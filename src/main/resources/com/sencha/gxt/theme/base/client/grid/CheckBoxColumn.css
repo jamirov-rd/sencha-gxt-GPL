@@ -1,0 +1,47 @@
+/**
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
+ * licensing@sencha.com
+ *
+ * http://www.sencha.com/products/gxt/license/
+ */
+.cell {
+  padding: 2px 0px 0px 2px !important;
+}
+
+.cellInner {
+  padding: 0px !important;
+}
+
+@sprite .grid-row .cell {
+  vertical-align: top;
+  gwt-image: 'specialColumn';
+  height: auto;
+  width: auto;
+}
+
+@sprite .grid-rowSelected .cell {
+  gwt-image: 'specialColumnSelected';
+  height: auto;
+  width: auto;
+}
+
+@sprite .rowChecker, .hdChecker {
+  gwt-image: 'unchecked';
+  height: 18px;
+}
+
+@sprite .grid-rowSelected .rowChecker, .headerChecked .hdChecker {
+  gwt-image: 'checked';
+  height: 18px;
+}
+
+.rowChecker, .hdChecker {
+  background-repeat: no-repeat;
+  background-color: transparent;
+}
+
+.hdChecker {
+  padding-bottom: 0px !important;
+}
+

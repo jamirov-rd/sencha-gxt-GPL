@@ -1,0 +1,4 @@
+Downloaded Files:
+
+gxt-parent-3.0.1.pom - https://repo1.maven.org/maven2/com/sencha/gxt/gxt-parent/3.0.1/gxt-parent-3.0.1.pom
+gxt-3.0.1-sources.jar - https://repo1.maven.org/maven2/com/sencha/gxt/gxt/3.0.1/gxt-3.0.1-sources.jar

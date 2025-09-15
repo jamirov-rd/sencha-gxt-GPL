@@ -1,4 +1,4 @@
 Downloaded Files:
 
-gxt-2.3.1-gwt22.pom - https://repo.maven.apache.org/maven2/com/extjs/gxt/2.3.1-gwt22/gxt-2.3.1-gwt22.pom
-gxt-2.3.1-gwt22-sources.jar - https://repo.maven.apache.org/maven2/com/extjs/gxt/2.3.1-gwt22/gxt-2.3.1-gwt22-sources.jar
+gxt-2.3.1-gwt22.pom - https://maven.taktik.be/content/groups/public/com/extjs/gxt/2.3.1a18-gwt22/gxt-2.3.1a18-gwt22.pom
+gxt-2.3.1-gwt22-sources.jar - https://maven.taktik.be/content/groups/public/com/extjs/gxt/2.3.1a18-gwt22/gxt-2.3.1a18-gwt22-sources.jar

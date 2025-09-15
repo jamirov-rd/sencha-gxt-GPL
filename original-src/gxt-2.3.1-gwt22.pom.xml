@@ -1,0 +1,39 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+    <groupId>com.extjs</groupId>
+    <artifactId>gxt</artifactId>
+    <version>2.3.1-gwt22</version>
+    <packaging>jar</packaging>
+    <name>Sencha GXT</name>
+    <description>Rich Internet Application Framework for GWT</description>
+    <url>http://www.sencha.com/products/gxt/</url>
+
+    <licenses>
+        <license>
+            <name>GNU GPL license v3</name>
+            <url>http://www.gnu.org/copyleft/gpl.html</url>
+        </license>
+        <license>
+            <name>Commercial License</name>
+            <url>http://www.sencha.com/products/gxt/license/</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>sencha-devs</id>
+            <name>Sencha GXT Developers</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:svn:https://svn.sencha.com/svn/gxt/</connection>
+        <url>https://svn.sencha.com/svn/gxt/</url>
+    </scm>
+</project>

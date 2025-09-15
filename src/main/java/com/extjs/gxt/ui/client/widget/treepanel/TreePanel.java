@@ -1631,7 +1631,7 @@ public class TreePanel<M extends ModelData> extends BoxComponent implements Chec
     if (focusEl != null) {
       focusEl.removeFromParent();
     }
-    focusEl = new El(focusImpl.createFocusable());
+    focusEl = new El(focusImpl.createFocusable().<Element>cast());
     focusEl.dom.getStyle().setProperty("outline", "none");
     getElement().appendChild(focusEl.dom);
     if (focusEl.dom.hasChildNodes()) {

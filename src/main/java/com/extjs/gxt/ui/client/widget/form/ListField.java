@@ -319,7 +319,7 @@ public class ListField<D extends ModelData> extends Field<D> implements Selectio
     String prop = valueField != null ? valueField : listView.getDisplayProperty();
     StringBuffer sb = new StringBuffer();
     for (D m : sel) {
-      sb.append(m.get(prop));
+      sb.append(m.<Object>get(prop));
       sb.append(",");
     }
     String s = sb.toString();

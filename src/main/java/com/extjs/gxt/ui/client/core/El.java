@@ -257,7 +257,7 @@ public class El {
    */
   public El(Element element) {
     assert element != null : "The element may not be null";
-    this.dom = element;
+    this.dom = element.cast();
   }
 
   /**

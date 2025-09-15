@@ -545,7 +545,7 @@ public class HtmlEditor extends Field<String> {
     }
 
     protected void onRender(Element target, int index) {
-      Element e = impl.getElement();
+      Element e = impl.getElement().cast();
       e.setPropertyInt("frameBorder", 0);
       setElement(e, target, index);
 

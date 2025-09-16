@@ -49,10 +49,7 @@
   ]]></property-provider>
 
   <!-- Add more user agents and redefine how one is selected -->
-  <define-property name="gxt.user.agent" values="ie8" />
-  <extend-property name="gxt.user.agent" values="ie9" />
-  <extend-property name="gxt.user.agent" values="ie10" />
-  <extend-property name="gxt.user.agent" values="gecko1_8" />
+  <define-property name="gxt.user.agent" values="gecko1_8" />
   <extend-property name="gxt.user.agent" values="gecko1_9" />
 
   <extend-property name="gxt.user.agent" values="safari3" />
@@ -65,15 +62,6 @@
   <property-provider name="gxt.user.agent" generator="com.sencha.gxt.core.rebind.useragent.UserAgentPropertyGenerator" />
 
   <!-- Restrict the permutation explosion -->
-  <set-property name="user.agent" value="ie8">
-    <when-property-is name="gxt.user.agent" value="ie8" />
-  </set-property>
-  <set-property name="user.agent" value="ie9">
-    <when-property-is name="gxt.user.agent" value="ie9" />
-  </set-property>
-  <set-property name="user.agent" value="ie10">
-    <when-property-is name="gxt.user.agent" value="ie10" />
-  </set-property>
   <set-property name="user.agent" value="gecko1_8">
     <any>
       <when-property-is name="gxt.user.agent" value="gecko1_8" />
@@ -97,24 +85,5 @@
   <!-- Layer appearance -->
   <replace-with class="com.sencha.gxt.core.client.dom.Layer.LayerBaseAppearance">
     <when-type-is class="com.sencha.gxt.core.client.dom.Layer.LayerAppearance" />
-  </replace-with>
-
-  <replace-with class="com.sencha.gxt.core.client.dom.Layer.LayerBaseAppearanceIe">
-    <when-type-is class="com.sencha.gxt.core.client.dom.Layer.LayerAppearance" />
-    <any>
-      <when-property-is name="gxt.user.agent" value="ie6" />
-      <when-property-is name="gxt.user.agent" value="ie7" />
-      <when-property-is name="gxt.user.agent" value="ie8" />
-      <when-property-is name="gxt.user.agent" value="ie9" />
-    </any>
-  </replace-with>
-
-  <replace-with class="com.sencha.gxt.core.client.dom.impl.ComputedStyleImplIE">
-    <when-type-is class="com.sencha.gxt.core.client.dom.impl.ComputedStyleImpl" />
-    <any>
-      <when-property-is name="gxt.user.agent" value="ie6" />
-      <when-property-is name="gxt.user.agent" value="ie7" />
-      <when-property-is name="gxt.user.agent" value="ie8" />
-    </any>
   </replace-with>
 </module>

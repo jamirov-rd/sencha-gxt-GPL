@@ -27,21 +27,6 @@ public class GXT {
     @PropertyValue("safari5")
     boolean isSafari5();
 
-    @PropertyValue(value="ie6", warn=false)
-    boolean isIE6();
-
-    @PropertyValue(value="ie7", warn=false)
-    boolean isIE7();
-
-    @PropertyValue("ie8")
-    boolean isIE8();
-
-    @PropertyValue("ie9")
-    boolean isIE9();
-
-    @PropertyValue("ie10")
-    boolean isIE10();
-
     @PropertyValue("gecko1_8")
     boolean isGecko1_8();
 
@@ -198,7 +183,7 @@ public class GXT {
    * @return true if IE 6
    */
   public static boolean isIE6() {
-    return userAgent().isIE6();
+    return false;
   }
 
   /**
@@ -207,7 +192,7 @@ public class GXT {
    * @return true if IE 7
    */
   public static boolean isIE7() {
-    return userAgent().isIE7();
+    return false;
   }
 
   /**
@@ -216,7 +201,7 @@ public class GXT {
    * @return true if IE 8
    */
   public static boolean isIE8() {
-    return userAgent().isIE8();
+    return false;
   }
 
   /**
@@ -225,7 +210,7 @@ public class GXT {
    * @return true if IE 9
    */
   public static boolean isIE9() {
-    return userAgent().isIE9();
+    return false;
   }
 
   /**
@@ -234,7 +219,7 @@ public class GXT {
    * @return true if IE 10
    */
   public static boolean isIE10() {
-    return userAgent().isIE10();
+    return false;
   }
 
   /**

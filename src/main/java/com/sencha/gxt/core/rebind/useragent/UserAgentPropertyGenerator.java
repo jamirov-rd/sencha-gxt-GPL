@@ -28,22 +28,6 @@ public class UserAgentPropertyGenerator implements PropertyProviderGenerator {
     uaContains(sw, "chrome", "chrome");
     uaContains(sw, "opera", "opera");
 
-    sw.println("if (ua.indexOf('msie') != -1) {");
-    sw.indent();
-
-    // TODO ChromeFrame?
-    docModeGreaterThan(sw, 10, "ie10");
-    docModeGreaterThan(sw, 9, "ie9");
-    docModeGreaterThan(sw, 8, "ie8");
-    
-    uaContains(sw, "msie 7", "ie7");
-    uaContains(sw, "msie 6", "ie6");
-    
-    // last assume newest
-    sw.println("return 'ie10';");
-    sw.outdent();
-    sw.println("}");
-
     sw.println("if (ua.indexOf('safari') != -1) {");
     sw.indent();
     uaContains(sw, "version/3", "safari3");

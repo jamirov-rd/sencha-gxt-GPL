@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client;
 
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.logical.shared.AttachEvent;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Event;
@@ -95,7 +96,7 @@ public class Composite extends Component {
 
     // Use the contained widget's element as the composite's element,
     // effectively merging them within the DOM.
-    setElement(widget.getElement());
+    setElement((Element) widget.getElement());
 
     // Logical attach.
     this.widget = widget;
@@ -107,13 +108,13 @@ public class Composite extends Component {
   @Override
   protected void onDisable() {
     super.onDisable();
-    DOM.setElementPropertyBoolean(widget.getElement(), "disabled", true);
+    widget.getElement().setPropertyBoolean("disabled", true);
   }
 
   @Override
   protected void onEnable() {
     super.onEnable();
-    DOM.setElementPropertyBoolean(widget.getElement(), "disabled", false);
+    widget.getElement().setPropertyBoolean("disabled", false);
   }
 
   @Override

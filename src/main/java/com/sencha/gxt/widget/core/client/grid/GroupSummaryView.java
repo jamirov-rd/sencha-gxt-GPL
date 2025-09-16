@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -11,11 +11,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gwt.core.shared.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
+import com.google.gwt.safecss.shared.SafeStylesUtils;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
@@ -23,17 +26,53 @@ import com.sencha.gxt.data.shared.ListStore;
 
 public class GroupSummaryView<M> extends GroupingView<M> {
 
+  public interface GroupSummaryViewAppearance extends GroupingViewAppearance {
+    void toggleSummaries(XElement parent, boolean visible);
+
+    NodeList<Element> getSummaries(XElement table);
+
+    int getGroupIndex(XElement group);
+
+    @Override
+    GroupSummaryViewStyle style();
+  }
+
+  public interface GroupSummaryViewStyle extends GroupingViewStyle {
+
+    String summaryRow();
+  }
+
+  private boolean summaryVisible = true;
+
+  public GroupSummaryView() {
+    this(GWT.<GroupSummaryViewAppearance>create(GroupSummaryViewAppearance.class));
+  }
+
+  public GroupSummaryView(GridAppearance appearance, GroupSummaryViewAppearance groupingAppearance) {
+    super(appearance, groupingAppearance);
+  }
+
+  public GroupSummaryView(GroupSummaryViewAppearance groupAppearance) {
+    super(groupAppearance);
+  }
+
+  @Override
+  public GroupSummaryViewAppearance getGroupingAppearance() {
+    return (GroupSummaryViewAppearance) super.getGroupingAppearance();
+  }
+
+  @Override
+  protected int getGroupIndex(XElement group) {
+    return group.getParentElement().<XElement>cast().indexOf(group) / 3;
+  }
+
   /**
-   * Returns the summary node element.
+   * Gets all summary nodes currently rendered in the grid
    * 
-   * @param g the group element
-   * @return the summary node
+   * @return all summary nodes
    */
-  public XElement getSummaryNode(Element g) {
-    if (g != null) {
-      return fly(g).down(".x-grid-summary-row");
-    }
-    return null;
+  public NodeList<Element> getSummaries() {
+    return getGroupingAppearance().getSummaries(dataTable);
   }
 
   /**
@@ -42,7 +81,7 @@ public class GroupSummaryView<M> extends GroupingView<M> {
    * @return true for visible
    */
   public boolean isSummaryVisible() {
-    return !grid.getElement().hasClassName("x-grid-hide-summary");
+    return summaryVisible;
   }
 
   /**
@@ -51,14 +90,8 @@ public class GroupSummaryView<M> extends GroupingView<M> {
    * @param visible true for visible, false to hide
    */
   public void toggleSummaries(boolean visible) {
-    XElement el = grid.getElement();
-    if (el != null) {
-      if (visible) {
-        el.removeClassName("x-grid-hide-summary");
-      } else {
-        el.addClassName("x-grid-hide-summary");
-      }
-    }
+    summaryVisible = visible;
+    getGroupingAppearance().toggleSummaries(grid.getElement(), visible);
   }
 
   protected Map<ValueProvider<? super M, ?>, Number> calculate(List<M> models) {
@@ -74,10 +107,11 @@ public class GroupSummaryView<M> extends GroupingView<M> {
   }
   
   /**
-   * Helper to ensure generics are typesafe
-   * @param cf
-   * @param models
-   * @return
+   * Helper to ensure generics are typesafe.
+   *
+   * @param cf the summary column config.
+   * @param models the list of models.
+   * @return Number Returns the value for a summary calculation.
    */
   private <N> Number calculate(SummaryColumnConfig<M, N> cf, List<M> models) {
     ValueProvider<? super M, N> vp = cf.getValueProvider();
@@ -100,17 +134,20 @@ public class GroupSummaryView<M> extends GroupingView<M> {
   }
 
   protected void refreshSummaries() {
+    if (groupingColumn == null) {
+      return;
+    }
+
     NodeList<Element> groups = getGroups();
-    List<GroupingData<M>> groupData = getGroupData();
+    NodeList<Element> summaries = getSummaries();
+    List<GroupingData<M>> groupData = createGroupingData();
     for (int i = 0; i < groupData.size(); i++) {
       Element g = groups.getItem(i);
       if (g == null) continue;
       SafeHtml s = renderGroupSummary(groupData.get(i));
-      XElement existing = getSummaryNode(g);
-      if (existing != null) {
-        existing.removeFromParent();
-      }
-      g.appendChild(XDOM.create(s));
+      s = tpls.table("", SafeStylesUtils.fromTrustedString(""), s, SafeHtmlUtils.EMPTY_SAFE_HTML);
+      Element existing = summaries.getItem(i);
+      existing.getParentElement().replaceChild(XDOM.create(s).getLastChild().<Element>cast().getFirstChildElement(), existing);
     }
   }
 
@@ -120,11 +157,10 @@ public class GroupSummaryView<M> extends GroupingView<M> {
     buf.append(renderGroupSummary(g));
   }
 
-  @Override
   protected SafeHtml renderGroupSummary(GroupingData<M> groupInfo) {
     Map<ValueProvider<? super M, ?>, Number> data = calculate(groupInfo.getItems());
     return renderSummary(groupInfo, data);
-  };
+  }
 
   protected SafeHtml renderSummary(GroupingData<M> groupInfo, Map<ValueProvider<? super M, ?>, Number> data) {
     int colCount = cm.getColumnCount();
@@ -132,8 +168,8 @@ public class GroupSummaryView<M> extends GroupingView<M> {
 
     String unselectableClass = " " + unselectable;
 
-    String cellClass = styles.cell();
-    String cellInner = styles.cellInner();
+    String cellClass = styles.cell() + " " + states.cell();
+    String cellInner = styles.cellInner() + " " + states.cellInner();
     String cellFirstClass = " x-grid-cell-first";
     String cellLastClass = " x-grid-cell-last";
 
@@ -146,26 +182,31 @@ public class GroupSummaryView<M> extends GroupingView<M> {
       String cellClasses = cellClass;
       cellClasses += (i == 0 ? cellFirstClass : (i == last ? cellLastClass : ""));
 
-      String id = cf.getColumnClassSuffix();
-      if (id != null && !id.equals("")) {
-        cellClasses += " x-grid-td-" + id;
+      if (cf.getCellClassName() != null) {
+        cellClasses += " " + cf.getCellClassName();
       }
 
       Number n = data.get(cm.getValueProvider(i));
-      String value = "";
+      SafeHtml value = SafeHtmlUtils.EMPTY_SAFE_HTML;
 
       if (cf.getSummaryFormat() != null) {
-        value = n == null ? "" : cf.getSummaryFormat().format(n.doubleValue());
+        if (n != null) {
+          value = SafeHtmlUtils.fromString(cf.getSummaryFormat().format(n.doubleValue()));
+        }
       } else if (cf.getSummaryRenderer() != null) {
-        value = cf.getSummaryRenderer().render(n, data).asString();
+        value = cf.getSummaryRenderer().render(n, data);
       }
-
-      SafeHtml tdContent = tpls.td(i, cellClasses, cd.getStyles(), cellInner, cf.getColumnTextStyle(), SafeHtmlUtils.fromString(value));
+      final SafeHtml tdContent;
+      if (!selectable && GXT.isIE()) {
+        tdContent = tpls.tdUnselectable(i, cellClasses, cd.getStyles(), cellInner, cf.getColumnTextStyle(), value);
+      } else {
+        tdContent = tpls.td(i, cellClasses, cd.getStyles(), cellInner, cf.getColumnTextStyle(), value);
+      }
       trBuilder.append(tdContent);
 
     }
 
-    String rowClasses = "x-grid-row-summary";
+    String rowClasses = getGroupingAppearance().style().summaryRow();
 
     if (!selectable) {
       rowClasses += unselectableClass;

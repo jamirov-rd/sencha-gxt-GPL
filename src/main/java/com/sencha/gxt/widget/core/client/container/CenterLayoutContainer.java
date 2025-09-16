@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -45,7 +45,7 @@ public class CenterLayoutContainer extends SimpleContainer {
       XElement con = getContainerTarget();
       XElement e = widget.getElement().cast();
       e.makePositionable(true);
-      Point p = e.getAlignToXY(con, new AnchorAlignment(Anchor.CENTER, Anchor.CENTER), null);
+      Point p = e.getAlignToXY(con, new AnchorAlignment(Anchor.CENTER, Anchor.CENTER), 0, 0);
       p = e.translatePoints(p);
       applyLayout(widget, new Rectangle(p.getX(), p.getY(), -1, -1));
     }

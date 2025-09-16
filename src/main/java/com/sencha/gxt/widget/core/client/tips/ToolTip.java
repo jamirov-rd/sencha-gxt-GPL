@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,7 +8,10 @@
 package com.sencha.gxt.widget.core.client.tips;
 
 import java.util.Date;
+import java.util.logging.Logger;
 
+import com.google.gwt.dom.client.Document;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.event.dom.client.BlurEvent;
 import com.google.gwt.event.dom.client.BlurHandler;
@@ -24,11 +27,10 @@ import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.event.logical.shared.AttachEvent;
 import com.google.gwt.safehtml.shared.SafeHtml;
-import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Widget;
+import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.Style.Anchor;
 import com.sencha.gxt.core.client.Style.AnchorAlignment;
 import com.sencha.gxt.core.client.Style.Side;
@@ -45,10 +47,11 @@ import com.sencha.gxt.widget.core.client.event.XEvent;
 import com.sencha.gxt.widget.core.client.tips.ToolTipConfig.ToolTipRenderer;
 
 /**
- * A standard tooltip implementation for providing additional information when
- * hovering over a target element.
+ * A standard tooltip implementation for providing additional information when hovering over a target element.
  */
 public class ToolTip extends Tip {
+
+  private static Logger logger = Logger.getLogger(ToolTip.class.getName());
 
   private class Handler implements MouseOverHandler, MouseOutHandler, MouseMoveHandler, HideHandler,
       AttachEvent.Handler, FocusHandler, BlurHandler, KeyDownHandler {
@@ -62,12 +65,10 @@ public class ToolTip extends Tip {
 
     @Override
     public void onBlur(BlurEvent event) {
-
     }
 
     @Override
     public void onFocus(FocusEvent event) {
-
     }
 
     @Override
@@ -77,7 +78,6 @@ public class ToolTip extends Tip {
 
     @Override
     public void onKeyDown(KeyDownEvent event) {
-
     }
 
     @Override
@@ -100,10 +100,9 @@ public class ToolTip extends Tip {
   protected Timer dismissTimer;
   protected Timer hideTimer;
   protected Timer showTimer;
-  protected Widget target;
+  protected Element target;
   protected Point targetXY = new Point(0, 0);
   protected String titleHtml, bodyHtml;
-  protected ToolTipConfig toolTipConfig;
   private GroupingHandlerRegistration handlerRegistration;
   private Date lastActive;
 
@@ -115,6 +114,17 @@ public class ToolTip extends Tip {
   public ToolTip(Widget target) {
     init();
     initTarget(target);
+  }
+
+  /**
+   * Creates a new tool tip.
+   *
+   * @param appearance the appearance
+   */
+  public ToolTip(TipAppearance appearance) {
+    super(appearance);
+    init();
+    initTarget(null);
   }
 
   /**
@@ -139,6 +149,17 @@ public class ToolTip extends Tip {
     init();
     updateConfig(config);
     initTarget(target);
+  }
+
+  /**
+   * Creates a new tool tip.
+   *
+   * @param config the tool tip config
+   */
+  public ToolTip(ToolTipConfig config) {
+    init();
+    updateConfig(config);
+    initTarget(null);
   }
 
   /**
@@ -167,26 +188,25 @@ public class ToolTip extends Tip {
   }
 
   /**
-   * Binds the tool tip to the target widget. Allows a tool tip to switch the
-   * target widget.
+   * Binds the tool tip to the target widget. Allows a tool tip to switch the target widget.
    * 
-   * @param target the target widget
+   * @param widget the target widget
    */
-  public void initTarget(final Widget target) {
-    if (this.target != null) {
+  public void initTarget(final Widget widget) {
+    if (handlerRegistration != null) {
       handlerRegistration.removeHandler();
     }
 
-    this.target = target;
+    if (widget != null) {
+      this.target = widget.getElement();
 
-    if (target != null) {
       Handler handler = new Handler();
       handlerRegistration = new GroupingHandlerRegistration();
-      handlerRegistration.add(target.addDomHandler(handler, MouseOverEvent.getType()));
-      handlerRegistration.add(target.addDomHandler(handler, MouseOutEvent.getType()));
-      handlerRegistration.add(target.addDomHandler(handler, MouseMoveEvent.getType()));
-      handlerRegistration.add(target.addHandler(handler, HideEvent.getType()));
-      handlerRegistration.add(target.addHandler(handler, AttachEvent.getType()));
+      handlerRegistration.add(widget.addDomHandler(handler, MouseOverEvent.getType()));
+      handlerRegistration.add(widget.addDomHandler(handler, MouseOutEvent.getType()));
+      handlerRegistration.add(widget.addDomHandler(handler, MouseMoveEvent.getType()));
+      handlerRegistration.add(widget.addHandler(handler, HideEvent.getType()));
+      handlerRegistration.add(widget.addHandler(handler, AttachEvent.getType()));
     }
   }
 
@@ -204,19 +224,22 @@ public class ToolTip extends Tip {
     if (disabled) return;
     Side origAnchor = null;
     boolean origConstrainPosition = false;
+
     if (toolTipConfig.getAnchor() != null) {
       origAnchor = toolTipConfig.getAnchor();
-      // pre-show it off screen so that the el will have dimensions
-      // for positioning calcs when getting xy next
-      // showAt(-1000, -1000);
+      // attach for good measure
+      // getTarget, so the elements can be properly measured/sized.
+      showAt(getTargetXY(0));
       origConstrainPosition = this.constrainPosition;
       constrainPosition = false;
     }
-    showAt(getTargetXY(0));
+
+    // go to the method below, it has some added benefits before going to super
+    Point xy = getTargetXY(0);
+    showAt(xy.getX(), xy.getY());
 
     if (toolTipConfig.getAnchor() != null) {
       anchorEl.show();
-      syncAnchor();
       constrainPosition = origConstrainPosition;
       toolTipConfig.setAnchor(origAnchor);
     } else {
@@ -229,6 +252,14 @@ public class ToolTip extends Tip {
     if (disabled) return;
     lastActive = new Date();
     clearTimers();
+
+    // retain the position set so that show() can be used to reposition the tip
+    // subtract mouse offset b/c getTarget(xy) sums to to targetXY
+    if (!toolTipConfig.isTrackMouse()) {
+      targetXY.setX(x - toolTipConfig.getMouseOffsetX());
+      targetXY.setY(y - toolTipConfig.getMouseOffsetY());
+    }
+
     super.showAt(x, y);
     if (toolTipConfig.getAnchor() != null) {
       anchorEl.show();
@@ -236,6 +267,7 @@ public class ToolTip extends Tip {
     } else {
       anchorEl.hide();
     }
+
     if (toolTipConfig.getDismissDelay() > 0 && toolTipConfig.isAutoHide() && !toolTipConfig.isCloseable()) {
       dismissTimer = new Timer() {
         @Override
@@ -258,6 +290,11 @@ public class ToolTip extends Tip {
       updateContent();
     }
     doAutoWidth();
+    
+    // When the tooltip text is updated reposition if the text runs the tooltip out of range/screen
+    if (!config.isTrackMouse() && isAttached()) {
+      show();
+    }
   }
 
   protected void clearTimer(String timer) {
@@ -344,10 +381,10 @@ public class ToolTip extends Tip {
           offsets = new int[] {0, 9};
           break;
         case BOTTOM:
-          offsets = new int[] {0, -13};
+          offsets = new int[] {0, -9};
           break;
         case RIGHT:
-          offsets = new int[] {-13, 0};
+          offsets = new int[] {-9, 0};
           break;
         default:
           offsets = new int[] {9, 0};
@@ -372,11 +409,8 @@ public class ToolTip extends Tip {
       }
 
     }
-    int[] mouseOffset = toolTipConfig.getMouseOffset();
-    if (mouseOffset != null) {
-      offsets[0] += mouseOffset[0];
-      offsets[1] += mouseOffset[1];
-    }
+    offsets[0] += toolTipConfig.getMouseOffsetX();
+    offsets[1] += toolTipConfig.getMouseOffsetY();
 
     return offsets;
   }
@@ -389,8 +423,8 @@ public class ToolTip extends Tip {
     lastActive = new Date();
     monitorWindowResize = true;
 
-    anchorEl = XElement.as(DOM.createDiv());
-    appearance.applyAnchorStyle(anchorEl);
+    anchorEl = Document.get().createDivElement().cast();
+    getAppearance().applyAnchorStyle(anchorEl);
     getElement().appendChild(anchorEl);
   }
 
@@ -409,7 +443,7 @@ public class ToolTip extends Tip {
       if (constrainPosition) {
         p = getElement().adjustForConstraints(p);
       }
-      setPagePosition(p.getX(), p.getY());
+      super.showAt(p.getX(), p.getY());
     }
   }
 
@@ -420,7 +454,7 @@ public class ToolTip extends Tip {
   protected void onTargetMouseOut(MouseOutEvent event) {
     Element source = event.getNativeEvent().getEventTarget().cast();
     Element to = event.getNativeEvent().getRelatedEventTarget().cast();
-    if (to == null || !source.isOrHasChild(to.<Element> cast())) {
+    if (source != null && (to == null || !source.isOrHasChild(to.<Element> cast()))) {
       onTargetOut(event.getNativeEvent().<Event> cast());
     }
   }
@@ -428,7 +462,7 @@ public class ToolTip extends Tip {
   protected void onTargetMouseOver(MouseOverEvent event) {
     Element source = event.getNativeEvent().getEventTarget().cast();
     EventTarget from = event.getNativeEvent().getRelatedEventTarget();
-    if (from == null || !source.isOrHasChild(from.<Element> cast())) {
+    if (source != null && (from == null || !source.isOrHasChild(from.<Element> cast()))) {
       onTargetOver(event.getNativeEvent().<Event> cast());
     }
   }
@@ -442,7 +476,7 @@ public class ToolTip extends Tip {
   }
 
   protected void onTargetOver(Event ce) {
-    if (disabled || !target.getElement().isOrHasChild(ce.getEventTarget().<Element> cast())) {
+    if (disabled || !target.isOrHasChild(ce.getEventTarget().<Element> cast())) {
       return;
     }
     clearTimer("hide");
@@ -460,31 +494,35 @@ public class ToolTip extends Tip {
 
   protected void syncAnchor() {
     Anchor anchorPos, targetPos;
-    int[] offset;
+    final int offsetX, offsetY;
     int anchorOffset = toolTipConfig.getAnchorOffset();
     switch (toolTipConfig.getAnchor()) {
       case TOP:
         anchorPos = Anchor.BOTTOM;
         targetPos = Anchor.TOP_LEFT;
-        offset = new int[] {20 + anchorOffset, 2};
+        offsetX = 20 + anchorOffset;
+        offsetY = 2;
         break;
       case RIGHT:
         anchorPos = Anchor.LEFT;
         targetPos = Anchor.TOP_RIGHT;
-        offset = new int[] {-2, 11 + anchorOffset};
+        offsetX = -2;
+        offsetY = 11 + anchorOffset;
         break;
       case BOTTOM:
         anchorPos = Anchor.TOP;
         targetPos = Anchor.BOTTOM_LEFT;
-        offset = new int[] {20 + anchorOffset, -2};
+        offsetX = 20 + anchorOffset;
+        offsetY = -2;
         break;
       default:
         anchorPos = Anchor.RIGHT;
         targetPos = Anchor.TOP_LEFT;
-        offset = new int[] {2, 11 + anchorOffset};
+        offsetX = 2;
+        offsetY = 11 + anchorOffset;
         break;
     }
-    anchorEl.alignTo(getElement(), new AnchorAlignment(anchorPos, targetPos, false), offset);
+    anchorEl.alignTo(getElement(), new AnchorAlignment(anchorPos, targetPos, false), offsetX, offsetY);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -501,39 +539,153 @@ public class ToolTip extends Tip {
       textHtml = Util.isEmptyString(bodyHtml) ? "&#160;" : bodyHtml;
     }
 
-    appearance.updateContent(getElement(), titleHtml, textHtml);
+    getAppearance().updateContent(getElement(), titleHtml, textHtml);
   }
 
-  private Point getTargetXY(int targetCounter) {
+  /**
+   * Add to tooltip anchor to the range for overall measurement calculations.
+   * 
+   * @param offsets return what was given with added anchor amount depending on side. Adds a couple pixels for spacing.
+   * @return offsets
+   */
+  private int[] getAddAnchorToRange(int[] offsets) {
+    Region ar = XElement.as(anchorEl).getRegion();
+    // Note things are inverted from screen to code
+    switch (toolTipConfig.getAnchor()) {
+      case TOP:
+        offsets[0] = 0;
+        offsets[1] += ar.getBottom() - ar.getTop() + 2;
+        break;
+      case BOTTOM:
+        offsets[0] = 0;
+        offsets[1] += ar.getBottom() - ar.getTop() + 2;
+        break;
+      case RIGHT:
+        offsets[0] = ar.getRight() - ar.getLeft() + 2;
+        offsets[1] = 0;
+        break;
+      case LEFT:
+        offsets[0] = ar.getRight() - ar.getLeft() + 2;
+        offsets[1] = 0;
+        break;
+    }
+    return offsets;
+  }
+
+  protected Point getTargetXY(int targetCounter) {
     if (toolTipConfig.getAnchor() != null) {
       targetCounter++;
       int[] offsets = getOffsets();
-      Point xy = (toolTipConfig.isAnchorToTarget() && !toolTipConfig.isTrackMouse()) ? getElement().getAlignToXY(
-          target.getElement(), getAnchorAlign(), null) : targetXY;
 
-      int dw = XDOM.getViewWidth(false) - 5;
-      int dh = XDOM.getViewHeight(false) - 5;
-      int scrollX = XDOM.getBodyScrollLeft() + 5;
-      int scrollY = XDOM.getBodyScrollTop() + 5;
+      // base pin point, depending on anchor side designation
+      Point xy = targetXY;
+      if (toolTipConfig.isAnchorToTarget() && !toolTipConfig.isTrackMouse()) {
+        // Note: Don't set the scroll offset in x and y
+        xy = getElement().getAlignToXY(target, getAnchorAlign(), 0, 0);
+      }
+
+      int dw = XDOM.getViewWidth(false);
+      int dh = XDOM.getViewHeight(false);
+      int scrollX = XDOM.getBodyScrollLeft();
+      int scrollY = XDOM.getBodyScrollTop();
 
       int[] axy = new int[] {xy.getX() + offsets[0], xy.getY() + offsets[1]};
-      Size sz = getElement().getSize();
-      Region r = XElement.as(target.getElement()).getRegion();
 
-      appearance.removeAnchorStyle(anchorEl);
+      // getElement().getAlignToXY adds scroll offset, this takes it away, b/c Tip showAt translates/adds it again
+      // This takes out the scroll offset given by 'getElement().getAlignToXY'
+      if (toolTipConfig.isAnchorToTarget() && !toolTipConfig.isTrackMouse()) {
+        axy[0] -= XDOM.getBodyScrollLeft();
+        axy[1] -= XDOM.getBodyScrollTop();
+        
+        if (scrollY > 0) {
+          // bottom offset correct is double
+          scrollY -= XDOM.getBodyScrollTop() * 2;
+        }
+      }
+
+      Size sz = getElement().getSize();
+      Region r = XElement.as(target).getRegion();
+
+      // Anchor range is not factored in on overall size, which overall size has to be used to flip to another side
+      // Note, things are inverted from display to programattical code like RIGHT means screen display LEFT
+      offsets = getAddAnchorToRange(offsets);
+
+      // When tip is screen top hits the ceiling out of range/site, this is the offset that fixes it.  
+      if (toolTipConfig.isTrackMouse() && toolTipConfig.getAnchor() == Side.BOTTOM) {
+          offsets[1] = XDOM.getBodyScrollTop() * 2;
+      }
+      
+      // When tip is screen bottom during a scroll needs an offset correction so not to flip to early
+      if (toolTipConfig.isTrackMouse() && toolTipConfig.getAnchor() == Side.TOP) {
+        offsets[1] -= XDOM.getBodyScrollTop() * 2;
+      }
+      
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        String s = "dw=" + dw + ",dh=" + dh + " ";
+        s += "scroll=" + scrollX + ",=" + scrollY + " ";
+        s += "offsets=" + offsets[0] + "," + offsets[1] + " ";
+        s += "axy=" + axy[0] + "," + axy[1] + " ";
+        s += "sz=" + sz + " ";
+        s += "r=" + r + " ";
+        s += "isTrackMouse=" + toolTipConfig.isTrackMouse() + " ";
+        s += "targetXY=" + targetXY + " ";
+        logger.finest(s);
+
+        if (toolTipConfig.getAnchor() == Side.TOP) {
+          String s1 = "TOP CALC: " + "sz.getHeight()=" + sz.getHeight() + " " + "+ offsets[1]=" + offsets[1] + " "
+              + "+ scrollY " + scrollY + " " + "< dh=" + dh + " " + "- r.getBottom()=" + r.getBottom();
+          String s2 = "TOP CALC: " + (sz.getHeight() + offsets[1] + scrollY) + " < " + (dh - r.getBottom()) + " ";
+          String s3 = "TOP CALC: " + (sz.getHeight() + offsets[1] + scrollY < dh - r.getBottom());
+          logger.finest(s1);
+          logger.finest(s2);
+          logger.finest(s3);
+        }
+
+        if (toolTipConfig.getAnchor() == Side.BOTTOM) {
+          String s1 = "BOTTOM CALC: sz.getHeight()=" + sz.getHeight() + " + offsets[1]=" + offsets[1] + " - scrollY="
+              + scrollY + " < r.getTop()=" + r.getTop();
+          String s2 = "BOTTOM CALC: " + (sz.getHeight() + offsets[1] - scrollY) + " <  " + r.getTop();
+          String s3 = "BOTTOM CALC: " + (sz.getHeight() + offsets[1] - scrollY < r.getTop());
+          logger.finest(s1);
+          logger.finest(s2);
+          logger.finest(s3);
+        }
+
+        if (toolTipConfig.getAnchor() == Side.LEFT) {
+          String s1 = "LEFT CALC: sz.getWidth()=" + sz.getWidth() + " + offsets[0]=" + offsets[0] + " + scrollX="
+              + scrollX + " < dw=" + dw + " - r.getRight()=" + r.getRight();
+          String s2 = "LEFT CALC: " + (sz.getWidth() + offsets[0] + scrollX) + " < " + (dw - r.getRight());
+          String s3 = "LEFT CALC: " + (sz.getWidth() + offsets[0] + scrollX < dw - r.getRight());
+          logger.finest(s1);
+          logger.finest(s2);
+          logger.finest(s3);
+        }
+
+        if (toolTipConfig.getAnchor() == Side.RIGHT) {
+          String s1 = "RIGHT CALC: sz.getWidth()=" + sz.getWidth() + " + offsets[0]=" + offsets[0] + " + scrollX="
+              + scrollX + " < r.getLeft()=" + r.getLeft();
+          String s2 = "RIGHT CALC: " + (sz.getWidth() + offsets[0] + scrollX) + " < " + r.getLeft();
+          String s3 = "RIGHT CALC: " + (sz.getWidth() + offsets[0] + scrollX < r.getLeft());
+          logger.finest(s1);
+          logger.finest(s2);
+          logger.finest(s3);
+        }
+      }
 
       // if we are not inside valid ranges we try to switch the anchor
       if (!((toolTipConfig.getAnchor() == Side.TOP && (sz.getHeight() + offsets[1] + scrollY < dh - r.getBottom()))
           || (toolTipConfig.getAnchor() == Side.RIGHT && (sz.getWidth() + offsets[0] + scrollX < r.getLeft()))
-          || (toolTipConfig.getAnchor() == Side.BOTTOM && (sz.getHeight() + offsets[1] + scrollY < r.getTop())) || (toolTipConfig.getAnchor() == Side.LEFT && (sz.getWidth()
-          + offsets[0] + scrollX < dw - r.getRight())))
+          || (toolTipConfig.getAnchor() == Side.BOTTOM && (sz.getHeight() + offsets[1] - scrollY < r.getTop())) 
+          || (toolTipConfig.getAnchor() == Side.LEFT && (sz.getWidth() + offsets[0] - scrollX < dw - r.getRight())))
           && targetCounter < 4) {
-        if (sz.getWidth() + offsets[0] + scrollX < dw - r.getRight()) {
-          toolTipConfig.setAnchor(Side.LEFT);
+        targetCounter++;
+
+        if (sz.getWidth() + offsets[0] + scrollX < r.getLeft()) {
+          toolTipConfig.setAnchor(Side.RIGHT);
           return getTargetXY(targetCounter);
         }
         if (sz.getWidth() + offsets[0] + scrollX < r.getLeft()) {
-          toolTipConfig.setAnchor(Side.RIGHT);
+          toolTipConfig.setAnchor(Side.LEFT);
           return getTargetXY(targetCounter);
         }
         if (sz.getHeight() + offsets[1] + scrollY < dh - r.getBottom()) {
@@ -546,23 +698,22 @@ public class ToolTip extends Tip {
         }
       }
 
-      appearance.applyAnchorDirectionStyle(anchorEl, toolTipConfig.getAnchor());
+      // sets the direction of the anchor <^>
+      if (toolTipConfig.isAnchorArrow()) {
+        getAppearance().applyAnchorDirectionStyle(anchorEl, toolTipConfig.getAnchor());
+      }
 
+      // reset recursion check counter
       targetCounter = 0;
       return new Point(axy[0], axy[1]);
 
     } else {
-      int x = targetXY.getX();
-      int y = targetXY.getY();
+      int x = targetXY.getX() + toolTipConfig.getMouseOffsetX();
+      int y = targetXY.getY() + toolTipConfig.getMouseOffsetY();
 
-      int[] mouseOffset = toolTipConfig.getMouseOffset();
-      if (mouseOffset != null) {
-        x += mouseOffset[0];
-        y += mouseOffset[1];
-      }
+
       return new Point(x, y);
     }
-
   }
 
   private void updateConfig(ToolTipConfig config) {

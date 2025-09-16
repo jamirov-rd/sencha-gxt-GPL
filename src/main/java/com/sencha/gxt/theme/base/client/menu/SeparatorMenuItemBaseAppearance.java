@@ -1,28 +1,27 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.theme.base.client.menu;
 
-import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
 import com.sencha.gxt.widget.core.client.menu.SeparatorMenuItem.SeparatorMenuItemAppearance;
 
-public abstract class SeparatorMenuItemBaseAppearance implements SeparatorMenuItemAppearance {
+public abstract class SeparatorMenuItemBaseAppearance extends ItemBaseAppearance implements SeparatorMenuItemAppearance {
 
-  public interface SeparatorMenuItemResources {
-
+  public interface SeparatorMenuItemResources extends ItemResources {
+    @Override
     SeparatorMenuItemStyle style();
 
   }
 
-  public interface SeparatorMenuItemStyle extends CssResource {
+  public interface SeparatorMenuItemStyle extends ItemStyle {
 
     String menuSep();
 
@@ -42,6 +41,7 @@ public abstract class SeparatorMenuItemBaseAppearance implements SeparatorMenuIt
 
   public SeparatorMenuItemBaseAppearance(SeparatorMenuItemResources resources,
       SeparatorMenuItemTemplate template) {
+    super(resources);
     this.resources = resources;
     this.style = resources.style();
     

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -39,7 +39,11 @@ public class Scroll extends SingleStyleEffect {
   @Override
   public void onComplete() {
     super.onComplete();
-    element.setScrollTop((int) to);
+    if (dir == ScrollDir.HORIZONTAL) {
+      element.setScrollLeft((int) to);
+    } else if (dir == ScrollDir.VERTICAL) {
+      element.setScrollTop((int) to);
+    }
   }
 
 }

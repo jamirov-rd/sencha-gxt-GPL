@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -195,12 +195,21 @@ public class Format {
   public static String substitute(String text, Object... params) {
     for (int i = 0; i < params.length; i++) {
       Object p = params[i];
-      if (p == null) {
-        p = "";
-      }
-      text = text.replaceAll("\\{" + i + "}", safeRegexReplacement(p.toString()));
+      String str = p == null ? "" : safeRegexReplacement(p.toString());
+      text = text.replaceAll("\\{" + i + "}", str);
     }
     return text;
+  }
+
+  /**
+   * Substitutes the indexed parameter.
+   * 
+   * @param text the text to format
+   * @param param the parameter to use, which will replace {0}
+   * @return the new text
+   */
+  public static String substitute(String text, Object param) {
+    return text.replaceAll("\\{0}", param == null ? "" : safeRegexReplacement(param.toString()));
   }
 
   /**

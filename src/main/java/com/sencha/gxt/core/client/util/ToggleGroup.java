@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -19,16 +19,20 @@ import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.ui.HasValue;
 
+/**
+ * Group HasValue<Boolean> implementers like checkboxes and radios so they can be controlled as a group.
+ * <p/>
+ * Note: to reset all the items in a group to false use {@link #reset()}.
+ */
 public class ToggleGroup extends AbstractSet<HasValue<Boolean>> implements HasValue<HasValue<Boolean>> {
-  protected ValueChangeHandler<Boolean> handler = new ValueChangeHandler<Boolean>() {
 
+  protected ValueChangeHandler<Boolean> handler = new ValueChangeHandler<Boolean>() {
     @SuppressWarnings("unchecked")
     @Override
     public void onValueChange(ValueChangeEvent<Boolean> event) {
       if (event.getValue() && getValue() != event.getSource()) {
         setValue((HasValue<Boolean>) event.getSource(), true);
       }
-
     }
   };
   
@@ -49,6 +53,16 @@ public class ToggleGroup extends AbstractSet<HasValue<Boolean>> implements HasVa
   @Override
   public HandlerRegistration addValueChangeHandler(ValueChangeHandler<HasValue<Boolean>> handler) {
     return ensureHandlers().addHandler(ValueChangeEvent.getType(), handler);
+  }
+
+  /**
+   * Remove all of the items added to this toggle group. This calls {@link java.util.AbstractSet#clear()}.
+   * <p>
+   * To Reset all of the toggle group HasValue<Boolean> items to false use {@link #reset()}.
+   */
+  @Override
+  public void clear() {
+    super.clear();
   }
 
   @Override
@@ -77,6 +91,21 @@ public class ToggleGroup extends AbstractSet<HasValue<Boolean>> implements HasVa
     }
     return false;
 
+  }
+
+  /**
+   * Reset all of the toggle group HasValue<Boolean> items to false.
+   * <p>
+   * To remove all of the items use {@link #clear()}.
+   */
+  public void reset() {
+    this.value = null;
+
+    Iterator<HasValue<Boolean>> it = iterator();
+    while (it.hasNext()) {
+      HasValue<Boolean> item = it.next();
+      item.setValue(false, false);
+    }
   }
 
   @Override

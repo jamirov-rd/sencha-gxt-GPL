@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -19,12 +19,13 @@ import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.theme.base.client.frame.Frame;
 import com.sencha.gxt.theme.base.client.frame.NestedDivFrame;
 import com.sencha.gxt.theme.base.client.tips.TipDefaultAppearance;
+import com.sencha.gxt.widget.core.client.form.error.SideErrorHandler.SideErrorTooltipAppearance;
 
-public class ErrorTipDefaultAppearance extends TipDefaultAppearance {
+public class ErrorTipDefaultAppearance extends TipDefaultAppearance implements SideErrorTooltipAppearance {
 
   public interface ErrorTipFrameResources extends ClientBundle, TipDivFrameResources {
 
-    @Source("com/sencha/gxt/theme/base/client/shared/clear.gif")
+    @Source("com/sencha/gxt/core/public/clear.gif")
     @ImageOptions(repeatStyle = RepeatStyle.Both)
     ImageResource background();
 
@@ -98,7 +99,11 @@ public class ErrorTipDefaultAppearance extends TipDefaultAppearance {
   private ErrorTipTemplate template;
 
   public ErrorTipDefaultAppearance() {
-    super(GWT.<ErrorTipResources> create(ErrorTipResources.class));
+    this(GWT.<ErrorTipResources> create(ErrorTipResources.class));
+  }
+
+  public ErrorTipDefaultAppearance(ErrorTipResources resources) {
+    super(resources);
 
     template = GWT.create(ErrorTipTemplate.class);
     frame = new NestedDivFrame(GWT.<TipDivFrameResources> create(ErrorTipFrameResources.class));

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,6 +10,7 @@ package com.sencha.gxt.widget.core.client;
 import java.util.Stack;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
@@ -20,6 +21,11 @@ import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
+import com.sencha.gxt.fx.client.animation.AfterAnimateEvent;
+import com.sencha.gxt.fx.client.animation.AfterAnimateEvent.AfterAnimateHandler;
+import com.sencha.gxt.fx.client.animation.Blink;
+import com.sencha.gxt.fx.client.animation.Fx;
+import com.sencha.gxt.fx.client.animation.MultiEffect;
 
 /**
  * A panel that grays out the view port and displays a widget above it.
@@ -43,12 +49,12 @@ public class ModalPanel extends Component {
       String panel();
     }
 
+    private final ModalPanelResources resources;
+
+    private final ModalPanelStyle style;
     public ModalPanelDefaultAppearance() {
       this(GWT.<ModalPanelResources> create(ModalPanelResources.class));
     }
-
-    private final ModalPanelResources resources;
-    private final ModalPanelStyle style;
 
     public ModalPanelDefaultAppearance(ModalPanelResources resources) {
       this.resources = resources;
@@ -100,7 +106,7 @@ public class ModalPanel extends Component {
    * Creates a new model panel.
    */
   public ModalPanel() {
-    this(GWT.<ModalPanelAppearance> create(ModalPanelDefaultAppearance.class));
+    this(GWT.<ModalPanelAppearance> create(ModalPanelAppearance.class));
   }
 
   /**
@@ -114,7 +120,7 @@ public class ModalPanel extends Component {
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
 
     shim = true;
     setShadow(false);
@@ -123,27 +129,16 @@ public class ModalPanel extends Component {
     eventPreview = new BaseEventPreview() {
       @Override
       protected boolean onPreview(NativePreviewEvent pe) {
-        XElement t = pe.getNativeEvent().getEventTarget().cast();
-        if (pe.getTypeInt() == Event.ONMOUSEDOWN && getElement().isOrHasChild(t)
-            && (t.findParent("." + CommonStyles.get().ignore(), -1) == null)) {
-          if (blink && !blinking) {
-            blinking = true;
-            // widget.el().blink(new FxConfig(new Listener<FxEvent>() {
-            // public void handleEvent(FxEvent fe) {
-            // blinking = false;
-            // widget.focus();
-            // }
-            // }));
-          } else if (!blink) {
-            component.focus();
-          }
-
-        }
+        onEventPreview(pe);
         return super.onPreview(pe);
       }
 
     };
     eventPreview.setAutoHide(false);
+  }
+
+  public ModalPanelAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -161,11 +156,11 @@ public class ModalPanel extends Component {
   public void hide() {
     super.hide();
     getElement().setZIndex(-1);
-    component = null;
     if (eventPreview != null) {
       eventPreview.getIgnoreList().removeAll();
       eventPreview.remove();
     }
+    component = null;
     RootPanel.get().remove(this);
   }
 
@@ -238,6 +233,40 @@ public class ModalPanel extends Component {
     if (eventPreview != null) {
       eventPreview.remove();
     }
+  }
+
+  protected void onEventPreview(NativePreviewEvent pe) {
+    XElement t = pe.getNativeEvent().getEventTarget().cast();
+    if (pe.getTypeInt() == Event.ONMOUSEDOWN && getElement().isOrHasChild(t)
+        && (t.findParent("." + CommonStyles.get().ignore(), -1) == null)) {
+      if (blink && !blinking) {
+        blinking = true;
+        pe.cancel();
+        Fx fx = new Fx();
+        fx.addAfterAnimateHandler(new AfterAnimateHandler() {
+          @Override
+          public void onAfterAnimate(AfterAnimateEvent event) {
+            blinking = false;
+            if (component != null) {
+              // component can be null if the preview goes off just before the panel hides
+              component.focus();
+            }
+          }
+        });
+        if (component.getShadow()) {
+          MultiEffect effect = new MultiEffect();
+          effect.addEffects(new Blink(component.getElement(), 50), new Blink(component.layer.getShadow(), 50));
+          fx.run(500, effect);
+        } else {
+          fx.run(500, new Blink(component.getElement(), 50));
+        }
+      } else if (!blink) {
+        pe.cancel();
+        component.focus();
+      }
+
+    }
+
   }
 
   @Override

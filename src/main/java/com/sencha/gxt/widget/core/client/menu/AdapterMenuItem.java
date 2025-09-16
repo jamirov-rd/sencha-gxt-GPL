@@ -1,12 +1,14 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.menu;
 
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Event;
@@ -44,12 +46,13 @@ public class AdapterMenuItem extends Item {
    * @param widget the widget to be adapted
    */
   public AdapterMenuItem(Widget widget) {
+    super(GWT.<ItemAppearance>create(ItemAppearance.class));
     assert widget != null : "Widget may not be null";
     widget.removeFromParent();
     this.widget = widget;
     setParent(this, widget);
-    
-    setElement(widget.getElement());
+
+    setElement((Element) widget.getElement());
   }
 
   @Override

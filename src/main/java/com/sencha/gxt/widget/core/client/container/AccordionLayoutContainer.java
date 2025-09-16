@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,7 +10,7 @@ package com.sencha.gxt.widget.core.client.container;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.user.client.DOM;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.util.Size;
@@ -88,7 +88,7 @@ public class AccordionLayoutContainer extends InsertResizeContainer implements H
     /**
      * Multiple panels may be expanded at the same time.
      */
-    MULTI;
+    MULTI
   }
 
   private class Handler implements BeforeExpandHandler, ExpandHandler {
@@ -118,7 +118,7 @@ public class AccordionLayoutContainer extends InsertResizeContainer implements H
    * Creates a new accordion layout container.
    */
   public AccordionLayoutContainer() {
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
   }
 
   /**
@@ -251,7 +251,7 @@ public class AccordionLayoutContainer extends InsertResizeContainer implements H
 
               if (c != activeWidget) {
                 c.collapse();
-                hh += (c.getHeader().getOffsetHeight());
+                hh += c.getAppearance().getHeaderSize(c.getElement()).getHeight();
                 applyLayout(c, size.getWidth(), -1);
               }
             }

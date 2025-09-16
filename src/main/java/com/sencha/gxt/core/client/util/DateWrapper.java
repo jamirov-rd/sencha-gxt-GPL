@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,7 +22,7 @@ public class DateWrapper {
    * {@link DateWrapper#add(Unit, int)} method takes
    */
   public enum Unit {
-    DAY, HOUR, MILLI, MINUTE, MONTH, SECOND, YEAR;
+    DAY, HOUR, MILLI, MINUTE, MONTH, SECOND, YEAR
   }
 
   protected static String format(Date date, String format) {

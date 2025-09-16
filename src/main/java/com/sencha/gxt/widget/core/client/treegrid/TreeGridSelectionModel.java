@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -40,14 +40,28 @@ public class TreeGridSelectionModel<M> extends GridSelectionModel<M> {
     }
   }
 
+  /**
+   * Returns the currently bound tree grid.
+   * 
+   * @return the tree grid
+   */
+  public TreeGrid<M> getTreeGrid() {
+    return tree;
+  }
+
   @Override
   protected void onKeyLeft(NativeEvent ce) {
-    if (Element.is(ce.getEventTarget())
-        && !grid.getView().isSelectableTarget(Element.as(ce.getEventTarget()))) {
+    if (Element.is(ce.getEventTarget()) && !grid.getView().isSelectableTarget(Element.as(ce.getEventTarget()))) {
       return;
     }
     super.onKeyLeft(ce);
     ce.preventDefault();
+
+    // EXTGWT-3009
+    if (getLastFocused() == null) {
+      return;
+    }
+
     boolean leaf = tree.isLeaf(getLastFocused());
     if (!leaf && tree.isExpanded(getLastFocused())) {
       tree.setExpanded(getLastFocused(), false);
@@ -66,8 +80,7 @@ public class TreeGridSelectionModel<M> extends GridSelectionModel<M> {
 
   @Override
   protected void onKeyRight(NativeEvent ce) {
-    if (Element.is(ce.getEventTarget())
-        && !grid.getView().isSelectableTarget(Element.as(ce.getEventTarget()))) {
+    if (Element.is(ce.getEventTarget()) && !grid.getView().isSelectableTarget(Element.as(ce.getEventTarget()))) {
       return;
     }
     super.onKeyRight(ce);

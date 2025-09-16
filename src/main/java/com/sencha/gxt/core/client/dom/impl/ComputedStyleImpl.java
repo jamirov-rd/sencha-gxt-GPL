@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,7 +8,6 @@
 package com.sencha.gxt.core.client.dom.impl;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -25,36 +24,49 @@ public class ComputedStyleImpl {
     return getComputedStyle(elem, names, checkHyphenCache(names), checkCamelCache(names), null);
   }
 
+  public String getStyleAttribute(Element elem, String prop) {
+    return getComputedStyle(elem, checkHyphenCache(prop), checkCamelCache(prop), null);
+  }
+
   public void setStyleAttribute(Element elem, String name, Object value) {
-    elem.getStyle().setProperty(checkCamelCache(Collections.singletonList(name)).get(0), value == null ? "" : String.valueOf(value));
+    elem.getStyle().setProperty(checkCamelCache(name), value == null ? "" : String.valueOf(value));
   }
 
   protected List<String> checkCamelCache(List<String> l) {
     List<String> list = new ArrayList<String>(l);
     for (int i = 0; i < list.size(); i++) {
-      String s = list.get(i);
-      String t = camelCache.get(s);
-      if (t == null) {
-        t = Format.camelize(getPropertyName(s));
-        camelCache.put(s, t);
-      }
+      String t = checkCamelCache(list.get(i));
       list.set(i, t);
     }
     return list;
+  }
+
+  protected String checkCamelCache(String s) {
+    String t = camelCache.get(s);
+    if (t == null) {
+      t = Format.camelize(getPropertyName(s));
+      camelCache.put(s, t);
+    }
+    return t;
   }
 
   protected List<String> checkHyphenCache(List<String> l) {
     List<String> list = new ArrayList<String>(l);
     for (int i = 0; i < list.size(); i++) {
       String s = list.get(i);
-      String t = hyphenCache.get(s);
-      if (t == null) {
-        t = Format.hyphenize(getPropertyName(s));
-        hyphenCache.put(s, t);
-      }
+      String t = checkHyphenCache(s);
       list.set(i, t);
     }
     return list;
+  }
+
+  protected String checkHyphenCache(String s) {
+    String t = hyphenCache.get(s);
+    if (t == null) {
+      t = Format.hyphenize(getPropertyName(s));
+      hyphenCache.put(s, t);
+    }
+    return t;
   }
 
   protected String getPropertyName(String name) {
@@ -63,6 +75,15 @@ public class ComputedStyleImpl {
     }
     return name;
   }
+  
+  protected native String getComputedStyle(Element elem, String name, String name2, String psuedo) /*-{
+    var v = elem.style[name2];
+    if (v) {
+      return String(v);
+    }
+    var cStyle = $doc.defaultView.getComputedStyle(elem, psuedo);
+    return cStyle ? String(cStyle.getPropertyValue(name)) : null;
+  }-*/;
 
   protected native FastMap<String> getComputedStyle(Element elem, List<String> originals, List<String> names,
       List<String> names2, String pseudo) /*-{

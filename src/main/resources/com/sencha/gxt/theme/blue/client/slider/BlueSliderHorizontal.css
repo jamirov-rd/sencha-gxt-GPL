@@ -1,12 +1,12 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 @if user.agent ie6 {
-  @eval TRACK_HORIZONTAL_LEFT com.sencha.gxt.theme.blue.client.slider.BlueSliderHorizontalAppearance.BlueSliderHorizontalAppearanceHelper.getTrackHorizontalLeft();
+  @eval TRACK_HORIZONTAL_LEFT com.sencha.gxt.core.client.util.ImageHelper.createModuleBasedUrl("blue/images/slider/trackHorizontalLeft.png");
   .slider {
     background-image: TRACK_HORIZONTAL_LEFT;
     background-position: left;
@@ -19,7 +19,7 @@
 }
 
 @if user.agent ie6 {
-  @eval TRACK_HORIZONTAL_RIGHT com.sencha.gxt.theme.blue.client.slider.BlueSliderHorizontalAppearance.BlueSliderHorizontalAppearanceHelper.getTrackHorizontalRight();
+  @eval TRACK_HORIZONTAL_RIGHT com.sencha.gxt.core.client.util.ImageHelper.createModuleBasedUrl("blue/images/slider/trackHorizontalRight.png");
   .end {
     background-image: TRACK_HORIZONTAL_RIGHT;
   }
@@ -37,7 +37,7 @@
 }
 
 @if user.agent ie6 {
-  @eval TRACK_HORIZONTAL_MIDDLE com.sencha.gxt.theme.blue.client.slider.BlueSliderHorizontalAppearance.BlueSliderHorizontalAppearanceHelper.getTrackHorizontalMiddle();
+  @eval TRACK_HORIZONTAL_MIDDLE com.sencha.gxt.core.client.util.ImageHelper.createModuleBasedUrl("blue/images/slider/trackHorizontalMiddle.png");
   .inner {
     background-image: TRACK_HORIZONTAL_MIDDLE;
   }

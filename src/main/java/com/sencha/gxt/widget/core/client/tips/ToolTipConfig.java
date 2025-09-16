@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -23,6 +23,7 @@ public class ToolTipConfig implements HasUiAttributes {
   }
 
   private Side anchor;
+  private boolean anchorArrowEnabled = true;
   private int anchorOffset = 0;
   private boolean anchorToTarget = true;
   private boolean autoHide = true;
@@ -31,7 +32,8 @@ public class ToolTipConfig implements HasUiAttributes {
   private int hideDelay = 200;
   private int maxWidth = 300;
   private int minWidth = 40;
-  private int[] mouseOffset = new int[] {15, 18};
+  private int mouseOffsetX = 15;
+  private int mouseOffsetY = 18;
   private Object data;
   private int showDelay = 500;
   private ToolTipRenderer<?> renderer;
@@ -44,7 +46,6 @@ public class ToolTipConfig implements HasUiAttributes {
    * Creates a new tool tip config.
    */
   public ToolTipConfig() {
-
   }
 
   /**
@@ -140,12 +141,19 @@ public class ToolTipConfig implements HasUiAttributes {
   }
 
   /**
-   * Returns the mouse offset.
-   *
-   * @return the offset
+   * Gets the X offset from the mouse position where the tooltip should be shown
+   * @return the X offset from the mouse position from the tooltip
    */
-  public int[] getMouseOffset() {
-    return new int[] { mouseOffset[0], mouseOffset[1] };
+  public int getMouseOffsetX() {
+    return mouseOffsetX;
+  }
+
+  /**
+   * Gets the Y offset from the mouse position where the tooltip should be shown
+   * @return the Y offset from the mouse position from the tooltip
+   */
+  public int getMouseOffsetY() {
+    return mouseOffsetY;
   }
 
   /**
@@ -173,6 +181,15 @@ public class ToolTipConfig implements HasUiAttributes {
    */
   public String getTitleHtml() {
     return titleHtml;
+  }
+
+  /**
+   * Returns the anchor arrow enabled.
+   *
+   * @return enabled true or false
+   */
+  public boolean isAnchorArrow() {
+    return anchorArrowEnabled;
   }
 
   /**
@@ -227,6 +244,15 @@ public class ToolTipConfig implements HasUiAttributes {
    */
   public void setAnchor(Side anchor) {
     this.anchor = anchor;
+  }
+
+  /**
+   * Turn on and off the anchor arrow. The arrow points from the tip to the target. Default is enabled true.
+   *
+   * @param anchorArrowEnabled enables the arrow
+   */
+  public void setAnchorArrow(boolean anchorArrowEnabled) {
+    this.anchorArrowEnabled = anchorArrowEnabled;
   }
 
   /**
@@ -349,25 +375,13 @@ public class ToolTipConfig implements HasUiAttributes {
   }
 
   /**
-   * An XY offset from the mouse position where the tooltip should be shown
-   * (defaults to [15,18]).
-   *
-   * @param mouseOffset the offset
-   */
-  public void setMouseOffset(int[] mouseOffset) {
-    assert mouseOffset != null && mouseOffset.length == 2;
-    this.mouseOffset[0] = mouseOffset[0];
-    this.mouseOffset[1] = mouseOffset[1];
-  }
-
-  /**
    * Sets the X offset from the mouse position where the tooltip should be shown
    * (defaults to 15)
    *
    * @param x the x axis offset
    */
   public void setMouseOffsetX(int x) {
-    this.mouseOffset[0] = x;
+    this.mouseOffsetX = x;
   }
 
   /**
@@ -377,7 +391,7 @@ public class ToolTipConfig implements HasUiAttributes {
    * @param y the y axis offset
    */
   public void setMouseOffsetY(int y) {
-    this.mouseOffset[1] = y;
+    this.mouseOffsetY = y;
   }
 
   /**

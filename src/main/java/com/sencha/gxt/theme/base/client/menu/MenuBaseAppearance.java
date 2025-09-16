@@ -1,19 +1,19 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.theme.base.client.menu;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Node;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
-import com.google.gwt.user.client.DOM;
 import com.sencha.gxt.core.client.Style.HideMode;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
@@ -35,11 +35,7 @@ public abstract class MenuBaseAppearance implements Menu.MenuAppearance {
 
     String menu();
 
-    String menuItemActive();
-
     String menuList();
-
-    String menuListItem();
 
     String menuListItemIndent();
 
@@ -84,8 +80,10 @@ public abstract class MenuBaseAppearance implements Menu.MenuAppearance {
   }
 
   public XElement createItem(XElement parent, String childId, boolean needsIndent) {
-    XElement div = XElement.as(DOM.createDiv());
-    div.setId("x-menu-el-" + childId);
+    XElement div = Document.get().createDivElement().cast();
+    if (childId != null && childId.length() != 0) {
+      div.setId("x-menu-el-" + childId);
+    }
     // div.setClassName(style.menuListItem());
     if (needsIndent) div.setClassName(style.menuListItemIndent());
     return div;
@@ -103,7 +101,7 @@ public abstract class MenuBaseAppearance implements Menu.MenuAppearance {
     }
 
     // Scroller does not already exist; create it
-    XElement scroller = XElement.as(DOM.createDiv());
+    XElement scroller = Document.get().createDivElement().cast();
     scroller.addClassName(style.menuScroller(), style.menuScrollerBottom());
     scroller.setInnerHTML("&nbsp;");
     parent.appendChild(scroller);
@@ -139,7 +137,7 @@ public abstract class MenuBaseAppearance implements Menu.MenuAppearance {
     }
 
     // Scroller does not already exist; create it
-    XElement scroller = XElement.as(DOM.createDiv());
+    XElement scroller = Document.get().createDivElement().cast();
     scroller.addClassName(style.menuScroller(), style.menuScrollerTop());
     scroller.setInnerHTML("&nbsp;");
     parent.insertFirst(scroller);
@@ -151,7 +149,7 @@ public abstract class MenuBaseAppearance implements Menu.MenuAppearance {
   }
 
   public void onScrollerOut(XElement target) {
-    target.removeClassName(style.menuItemActive(), style.menuScrollerActive());
+    target.removeClassName(style.menuScrollerActive());
   }
 
   public void render(SafeHtmlBuilder result) {

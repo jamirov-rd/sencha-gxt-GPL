@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -17,6 +17,8 @@ import com.google.gwt.dom.client.InputElement;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.ui.impl.TextBoxImpl;
+import com.sencha.gxt.cell.core.client.FocusableCell;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.widget.core.client.event.ParseErrorEvent;
@@ -29,7 +31,7 @@ import com.sencha.gxt.widget.core.client.form.PropertyEditor;
  * 
  * @param <T> the data type
  */
-public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasParseErrorHandlers {
+public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasParseErrorHandlers, FocusableCell {
 
   public interface ValueBaseFieldAppearance extends FieldAppearance {
     XElement getInputElement(Element parent);
@@ -37,31 +39,51 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
 
   protected static TextBoxImpl impl = GWT.create(TextBoxImpl.class);
 
+  /**
+   * True to finish the edit if a blur is fired without a change event for browsers that do fire change events when
+   * blurring the browser window.
+   */
+  protected boolean finishEditOnBlur = true;
+
   @SuppressWarnings("unchecked")
   protected PropertyEditor<T> propertyEditor = (PropertyEditor<T>) PropertyEditor.DEFAULT;
   protected String name;
-  protected boolean allowBlank;
+  protected boolean allowBlank = true;
 
-  private final ValueBaseFieldAppearance appearance;
   private String emptyText;
   private boolean selectOnFocus;
   private static Logger logger = Logger.getLogger(ValueBaseInputCell.class.getName());
   private int cursorLocation;
   private boolean clearValueOnParseError = true;
+  private boolean stopClick;
 
+  /**
+   * Creates a new cell instance.
+   * 
+   * @param appearance the appearance
+   */
   public ValueBaseInputCell(ValueBaseFieldAppearance appearance) {
     super(appearance);
-    this.appearance = appearance;
   }
 
+  /**
+   * Creates a new cell instance.
+   * 
+   * @param appearance the appearance
+   * @param consumedEvents the consumed events
+   */
   public ValueBaseInputCell(ValueBaseFieldAppearance appearance, Set<String> consumedEvents) {
     super(appearance, consumedEvents);
-    this.appearance = appearance;
   }
 
+  /**
+   * Creates a new cell instance.
+   * 
+   * @param appearance the appearance
+   * @param consumedEvents the consumed events
+   */
   public ValueBaseInputCell(ValueBaseFieldAppearance appearance, String... consumedEvents) {
     super(appearance, consumedEvents);
-    this.appearance = appearance;
   }
 
   @Override
@@ -72,13 +94,13 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   @Override
   public void disable(XElement parent) {
     super.disable(parent);
-    appearance.getInputElement(parent).disable();
+    getAppearance().getInputElement(parent).disable();
   }
 
   @Override
   public void enable(XElement parent) {
     super.enable(parent);
-    appearance.getInputElement(parent).enable();
+    getAppearance().getInputElement(parent).enable();
   }
 
   /**
@@ -87,12 +109,11 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
    * @return the appearance
    */
   public ValueBaseFieldAppearance getAppearance() {
-    return appearance;
+    return (ValueBaseFieldAppearance) super.getAppearance();
   }
 
   /**
-   * Gets the current position of the cursor (this also serves as the beginning
-   * of the text selection).
+   * Gets the current position of the cursor (this also serves as the beginning of the text selection).
    * 
    * @param parent the parent
    * @return the cursor's position
@@ -111,8 +132,13 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   }
 
   @Override
+  public XElement getFocusElement(XElement parent) {
+    return getInputElement(parent).cast();
+  }
+
+  @Override
   public InputElement getInputElement(Element parent) {
-    return appearance.getInputElement(parent.<XElement> cast()).cast();
+    return getAppearance().getInputElement(parent.<XElement> cast()).cast();
   }
 
   /**
@@ -173,12 +199,12 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
 
   @Override
   public void onEmpty(XElement parent, boolean empty) {
-    appearance.onEmpty(parent, empty);
+    getAppearance().onEmpty(parent, empty);
   }
 
   @Override
   public boolean resetFocus(Context context, Element parent, T value) {
-    appearance.getInputElement(parent).focus();
+    getAppearance().getInputElement(parent).focus();
     if (cursorLocation > 0) {
       setCursorPos(parent.<XElement> cast(), cursorLocation);
     }
@@ -200,7 +226,7 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
       throw new IndexOutOfBoundsException("From Index: " + start + "  To Index: " + (start + length)
           + "  Text Length: " + getText(parent).length());
     }
-    impl.setSelectionRange((com.google.gwt.user.client.Element) getInputElement(parent).cast(), start, length);
+    impl.setSelectionRange((Element) getInputElement(parent).cast(), start, length);
   }
 
   /**
@@ -208,10 +234,16 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
    * 
    * @param parent the parent
    */
+  @SuppressWarnings("deprecation")
   public void selectAll(XElement parent) {
     int length = getText(parent).length();
     if (length > 0) {
       select(parent, 0, length);
+    } else {
+      // EXTGWT-3391 no focus when starting an edit with an empty field in IE8
+      if (GXT.isIE8()) {
+        impl.setSelectionRange((com.google.gwt.user.client.Element) getInputElement(parent).cast(), 0, 0);
+      }
     }
   }
 
@@ -225,8 +257,7 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   }
 
   /**
-   * True to clear the current value when a parse error occurs (defaults to
-   * true).
+   * True to clear the current value when a parse error occurs (defaults to true).
    * 
    * @param clearValueOnParseError true to clean the value on parse error
    */
@@ -237,8 +268,7 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   /**
    * Sets the cursor position.
    * 
-   * This will only work when the widget is attached to the document and not
-   * hidden.
+   * This will only work when the widget is attached to the document and not hidden.
    * 
    * @param parent the parent
    * @param pos the new cursor position
@@ -267,8 +297,8 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   }
 
   /**
-   * Sets the field's property editor which is used to translate typed values to
-   * string, and string values back to typed values.
+   * Sets the field's property editor which is used to translate typed values to string, and string values back to typed
+   * values.
    * 
    * @param propertyEditor the property editor
    */
@@ -277,8 +307,9 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   }
 
   /**
-   * True to automatically select any existing field text when the field
-   * receives input focus (defaults to false).
+   * True to automatically select any existing field text when the field receives input focus (defaults to false). This
+   * only applies when the field becomes focused via a click. This setting has no effect when tabbing into the field as
+   * the browser will select all text.
    * 
    * @param selectOnFocus true to focus
    */
@@ -287,43 +318,69 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
   }
 
   /**
-   * Sets the underlying DOM field's value directly, bypassing validation. This
-   * method does not update the field's value. To set the value with validation
-   * see {@link #setValue}.
+   * Sets the underlying DOM field's value directly, bypassing validation. This method does not update the field's
+   * value. To set the value with validation see {@link #setValue}.
    * 
    * @param parent the parent element
    * @param text the text
    */
   public void setText(XElement parent, String text) {
-    getInputElement(parent).setValue(text);
+    getInputElement(parent).setValue(text != null ? text : "");
   }
 
   protected void applyEmptyText(Context context, XElement parent) {
     if (!hasFocus(context, parent) && emptyText != null && getText(parent).length() < 1) {
-      setText(parent, emptyText);
+      if (GXT.isIE8() || GXT.isIE9()) {
+        setText(parent, emptyText);
+      }
       onEmpty(parent, true);
     }
+    // can set this whether IE or not
+    getInputElement(parent).setAttribute("placeholder", emptyText == null ? "" : emptyText);
   }
 
   @Override
   protected void onBlur(Context context, XElement parent, T value, NativeEvent event, ValueUpdater<T> valueUpdater) {
+    // all browsers fire change the blur event on a 'normal' blur
+    // when blurring the browser window does the browser fire a change event
+    // browsers that do NOT fire a change event on browser window blur
+    // Safari, Chrome, IE9, IE8
+    //
+    // Browsers should fire the change event
+    // http://www.w3.org/TR/DOM-Level-2-Events/events.html#Events-eventgroupings-htmlevents-h3
+
+    if (finishEditOnBlur && (GXT.isSafari() || GXT.isChrome() || GXT.isOpera() || GXT.isIE9() || GXT.isIE10())) {
+      String text = getText(parent);
+      String sValue = getPropertyEditor().render(value);
+      if (!text.equals(sValue)) {
+        if (GXTLogConfiguration.loggingIsEnabled()) {
+          logger.finest("onBlur input value not equal to value, the browser CHANGE not fired, manually call finishEditing");
+        }
+        finishEditing(parent, value, context.getKey(), valueUpdater);
+      }
+    }
+
     super.onBlur(context, parent, value, event, valueUpdater);
     applyEmptyText(context, parent);
   }
 
   @Override
-  protected void onFocus(Context context, XElement parent, T value, NativeEvent event, ValueUpdater<T> valueUpdater) {
-    super.onFocus(context, parent, value, event, valueUpdater);
+  protected void onClick(XElement parent, NativeEvent event) {
+    if (stopClick) {
+      event.preventDefault();
+    }
+    stopClick = false;
+    super.onClick(parent, event);
+  }
+
+  @Override
+  protected void onFocus(Context context, XElement parent, T value, NativeEvent event, ValueUpdater<T> updater) {
+    super.onFocus(context, parent, value, event, updater);
     if (GXTLogConfiguration.loggingIsEnabled()) {
       logger.finest("onFocus");
     }
 
     if (emptyText != null) {
-      String v = getText(parent);
-      if (emptyText.equals(v)) {
-        setText(parent, "");
-        select(parent, 0, 0);
-      }
       removeEmptyText(parent);
     }
     if (selectOnFocus) {
@@ -331,26 +388,26 @@ public abstract class ValueBaseInputCell<T> extends FieldCell<T> implements HasP
     }
   }
 
-  protected void onKeyDown(Context context, Element parent, T value, NativeEvent event, ValueUpdater<T> valueUpdater) {
-    super.onKeyDown(context, parent, value, event, valueUpdater);
-
-    // IE8 backspace causes navigation away from page when input is read only
-    if (isReadOnly()) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }
-
-  protected void onKeyUp(Context context, Element parent, T value, NativeEvent event, ValueUpdater<T> valueUpdater) {
+  protected void onKeyUp(Context context, XElement parent, T value, NativeEvent event, ValueUpdater<T> valueUpdater) {
     super.onKeyUp(context, parent, value, event, valueUpdater);
 
     cursorLocation = getCursorPos(parent.<XElement> cast());
   }
 
+  @Override
+  protected void onMouseDown(XElement parent, NativeEvent event) {
+    super.onMouseDown(parent, event);
+
+    stopClick = selectOnFocus && !hasFocus(null, parent);
+  }
+
   protected void removeEmptyText(XElement parent) {
     onEmpty(parent, false);
-    if ("".equals(getText(parent))) {
+
+    String v = getText(parent);
+    if (((emptyText != null && emptyText.equals(v)) || "".equals(v)) && (GXT.isIE8() || GXT.isIE9())) {
       setText(parent, "");
+      select(parent, 0, 0);
     }
   }
 

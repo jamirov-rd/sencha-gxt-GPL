@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -16,7 +16,10 @@ public class GrayItemAppearance extends ItemBaseAppearance {
 
   public interface GrayItemResources extends ItemBaseAppearance.ItemResources, ClientBundle {
 
-    @Source({"com/sencha/gxt/theme/base/client/menu/Item.css", "GrayItem.css"})
+    @Override
+    @Source({"com/sencha/gxt/theme/base/client/menu/Item.css",
+            "com/sencha/gxt/theme/gray/client/menu/GrayItem.css",
+            "GrayItem.css"})
     GrayItemStyle style();
 
     ImageResource itemOver();
@@ -24,8 +27,6 @@ public class GrayItemAppearance extends ItemBaseAppearance {
   }
 
   public interface GrayItemStyle extends ItemStyle {
-
-    String active();
 
   }
 

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,9 +8,11 @@
 package com.sencha.gxt.widget.core.client;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Stack;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.event.shared.SimpleEventBus;
 import com.google.gwt.user.client.ui.Widget;
@@ -26,7 +28,19 @@ import com.sencha.gxt.widget.core.client.event.UnregisterEvent.UnregisterHandler
 
 /**
  * An object that represents a group of {@link Widget} instances and provides
- * z-order management and window activation behavior.
+ * z-order management and window activation behavior. By default, WindowManager
+ * only provides these features for the {@link Window} class, as {@code Widget}s
+ * don't have a concept of activation or moving to the front.
+ * 
+ * Can be extended and replaced to support non-{@code Window} classes - the main
+ * extension points will be the {@link #activateLast()} and {@link #setActiveWin(Widget)}
+ * methods, which should be made general enough for the specific use case. Then, 
+ * the global {@code WindowManager} can be replaced with the subclass in the project
+ * module file:
+ * <pre><code>
+&lt;replace-with class="com.example.project.client.ReplacementWindowManager"&gt;
+    &lt;when-type-is class="com.sencha.gxt.widget.core.client.WindowManager" /&gt;
+&lt;/replace-with&gt;
  */
 public class WindowManager implements HasRegisterHandlers<Widget>, HasUnregisterHandlers<Widget> {
 
@@ -38,7 +52,7 @@ public class WindowManager implements HasRegisterHandlers<Widget>, HasUnregister
    * @return the window manager
    */
   public static WindowManager get() {
-    if (instance == null) instance = new WindowManager();
+    if (instance == null) instance = GWT.create(WindowManager.class);
     return instance;
   }
 
@@ -146,7 +160,7 @@ public class WindowManager implements HasRegisterHandlers<Widget>, HasUnregister
    * @return the widgets
    */
   public List<Widget> getWindows() {
-    return widgets;
+    return Collections.unmodifiableList(widgets);
   }
 
   /**
@@ -187,7 +201,7 @@ public class WindowManager implements HasRegisterHandlers<Widget>, HasUnregister
    * 
    * @param widget the widget
    */
-  public void unregister(Window widget) {
+  public void unregister(Widget widget) {
     if (front == widget) {
       front = null;
     }
@@ -201,18 +215,25 @@ public class WindowManager implements HasRegisterHandlers<Widget>, HasUnregister
     return eventBus == null ? eventBus = new SimpleEventBus() : eventBus;
   }
 
-  private void activateLast() {
+  /**
+   * Activates the top window in the stack. Protected so it can be overridden to activate
+   * more than just GXT Window objects.
+   */
+  protected void activateLast() {
     for (int i = accessList.size() - 1; i >= 0; --i) {
-      Window w = (Window) accessList.get(i);
-      if (w.isVisible()) {
-        setActiveWin(w);
-        return;
+      Widget last = accessList.get(i);
+      if (last instanceof Window) {
+        Window w = (Window) last;
+        if (w.isVisible()) {
+          setActiveWin(w);
+          return;
+        }
       }
     }
     setActiveWin(null);
   }
 
-  private void focus(Widget widget) {
+  protected void focus(Widget widget) {
     if (widget instanceof Component) {
       ((Component) widget).focus();
     } else {
@@ -220,7 +241,12 @@ public class WindowManager implements HasRegisterHandlers<Widget>, HasUnregister
     }
   }
 
-  private void setActiveWin(Widget window) {
+  /**
+   * Indicates that this window should be made active. Protected so it can be overridden
+   * to provide specialized behavior when more than GXT Windows are used.
+   * @param window
+   */
+  protected void setActiveWin(Widget window) {
     if (window != front) {
       if (front != null) {
         if (window instanceof Window) {

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,7 +12,7 @@ import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.dom.client.TableElement;
 import com.google.gwt.resources.client.ClientBundle;
-import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.resources.client.CssResource.Import;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.resources.client.ImageResource.ImageOptions;
 import com.google.gwt.resources.client.ImageResource.RepeatStyle;
@@ -23,6 +23,7 @@ import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
 import com.sencha.gxt.widget.core.client.grid.GridView.GridAppearance;
+import com.sencha.gxt.widget.core.client.grid.GridView.GridStateStyles;
 import com.sencha.gxt.widget.core.client.grid.GridView.GridStyles;
 
 public abstract class GridBaseAppearance implements GridAppearance {
@@ -30,6 +31,7 @@ public abstract class GridBaseAppearance implements GridAppearance {
   public interface GridResources extends ClientBundle {
 
     @Source("Grid.css")
+    @Import(GridStateStyles.class)
     GridStyle css();
 
     @ImageOptions(repeatStyle = RepeatStyle.Vertical)
@@ -40,16 +42,10 @@ public abstract class GridBaseAppearance implements GridAppearance {
 
   }
 
-  public interface GridStyle extends CssResource, GridStyles {
-
-    String empty();
-
-    String grid();
-
+  public interface GridStyle extends GridStyles {
     String scroller();
 
     String body();
-
   }
 
   public interface GridTemplates extends XTemplates {
@@ -81,7 +77,7 @@ public abstract class GridBaseAppearance implements GridAppearance {
   @Override
   public Element findRow(Element elem) {
     if (Element.is(elem)) {
-      return elem.<XElement> cast().findParentElement("." + style.row(), 15);
+      return elem.<XElement> cast().findParentElement("." + style.row(), -1);
     }
     return null;
   }
@@ -94,7 +90,7 @@ public abstract class GridBaseAppearance implements GridAppearance {
   @Override
   public Element findCell(Element elem) {
     if (Element.is(elem)) {
-      return elem.<XElement> cast().findParentElement("." + style.cell(), 15);
+      return elem.<XElement> cast().findParentElement("." + style.cell(), -1);
     }
     return null;
   }
@@ -111,12 +107,10 @@ public abstract class GridBaseAppearance implements GridAppearance {
 
   @Override
   public void onRowSelect(Element row, boolean select) {
-    row.<XElement> cast().setClassName(style.rowSelected(), select);
   }
 
   @Override
   public void onCellSelect(Element cell, boolean select) {
-    cell.<XElement> cast().setClassName(style.cellSelected(), select);
   }
 
   @Override

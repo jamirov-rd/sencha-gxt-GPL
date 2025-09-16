@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -11,10 +11,10 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Document;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
@@ -29,6 +29,7 @@ import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
+import com.sencha.gxt.core.client.util.KeyNav;
 import com.sencha.gxt.core.client.util.Point;
 import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.core.client.util.Size;
@@ -39,8 +40,12 @@ import com.sencha.gxt.fx.client.DragMoveEvent;
 import com.sencha.gxt.fx.client.DragStartEvent;
 import com.sencha.gxt.fx.client.Draggable;
 import com.sencha.gxt.messages.client.DefaultMessages;
-import com.sencha.gxt.widget.core.client.button.TextButton;
+import com.sencha.gxt.widget.core.client.FramedPanel.FramedPanelAppearance;
 import com.sencha.gxt.widget.core.client.button.ToolButton;
+import com.sencha.gxt.widget.core.client.container.FlowLayoutContainer;
+import com.sencha.gxt.widget.core.client.container.LayoutData;
+import com.sencha.gxt.widget.core.client.container.ResizeContainer;
+import com.sencha.gxt.widget.core.client.container.VerticalLayoutContainer;
 import com.sencha.gxt.widget.core.client.event.ActivateEvent;
 import com.sencha.gxt.widget.core.client.event.ActivateEvent.ActivateHandler;
 import com.sencha.gxt.widget.core.client.event.ActivateEvent.HasActivateHandlers;
@@ -83,12 +88,43 @@ import com.sencha.gxt.widget.core.client.event.ShowEvent;
     w.setWidget(new Frame("http://www.sencha.com/products/gxt"));
     w.show();
  * </pre>
+ * <p />
+ * In this case, the window contains a single Frame widget, as specified in the call to <code>setWidget</code>. To
+ * display multiple widgets, use setWidget to add a container to the window and then add widgets to the container. Once
+ * the window is shown, if you add or remove widgets from the container, be sure to invoke {@link #forceLayout()} to
+ * instruct the window to update its layout.
+ * <p />
+ * The {@link #setPixelSize(int, int)} method specifies the size of the window. This size, adjusted for the frame and
+ * heading, is propagated to the window's content. If the content is a {@link ResizeContainer} like
+ * {@link VerticalLayoutContainer} the container lays out the children and propagates the size to them, in a top-down
+ * fashion, as specified by the child's {@link LayoutData}.
+ * <p />
+ * Alternatively, either dimension in the call to <code>setPixelSize</code> may be specified as -1. This enables auto
+ * sizing for that dimension. Auto sizing is generally used with a container that is not a <code>ResizeContainer</code>
+ * , like {@link FlowLayoutContainer}. In this case the children determine their own size and this determines the size
+ * of the window, in a bottom-up fashion.
+ * <p />
+ * To configure auto size for a particular dimension, you must also set the minimum size for that dimension to zero and
+ * turn off the resizable property so that the user cannot resize the window (which would turn auto size off). For
+ * example, to auto size both the width and the height, set the following window properties as indicated:
+ * 
+ * <pre>
+    w.setPixelSize(-1, -1);
+    w.setMinWidth(0);
+    w.setMinHeight(0);
+    w.setResizable(false);
+ * </pre>
+ * <p />
+ * Note: even with auto size configured, you must still invoke {@link #forceLayout()} as described above if you add or
+ * remove widgets from a container that is displayed in a window. Failure to do so may result in unexpected visual
+ * effects, such as an incomplete window shadow or buttons that are not positioned correctly. Furthermore, you must
+ * ensure that the size of the window cannot grow beyond the viewport (e.g. the browser window).
  */
 public class Window extends ContentPanel implements HasActivateHandlers<Window>, HasDeactivateHandlers<Window>,
     HasMaximizeHandlers, HasMinimizeHandlers, HasRestoreHandlers {
 
   @SuppressWarnings("javadoc")
-  public interface WindowAppearance extends ContentPanelAppearance {
+  public interface WindowAppearance extends FramedPanelAppearance {
     String ghostClass();
   }
 
@@ -134,6 +170,10 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   private class ResizeHandler implements ResizeStartHandler, ResizeEndHandler {
     @Override
     public void onResizeEnd(final ResizeEndEvent event) {
+      // corrects button bar location after resize
+      if (GXT.isIE6() || GXT.isIE7()) {
+        getElement().repaint();
+      }
       Scheduler.get().scheduleDeferred(new ScheduledCommand() {
         @Override
         public void execute() {
@@ -173,7 +213,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   private ModalPanel modalPanel;
   private Resizable resizer;
   private Point restorePos;
-  private Size restoreSize;
+  private Size restoreSize, viewportSize;
   private boolean draggable = true;
   private boolean positioned;
   private boolean autoHide;
@@ -185,26 +225,26 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   private HandlerRegistration modalPreview;
   private boolean dragging;
   private ResizeHandler resizeHandler;
+  private boolean clearHeight;
+  private boolean clearWidth;
+
   private DragHandler dragHandler = new DragHandler() {
     public void onDragCancel(DragCancelEvent event) {
       Window.this.onDragCancel(event);
-    };
+    }
 
     public void onDragEnd(DragEndEvent event) {
       Window.this.onDragEnd(event);
-    };
+    }
 
     public void onDragMove(DragMoveEvent event) {
       Window.this.onDragMove(event);
-    };
+    }
 
     public void onDragStart(DragStartEvent event) {
       Window.this.onDragStart(event);
-    };
+    }
   };
-
-  private TextButton hideButton;
-  private final WindowAppearance appearance;
 
   /**
    * Creates a new window with the default appearance.
@@ -220,12 +260,14 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
    */
   public Window(WindowAppearance appearance) {
     super(appearance);
-    this.appearance = appearance;
     shim = true;
     hidden = true;
     setShadow(true);
+    // using OFFSETS hideMode.  IE11 has issues with the default HideMode causing issues with ValueBaseField text
+    setHideMode(HideMode.OFFSETS);
     setDraggable(true);
-    setResizable(true);
+
+    setMonitorWindowResize(true);
 
     forceLayoutOnResize = true;
 
@@ -243,16 +285,10 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
         }
         return false;
       }
-
-      @Override
-      protected void onPreviewKeyPress(NativePreviewEvent pe) {
-        onKeyPress(pe.getNativeEvent().<Event> cast());
-      }
-
     };
     eventPreview.getIgnoreList().add(getElement());
 
-    sinkEvents(Event.ONMOUSEDOWN | Event.ONKEYPRESS);
+    sinkEvents(Event.ONMOUSEDOWN | KeyNav.getKeyEvent());
 
     getElement().setTabIndex(0);
     getElement().setAttribute("hideFocus", "true");
@@ -284,32 +320,29 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Aligns the window to the specified element. Should only be called when the
-   * window is visible.
+   * Aligns the window to the specified element. Should only be called when the window is visible.
    * 
    * @param elem the element to align to.
-   * @param alignment the position to align to (see {@link XElement#alignTo} for
-   *          more details)
-   * @param offsets the offsets
+   * @param alignment the position to align to (see {@link XElement#alignTo} for more details)
+   * @param offsetX X offset
+   * @param offsetY Y offset
    */
-  public void alignTo(Element elem, AnchorAlignment alignment, int[] offsets) {
-    Point p = getElement().getAlignToXY(elem, alignment, offsets);
+  public void alignTo(Element elem, AnchorAlignment alignment, int offsetX, int offsetY) {
+    Point p = getElement().getAlignToXY(elem, alignment, offsetX, offsetY);
     setPagePosition(p.getX(), p.getY());
   }
 
   /**
-   * Centers the window in the viewport. Should only be called when the window
-   * is visible.
+   * Centers the window in the viewport. Should only be called when the window is visible.
    */
   public void center() {
-    Point p = getElement().getAlignToXY(Document.get().getBody(), new AnchorAlignment(Anchor.CENTER, Anchor.CENTER),
-        null);
+    Point p = getElement().getAlignToXY(Document.get().getBody(), new AnchorAlignment(Anchor.CENTER, Anchor.CENTER), 0,
+        0);
     setPagePosition(p.getX(), p.getY());
   }
 
   /**
-   * Focus the window. If a focusWidget is set, it will receive focus, otherwise
-   * the window itself will receive focus.
+   * Focus the window. If a focusWidget is set, it will receive focus, otherwise the window itself will receive focus.
    */
   @Override
   public void focus() {
@@ -319,6 +352,11 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
         doFocus();
       }
     });
+  }
+
+  @Override
+  public WindowAppearance getAppearance() {
+    return (WindowAppearance) super.getAppearance();
   }
 
   /**
@@ -364,15 +402,6 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Returns the button the was clicked to initiate the hide.
-   * 
-   * @return the hide button or null
-   */
-  public TextButton getHideButton() {
-    return hideButton;
-  }
-
-  /**
    * Returns the minimum height.
    * 
    * @return the minimum height
@@ -410,20 +439,9 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
 
   @Override
   public void hide() {
-    hide(null);
-  }
-
-  /**
-   * Hides the window.
-   * 
-   * @param buttonPressed the button that was pressed or null
-   */
-  public void hide(TextButton buttonPressed) {
     if (hidden || !fireCancellableEvent(new BeforeHideEvent())) {
       return;
     }
-
-    hideButton = buttonPressed;
 
     if (dragger != null) {
       dragger.cancelDrag();
@@ -434,6 +452,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     if (!maximized) {
       restoreSize = getElement().getSize();
       restorePos = new Point(getElement().getLeft(), getElement().getTop());
+      viewportSize = XDOM.getViewportSize();
     }
 
     if (modalPreview != null) {
@@ -460,7 +479,6 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     }
 
     fireEvent(new HideEvent());
-    // fireEvent(Events.Hide, new WindowEvent(this, buttonPressed));
   }
 
   /**
@@ -554,8 +572,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Fits the window within its current container and automatically replaces the
-   * 'maximize' tool button with the 'restore' tool button.
+   * Fits the window within its current container and automatically replaces the 'maximize' tool button with the
+   * 'restore' tool button.
    */
   public void maximize() {
     if (!maximized) {
@@ -596,15 +614,21 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
 
       fireEvent(new MaximizeEvent());
     } else {
-      fitContainer();
+      // EXTGWT-2731 - when maximizeable, and instead of fitting, make the window maximized, otherwise
+      // it appears out of sync with button max/restore.
+      if (maximizable) {
+        maximized = false;
+        maximize();
+      } else {
+        fitContainer();
+      }
     }
   }
 
   /**
-   * Placeholder method for minimizing the window. By default, this method
-   * simply fires the minimize event since the behavior of minimizing a window
-   * is application-specific. To implement custom minimize behavior, either the
-   * minimize event can be handled or this method can be overridden.
+   * Placeholder method for minimizing the window. By default, this method simply fires the minimize event since the
+   * behavior of minimizing a window is application-specific. To implement custom minimize behavior, either the minimize
+   * event can be handled or this method can be overridden.
    */
   public void minimize() {
     fireEvent(new MinimizeEvent());
@@ -624,15 +648,17 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
             manager.bringToFront(this);
           }
         }
-
+        break;
+      case Event.ONKEYDOWN:
+      case Event.ONKEYPRESS:
+        onKeyPress(event);
         break;
     }
   }
 
   /**
-   * Restores a maximized window back to its original size and position prior to
-   * being maximized and also replaces the 'restore' tool button with the
-   * 'maximize' tool button.
+   * Restores a maximized window back to its original size and position prior to being maximized and also replaces the
+   * 'restore' tool button with the 'maximize' tool button.
    */
   public void restore() {
     if (maximized) {
@@ -660,7 +686,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
         setPixelSize(restoreSize.getWidth(), restoreSize.getHeight());
         cacheSizes = cacheSizesRestore;
       }
-      if (container == null && restoreWindowScrolling != null) {
+      if (container == null && restoreWindowScrolling != null && !restoreSize.equals(XDOM.getViewportSize())) {
         com.google.gwt.dom.client.Document.get().enableScrolling(restoreWindowScrolling.booleanValue());
         restoreWindowScrolling = null;
       }
@@ -670,9 +696,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Makes this the active window by showing its shadow, or deactivates it by
-   * hiding its shadow. This method also fires the activate or deactivate event
-   * depending on which action occurred.
+   * Makes this the active window by showing its shadow, or deactivates it by hiding its shadow. This method also fires
+   * the activate or deactivate event depending on which action occurred.
    * 
    * @param active true to make the window active
    */
@@ -704,8 +729,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to hide the window when the user clicks outside of the window's bounds
-   * (defaults to false, pre-render).
+   * True to hide the window when the user clicks outside of the window's bounds (defaults to false, pre-render).
    * 
    * @param autoHide true for auto hide
    */
@@ -714,8 +738,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to blink the window when the user clicks outside of the windows bounds
-   * (defaults to false). Only applies window model = true.
+   * True to blink the window when the user clicks outside of the windows bounds (defaults to false). Only applies
+   * window model = true.
    * 
    * @param blinkModal true to blink
    */
@@ -727,9 +751,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to display the 'close' tool button and allow the user to close the
-   * window, false to hide the button and disallow closing the window (default
-   * to true).
+   * True to display the 'close' tool button and allow the user to close the window, false to hide the button and
+   * disallow closing the window (default to true).
    * 
    * @param closable true to enable closing
    */
@@ -738,8 +761,9 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to constrain the window to the {@link XDOM#getViewportSize()}, false
-   * to allow it to fall outside of the Viewport (defaults to true).
+   * True to constrain the window to the {@link XDOM#getViewportSize()}, false to allow it to fall outside of the
+   * Viewport (defaults to true). Note, when using window.getDraggable().setContainer(container) will override
+   * setConstrain(false) and constrain the window to the container given during dragging.
    * 
    * @param constrain true to constrain, otherwise false
    */
@@ -751,8 +775,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Sets the container element to be used to size and position the window when
-   * maximized.
+   * Sets the container element to be used to size and position the window when maximized.
    * 
    * @param container the container element
    */
@@ -787,12 +810,10 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to display the 'maximize' tool button and allow the user to maximize
-   * the window, false to hide the button and disallow maximizing the window
-   * (defaults to false). Note that when a window is maximized, the tool button
-   * will automatically change to a 'restore' button with the appropriate
-   * behavior already built-in that will restore the window to its previous
-   * size.
+   * True to display the 'maximize' tool button and allow the user to maximize the window, false to hide the button and
+   * disallow maximizing the window (defaults to false). Note that when a window is maximized, the tool button will
+   * automatically change to a 'restore' button with the appropriate behavior already built-in that will restore the
+   * window to its previous size.
    * 
    * @param maximizable the maximizable state
    */
@@ -801,8 +822,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * The minimum height in pixels allowed for this window (defaults to 100).
-   * Only applies when resizable = true.
+   * The minimum height in pixels allowed for this window (defaults to 100). Only applies when resizable = true.
    * 
    * @param minHeight the min height
    */
@@ -814,12 +834,10 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to display the 'minimize' tool button and allow the user to minimize
-   * the window, false to hide the button and disallow minimizing the window
-   * (defaults to false). Note that this button provides no implementation --
-   * the behavior of minimizing a window is implementation-specific, so the
-   * minimize event must be handled and a custom minimize behavior implemented
-   * for this option to be useful.
+   * True to display the 'minimize' tool button and allow the user to minimize the window, false to hide the button and
+   * disallow minimizing the window (defaults to false). Note that this button provides no implementation -- the
+   * behavior of minimizing a window is implementation-specific, so the minimize event must be handled and a custom
+   * minimize behavior implemented for this option to be useful.
    * 
    * @param minimizable true to enabled minimizing
    */
@@ -828,8 +846,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * The minimum width in pixels allowed for this window (defaults to 200). Only
-   * applies when resizable = true.
+   * The minimum width in pixels allowed for this window (defaults to 200). Only applies when resizable = true.
    * 
    * @param minWidth the minimum height
    */
@@ -841,9 +858,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to make the window modal and mask everything behind it when displayed,
-   * false to display it without restricting access to other UI elements
-   * (defaults to false).
+   * True to make the window modal and mask everything behind it when displayed, false to display it without restricting
+   * access to other UI elements (defaults to false).
    * 
    * @param modal true for modal
    */
@@ -852,10 +868,10 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Allows override of the built-in processing for the escape key. Default
-   * action is to close the Window.
+   * True to close the window when the escape key is pressed (defaults to true). Only applies when
+   * {@link #setCollapsible(boolean)} is true.
    * 
-   * @param onEsc true to close window on esc key press
+   * @param onEsc true to close window on escape key press
    */
   public void setOnEsc(boolean onEsc) {
     this.onEsc = onEsc;
@@ -874,8 +890,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * True to allow user resizing at each edge and corner of the window, false to
-   * disable resizing (defaults to true).
+   * True to allow user resizing at each edge and corner of the window, false to disable resizing (defaults to true).
    * 
    * @param resizable true to enabled resizing
    */
@@ -898,20 +913,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     this.windowMessages = windowMessages;
   }
 
-  // @Override
-  // public void setZIndex(int zIndex) {
-  // super.setZIndex(zIndex);
-  // if (ghost != null) {
-  // ghost.setZIndex(zIndex);
-  // }
-  // if (modalPanel != null && modalPanel.rendered) {
-  // modalPanel.el().setZIndex(zIndex - 9);
-  // }
-  // }
-
   /**
-   * Sets the z-index for the window. A larger value will cause the window to
-   * appear over windows with smaller values.
+   * Sets the z-index for the window. A larger value will cause the window to appear over windows with smaller values.
    * 
    * @param zIndex the z-index (stacking order) of the window
    */
@@ -926,22 +929,21 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Shows the window, rendering it first if necessary, or activates it and
-   * brings it to front if hidden.
+   * Shows the window, rendering it first if necessary, or activates it and brings it to front if hidden.
    */
   @Override
   public void show() {
     if (!hidden || !fireCancellableEvent(new BeforeShowEvent())) {
       return;
     }
+
     // remove hide style, else layout fails
     removeStyleName(getHideMode().value());
-    // addStyleName(HideMode.OFFSETS.value());
+    getElement().makePositionable(true);
     if (!isAttached()) {
       RootPanel.get().add(this);
     }
 
-    getElement().makePositionable(true);
     onShow();
     manager.register(this);
 
@@ -950,8 +952,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Sends this window to the back of (lower z-index than) any other visible
-   * windows.
+   * Sends this window to the back of (lower z-index than) any other visible windows.
    */
   public void toBack() {
     manager.sendToBack(this);
@@ -968,9 +969,16 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     hidden = false;
 
     if (restorePos != null) {
-      setPosition(restorePos.getX(), restorePos.getY());
-      if (restoreSize != null) {
-        setPixelSize(restoreSize.getWidth(), restoreSize.getHeight());
+      if (XDOM.getViewportSize().equals(viewportSize)) {
+        setPosition(restorePos.getX(), restorePos.getY());
+        if (restoreSize != null) {
+          setAutoPixelSize(restoreSize.getWidth(), restoreSize.getHeight());
+        }
+      } else {
+        restorePos = null;
+        restoreSize = null;
+        viewportSize = null;
+        positioned = false;
       }
     }
     if (restoreWindowScrolling != null) {
@@ -979,28 +987,24 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
 
     int h = getOffsetHeight();
     int w = getOffsetWidth();
-    boolean autoHeight = isAutoHeight();
     boolean autoWidth = isAutoWidth();
 
     if ((GXT.isIE6() || GXT.isIE7()) && autoWidth) {
-      setWidth(minWidth);
+      // only the first child of the body wrap returns valid sizing
+      w = getAppearance().getBodyWrap(getElement()).getFirstChildElement().getOffsetWidth();
+      setWidth(Math.max(minWidth, w + getFrameSize().getWidth()));
     }
-
-    h = getOffsetHeight();
 
     if (h < minHeight && w < minWidth) {
+      clearHeight = true;
+      clearWidth = true;
       setPixelSize(minWidth, minHeight);
     } else if (h < minHeight) {
+      clearHeight = true;
       setHeight(minHeight);
     } else if (w < minWidth) {
+      clearWidth = true;
       setWidth(minWidth);
-    }
-
-    if (autoHeight) {
-      height = null;
-    }
-    if (autoWidth) {
-      width = null;
     }
 
     // not positioned, then center
@@ -1022,23 +1026,9 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
                 && (modalPanel == null || (modalPanel != null && !modalPanel.getElement().isOrHasChild(target)))
                 && !Window.this.getElement().isOrHasChild(target)
                 && target.findParent("." + CommonStyles.get().ignore(), -1) == null) {
-              // ArrayList<Component> col = new
-              // ArrayList<Component>(ComponentManager.get().getAll());
-              // for (Component c : col) {
-              // if (c instanceof TriggerField<?>) {
-              // triggerBlur((TriggerField<?>) c);
-              // } else if (c instanceof Menu) {
-              // ((Menu) c).hide(true);
-              // }
-              // }
-              // Window.this.focus();
             }
           }
         }
-
-        // private native void triggerBlur(TriggerField<?> field) /*-{
-        // field.@com.extjs.gxt.ui.client.widget.form.TriggerField::triggerBlur(Lcom/extjs/gxt/ui/client/event/ComponentEvent;)(null);
-        // }-*/;
       });
     }
 
@@ -1060,22 +1050,17 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     removeStyleName(HideMode.OFFSETS.value());
     fireEvent(new ShowEvent());
     toFront();
-    // }
-    // });
-    // layout early to render window's content for size calcs
-    // if (!layoutExecuted || isLayoutNeeded()) {
-    // forceLayout();
-    // }
-
   }
 
   protected Layer createGhost() {
-    XElement div = DOM.createDiv().<XElement> cast();
+    XElement div = Document.get().createDivElement().<XElement> cast();
     Layer l = new Layer(div);
     if (shim && GXT.isUseShims()) {
       l.enableShim();
     }
-    l.getElement().setClassName(appearance.ghostClass());
+    l.getElement().setClassName(getAppearance().ghostClass());
+    // neptune theme rounded corners applied to root element of window, not header itself
+    l.getElement().addClassName(getStyleName());
     if (header != null) {
       div.appendChild(getElement().getFirstChild().cloneNode(true));
     }
@@ -1095,6 +1080,24 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     }
   }
 
+  @Override
+  protected void doLayout() {
+    if ((GXT.isIE6() || GXT.isIE7()) && (isAutoWidth() || isAutoHeight())) {
+      getElement().repaint();
+    }
+    super.doLayout();
+    if (clearWidth) {
+      clearWidth = false;
+      width = null;
+    }
+    if (clearHeight) {
+      clearHeight = false;
+      height = null;
+    }
+
+    sync(true);
+  }
+
   protected void fitContainer() {
     if (container != null) {
       Rectangle bounds = container.getBounds();
@@ -1111,8 +1114,7 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   /**
-   * Returns the window messages. The default implementation provides for
-   * translatable messages using a resource file.
+   * Returns the window messages. The default implementation provides for translatable messages using a resource file.
    * 
    * @return the window messages
    */
@@ -1124,11 +1126,11 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   }
 
   protected Layer ghost() {
-    Layer g = ghost != null ? ghost : createGhost();
+    Layer g = createGhost();
     g.getElement().setVisibility(false);
     Rectangle box = getElement().getBounds(false);
     g.getElement().setBounds(box, true);
-    int h = appearance.getBodyWrap(getElement()).getOffsetHeight();
+    int h = getAppearance().getBodyWrap(getElement()).getOffsetHeight();
     g.getElement().getChild(1).<XElement> cast().setHeight(h - 1, true);
     return g;
   }
@@ -1189,6 +1191,8 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
   @Override
   protected void onAfterFirstAttach() {
     super.onAfterFirstAttach();
+
+    setResizable(resizable);
 
     if (manager == null) {
       manager = WindowManager.get();
@@ -1266,15 +1270,18 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     resizing = false;
   }
 
-  protected void onKeyPress(Event we) {
-    int keyCode = we.getKeyCode();
-
-    boolean t = getElement().isOrHasChild(we.getEventTarget().<Element> cast());
-    boolean key = true;
-    if (key && closable && onEsc && keyCode == KeyCodes.KEY_ESCAPE && t) {
+  protected void onKeyPress(Event event) {
+    if (isClosable() && isOnEsc() && event.getKeyCode() == KeyCodes.KEY_ESCAPE) {
       hide();
     }
+  }
 
+  @Override
+  protected void onResize(int width, int height) {
+    super.onResize(width, height);
+    if ((GXT.isIE6() || GXT.isIE7()) && (isAutoWidth() || isAutoHeight())) {
+      getElement().repaint();
+    }
   }
 
   protected void onStartResize(ResizeStartEvent re) {
@@ -1292,6 +1299,9 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
           setPagePosition(p.getX(), p.getY());
         }
       }
+      if ((GXT.isIE6() || GXT.isIE7()) && (isAutoWidth() || isAutoHeight())) {
+        getElement().repaint();
+      }
     }
   }
 
@@ -1308,5 +1318,32 @@ public class Window extends ContentPanel implements HasActivateHandlers<Window>,
     if (de != null) {
       setPagePosition(de.getX(), de.getY());
     }
+  }
+
+  /**
+   * See {@link Window} for more information on auto size. Auto size is enabled if the width and height are specified as
+   * -1 (or null) and the minimum width and height are specified as 0.
+   * 
+   * @param specifiedWidth the current working width of the window. This is either the width provided by the developer
+   *          (if specified), or the offset width as returned by the DOM. In either case it may have been rounded up to
+   *          the minimum width.
+   * @param specifiedHeight the current working height of the window. This is either the height provided by the
+   *          developer (if specified), or the offset height as returned by the DOM. In either case it may have been
+   *          rounded up to the minimum height.
+   */
+  private void setAutoPixelSize(int specifiedWidth, int specifiedHeight) {
+    final int width;
+    if (isAutoWidth() && getMinWidth() == 0) {
+      width = -1;
+    } else {
+      width = specifiedWidth;
+    }
+    final int height;
+    if (isAutoHeight() && getMinHeight() == 0) {
+      height = -1;
+    } else {
+      height = specifiedHeight;
+    }
+    setPixelSize(width, height);
   }
 }

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -21,8 +21,6 @@ import com.sencha.gxt.cell.core.client.AutoProgressBarCell;
  */
 public class AutoProgressBar extends ProgressBar {
 
-  protected final AutoProgressBarCell cell;
-  
   /**
    * Creates a new progress bar with the default automatic progress bar cell.
    */
@@ -37,7 +35,6 @@ public class AutoProgressBar extends ProgressBar {
    */
   public AutoProgressBar(AutoProgressBarCell cell) {
     super(cell);
-    this.cell = cell;
   }
 
   /**
@@ -45,7 +42,12 @@ public class AutoProgressBar extends ProgressBar {
    * increment, and interval.
    */
   public void auto() {
-    cell.auto(createContext(), getElement());
+    getCell().auto(createContext(), getElement());
+  }
+
+  @Override
+  public AutoProgressBarCell getCell() {
+    return (AutoProgressBarCell) super.getCell();
   }
 
   /**
@@ -54,7 +56,7 @@ public class AutoProgressBar extends ProgressBar {
    * @return the duration
    */
   public int getDuration() {
-    return cell.getDuration();
+    return getCell().getDuration();
   }
 
   /**
@@ -63,7 +65,7 @@ public class AutoProgressBar extends ProgressBar {
    * @return the interval in milliseconds
    */
   public int getInterval() {
-    return cell.getInterval();
+    return getCell().getInterval();
   }
 
   /**
@@ -72,7 +74,7 @@ public class AutoProgressBar extends ProgressBar {
    * @return true if waiting, else false
    */
   public boolean isRunning() {
-    return cell.isRunning();
+    return getCell().isRunning();
   }
 
   /**
@@ -83,7 +85,7 @@ public class AutoProgressBar extends ProgressBar {
    * @param duration the duration in milliseconds
    */
   public void setDuration(int duration) {
-    cell.setDuration(duration);
+    getCell().setDuration(duration);
   }
 
   /**
@@ -93,7 +95,7 @@ public class AutoProgressBar extends ProgressBar {
    * @param interval the interval to set
    */
   public void setInterval(int interval) {
-    cell.setInterval(interval);
+    getCell().setInterval(interval);
   }
 
   @Override

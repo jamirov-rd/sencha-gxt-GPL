@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -68,6 +68,9 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
     @Source("treeExpanded.png")
     ImageResource jointExpandedIcon();
 
+    @Source("loading.gif")
+    ImageResource loadingIcon();
+
     ImageResource partialChecked();
 
     TreeBaseStyle style();
@@ -78,6 +81,12 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
 
   private final TreeResources resources;
   private final TreeBaseStyle style;
+
+  protected String indentMarkupStart = "<img src='" + GXT.getBlankImageUrl() + "' style='height: 18px; width: ";
+
+  protected String indentMarkupEnd = "px;' />";
+
+  protected int indentWidth = 17;
 
   public TreeBaseAppearance(TreeResources resources) {
     this.resources = resources;
@@ -143,10 +152,15 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
       return target.hasClassName(style.joint());
     }
   }
-  
+
   @Override
   public String itemSelector() {
     return "." + style.node();
+  }
+
+  @Override
+  public ImageResource loadingIcon() {
+    return resources.loadingIcon();
   }
 
   @Override
@@ -215,7 +229,14 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
 
   @Override
   public void render(SafeHtmlBuilder sb) {
-    sb.appendHtmlConstant("<div class=" + style.tree() + "></div>");
+    // EXTGWT-3113 the inner table is needed so that the tree nodes are as wide as needed with horizontal scrolling
+    if (GXT.isIE6() || GXT.isIE7()) {
+      sb.appendHtmlConstant("<div class=" + style.tree() + " style=\"position: relative;\"></div>");
+    } else {
+      sb.appendHtmlConstant("<div class="
+          + style.tree()
+          + " style=\"position: relative;\"><table cellpadding=0 cellspacing=0 width=100%><tr><td></td></tr></table></div>");
+    }
   }
 
   @Override
@@ -235,8 +256,7 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
 
     if (renderMode == TreeViewRenderMode.ALL || renderMode == TreeViewRenderMode.BUFFER_BODY) {
 
-      sb.appendHtmlConstant("<img src='" + GXT.getBlankImageUrl() + "' style='height: 18px; width: " + (level * 18)
-          + "px;' />");
+      sb.appendHtmlConstant(getIndentMarkup(level));
 
       Element jointElement = null;
       switch (joint) {
@@ -247,6 +267,8 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
         case EXPANDED:
           jointElement = getImage(ts.getJointOpenIcon() == null ? resources.jointExpandedIcon() : ts.getJointOpenIcon());
           break;
+        default:
+          // empty
       }
 
       if (jointElement != null) {
@@ -298,6 +320,10 @@ public abstract class TreeBaseAppearance implements TreeAppearance {
   @Override
   public String textSelector() {
     return "." + style.text();
+  }
+
+  protected String getIndentMarkup(int level) {
+    return indentMarkupStart + (indentWidth * level) + indentMarkupEnd;
   }
 
   private Element getImage(ImageResource ir) {

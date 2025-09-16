@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -27,7 +27,6 @@ import com.sencha.gxt.core.client.util.DelayedTask;
 public class CheckBox extends Field<Boolean> implements HasChangeHandlers {
 
   private DelayedTask alignTask = new DelayedTask() {
-
     @Override
     public void onExecute() {
       alignElements();
@@ -57,9 +56,21 @@ public class CheckBox extends Field<Boolean> implements HasChangeHandlers {
     return addDomHandler(handler, ChangeEvent.getType());
   }
 
+  /**
+   * Clears the value from the field.
+   */
+  public void clear() {
+    boolean restore = preventMark;
+    preventMark = true;
+    setValue(false, false);
+    preventMark = restore;
+    clearInvalid();
+  }
+
   @Override
   public void clearInvalid() {
-    // do nothing
+    forceInvalidText = null;
+    // do nothing else, there are no validation errors possible on a checkbox
   }
 
   /**
@@ -86,12 +97,6 @@ public class CheckBox extends Field<Boolean> implements HasChangeHandlers {
   }
 
   @Override
-  public void setReadOnly(boolean readOnly) {
-    super.setReadOnly(readOnly);
-    getCell().getInputElement(getElement()).setReadOnly(readOnly);
-  }
-
-  @Override
   public void setTabIndex(int tabIndex) {
     this.tabIndex = tabIndex;
     getCell().getInputElement(getElement()).setTabIndex(tabIndex);
@@ -108,21 +113,29 @@ public class CheckBox extends Field<Boolean> implements HasChangeHandlers {
     redraw();
   }
 
+  protected void alignElements() {
+    if (getBoxLabel() == null) {
+      getCell().getInputElement(getElement()).<XElement> cast().center(getElement());
+    }
+  }
+
   @Override
   protected void markInvalid(List<EditorError> msg) {
     // do nothing
   }
 
   @Override
+  public void reset() {
+    if (originalValue == null) {
+      originalValue = false;
+    }
+    super.reset();
+  }
+
+  @Override
   protected void onAttach() {
     super.onAttach();
     alignTask.delay(10);
-  }
-
-  protected void alignElements() {
-    if (getBoxLabel() == null) {
-      getCell().getInputElement(getElement()).<XElement> cast().center(getElement());
-    }
   }
 
   @Override
@@ -135,5 +148,7 @@ public class CheckBox extends Field<Boolean> implements HasChangeHandlers {
   protected void onRedraw() {
     super.onRedraw();
     getCell().getInputElement(getElement()).setTabIndex(getTabIndex());
+    alignTask.delay(10);
   }
+
 }

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,7 +8,6 @@
 package com.sencha.gxt.core.client.dom;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.dom.client.StyleInjector;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
@@ -19,6 +18,7 @@ import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.Mask.MaskDefaultAppearance.MaskStyle;
+import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
 
 /**
  * Masks a target element by showing a transparent "gray" overlay with support for a message.
@@ -58,28 +58,27 @@ public class Mask {
     }
 
     private final MaskResources resources;
-    private final MaskStyle style;
-    private static boolean injected;
+    private final MessageTemplates template;
 
     public MaskDefaultAppearance() {
-      this.resources = GWT.create(MaskResources.class);
-      this.style = this.resources.css();
-      if (!injected) {
-        StyleInjector.inject(style.getText(), true);
-        injected = true;
-      }
+      this(GWT.<MessageTemplates>create(MessageTemplates.class), GWT.<MaskResources>create(MaskResources.class));
+    }
+
+    public MaskDefaultAppearance(MessageTemplates template, MaskResources resources) {
+      this.resources = resources;
+      this.template = template;
+      StyleInjectorHelper.ensureInjected(this.resources.css(), true);
     }
 
     @Override
     public void mask(XElement parent, String message) {
       XElement mask = XElement.createElement("div");
-      mask.setClassName(style.mask());
+      mask.setClassName(resources.css().mask());
       parent.appendChild(mask);
 
       XElement box = null;
       if (message != null) {
-        MessageTemplates messageTemplates = GWT.create(MessageTemplates.class);
-        box = XDOM.create(messageTemplates.template(style, SafeHtmlUtils.htmlEscape(message))).cast();
+        box = XDOM.create(template.template(resources.css(), SafeHtmlUtils.htmlEscape(message))).cast();
         parent.appendChild(box);
       }
 
@@ -96,21 +95,21 @@ public class Mask {
 
     @Override
     public String masked() {
-      return style.masked();
+      return resources.css().masked();
     }
 
     @Override
     public String positioned() {
-      return style.positioned();
+      return resources.css().positioned();
     }
 
     @Override
     public void unmask(XElement parent) {
-      XElement mask = parent.selectNode("> ." + style.mask());
+      XElement mask = parent.selectNode("> ." + resources.css().mask());
       if (mask != null) {
         mask.removeFromParent();
       }
-      XElement box = parent.selectNode("> ." + style.box());
+      XElement box = parent.selectNode("> ." + resources.css().box());
       if (box != null) {
         box.removeFromParent();
       }
@@ -125,7 +124,7 @@ public class Mask {
 
   }
 
-  private static Mask instance = new Mask();
+  private static final Mask instance = GWT.create(Mask.class);
 
   /**
    * Masks the given element.
@@ -152,12 +151,16 @@ public class Mask {
     this.appearance = GWT.create(MaskAppearance.class);
   }
 
+  public MaskAppearance getAppearance() {
+    return appearance;
+  }
+
   private void maskInternal(XElement parent, String message) {
     parent.addClassName(appearance.masked());
-    if ("static".equals(parent.getStyle().getPosition())) {
+    if ("static".equals(parent.getComputedStyle("position"))) {
       parent.addClassName(appearance.positioned());
     }
-
+    appearance.unmask(parent);
     appearance.mask(parent, message);
 
   }

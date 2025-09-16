@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
@@ -26,6 +28,7 @@ import com.google.gwt.user.client.ui.RichTextArea;
 import com.google.gwt.user.client.ui.RichTextArea.FontSize;
 import com.google.gwt.user.client.ui.RichTextArea.Justification;
 import com.google.gwt.user.client.ui.Widget;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.messages.client.DefaultMessages;
 import com.sencha.gxt.widget.core.client.Component;
@@ -42,15 +45,13 @@ import com.sencha.gxt.widget.core.client.toolbar.SeparatorToolItem;
 import com.sencha.gxt.widget.core.client.toolbar.ToolBar;
 
 /**
- * Provides an HTML-based rich text editor with a tool bar for selecting
- * formatting options, including fonts, text justification, lists, hyperlinks
- * and text color. Enables switching between formatted and HTML editing modes.
- * Supports copy and paste from Web pages as well as text editing features
- * provided by the browser (e.g. spell checking, text search).
+ * Provides an HTML-based rich text editor with a tool bar for selecting formatting options, including fonts, text
+ * justification, lists, hyperlinks and text color. Enables switching between formatted and HTML editing modes. Supports
+ * copy and paste from Web pages as well as text editing features provided by the browser (e.g. spell checking, text
+ * search).
  * <p/>
- * By default, all formatting options are enabled and available via the tool
- * bar. To disable one or more options, use the appropriate setter <b>before</b>
- * adding the HTML editor to its container.
+ * By default, all formatting options are enabled and available via the tool bar. To disable one or more options, use
+ * the appropriate setter <b>before</b> adding the HTML editor to its container.
  */
 public class HtmlEditor extends AdapterField<String> {
 
@@ -308,7 +309,7 @@ public class HtmlEditor extends AdapterField<String> {
 
   protected VerticalLayoutContainer container;
   protected ToolBar toolBar;
-  protected final HtmlEditorAppearance appearance;
+  private final HtmlEditorAppearance appearance;
   protected HtmlEditorMessages messages;
   protected RichTextArea textArea;
   protected TextArea sourceTextArea;
@@ -323,7 +324,7 @@ public class HtmlEditor extends AdapterField<String> {
   private boolean enableLinks = true;
   private boolean enableLists = true;
   private boolean showToolBar = true;
-  private boolean sourceEditMode = true;
+  private boolean enableSourceEditMode = true;
   private TextButton fontIncrease;
   private TextButton fontDecrease;
   private SelectHandler buttonHandler;
@@ -339,18 +340,19 @@ public class HtmlEditor extends AdapterField<String> {
   private TextButton fontColor;
   private TextButton fontHighlight;
   private ToggleButton sourceEdit;
+  private boolean sourceEditMode;
 
   /**
-   * Creates an HTML-based rich text editor with support for fonts, text
-   * justification, lists, hyperlinks and text color.
+   * Creates an HTML-based rich text editor with support for fonts, text justification, lists, hyperlinks and text
+   * color.
    */
   public HtmlEditor() {
     this(GWT.<HtmlEditorAppearance> create(HtmlEditorAppearance.class));
   }
 
   /**
-   * Creates an HTML-based rich text editor with support for fonts, text
-   * justification, lists, hyperlinks and text color.
+   * Creates an HTML-based rich text editor with support for fonts, text justification, lists, hyperlinks and text
+   * color.
    */
   public HtmlEditor(HtmlEditorAppearance appearance) {
     super(new VerticalLayoutContainer());
@@ -369,6 +371,21 @@ public class HtmlEditor extends AdapterField<String> {
       @Override
       public void onFocus(FocusEvent event) {
         ensureTriggerFieldBlur();
+
+        //EXTGWT-2916 - Firefox is re-enabled whenever it is re-attached to the dom
+        //and focused.
+        if (GXT.isGecko()) {
+          Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+            @Override
+            public void execute() {
+              if (!isEnabled()) {
+                //shouldn't be focusing anyway since disabled,
+                //so we need to re-set this
+                textArea.setEnabled(isEnabled());
+              }
+            }
+          });
+        }
       }
     });
 
@@ -382,6 +399,10 @@ public class HtmlEditor extends AdapterField<String> {
     fontSizesConstants.add(FontSize.LARGE);
     fontSizesConstants.add(FontSize.X_LARGE);
     fontSizesConstants.add(FontSize.XX_LARGE);
+  }
+
+  public HtmlEditorAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -398,70 +419,91 @@ public class HtmlEditor extends AdapterField<String> {
 
   @Override
   public String getValue() {
+    if (sourceEditMode && sourceTextArea != null) {
+      pushValue();
+    }
     return textArea.getHTML();
   }
 
   /**
-   * Returns true if text justification is enabled.
+   * Returns the {@link RichTextArea}.
+   *
+   * @return textArea
+   */
+  public RichTextArea getTextArea() {
+    return textArea;
+  }
+
+  /**
+   * Returns {@code true} if text justification is enabled.
    * 
-   * @return if text justification is enabled
+   * @return {@code true} if text justification is enabled
    */
   public boolean isEnableAlignments() {
     return enableAlignments;
   }
 
   /**
-   * Returns true if setting text foreground and background colors is enabled.
+   * Returns {@code true} if setting text foreground and background colors is enabled.
    * 
-   * @return if setting text foreground and background colors is enabled
+   * @return {@code true} if setting text foreground and background colors is enabled
    */
   public boolean isEnableColors() {
     return enableColors;
   }
 
   /**
-   * Returns true if setting font family name is enabled.
+   * Returns {@code true} if setting font family name is enabled.
    * 
-   * @return if setting font family name is enabled
+   * @return {@code true} if setting font family name is enabled
    */
   public boolean isEnableFont() {
     return enableFont;
   }
 
   /**
-   * Returns true if setting font size is enabled.
+   * Returns {@code true} if setting font size is enabled.
    * 
-   * @return true if setting font size is enabled
+   * @return {@code true} if setting font size is enabled
    */
   public boolean isEnableFontSize() {
     return enableFontSize;
   }
 
   /**
-   * Returns true if setting font style is enabled.
+   * Returns {@code true} if setting font style is enabled.
    * 
-   * @return true if setting font style is enabled
+   * @return {@code true} if setting font style is enabled
    */
   public boolean isEnableFormat() {
     return enableFormat;
   }
 
   /**
-   * Returns true if creating a hyperlink from selected text is enabled.
+   * Returns {@code true} if creating a hyperlink from selected text is enabled.
    * 
-   * @return true if creating a hyperlink from selected text is enabled
+   * @return {@code true} if creating a hyperlink from selected text is enabled
    */
   public boolean isEnableLinks() {
     return enableLinks;
   }
 
   /**
-   * Returns true if creating lists is enabled.
+   * Returns {@code true} if creating lists is enabled.
    * 
-   * @return true if creating lists is enabled
+   * @return {@code true} if creating lists is enabled
    */
   public boolean isEnableLists() {
     return enableLists;
+  }
+
+  /**
+   * Returns {@code true} if the ability to switch to HTML source mode is enabled.
+   * 
+   * @return {@code true} if the ability to switch to HTML source mode is enabled
+   */
+  public boolean isEnableSourceEditMode() {
+    return enableSourceEditMode;
   }
 
   /**
@@ -474,9 +516,9 @@ public class HtmlEditor extends AdapterField<String> {
   }
 
   /**
-   * Returns true if the ability to switch to HTML source mode is enabled.
+   * Returns {@code true} if the editor is in source edit mode.
    * 
-   * @return true if the ability to switch to HTML source mode is enabled
+   * @return {@code true} if editor is in source edit mode
    */
   public boolean isSourceEditMode() {
     return sourceEditMode;
@@ -490,67 +532,83 @@ public class HtmlEditor extends AdapterField<String> {
   }
 
   /**
-   * Sets whether text justification is enabled.
+   * Sets whether text justification is enabled (defaults to {@code true}, pre-render).
    * 
-   * @param enableAlignments true to enable text justification
+   * @param enableAlignments {@code true} to enable text justification
    */
   public void setEnableAlignments(boolean enableAlignments) {
+    assertPreRender();
     this.enableAlignments = enableAlignments;
   }
 
   /**
-   * Sets whether setting text foreground and background colors is enabled.
+   * Sets whether setting text foreground and background colors is enabled (defaults to {@code true}, pre-render).
    * 
-   * @param enableColors true to enable setting text foreground and background
-   *          colors.
+   * @param enableColors {@code true} to enable setting text foreground and background colors.
    */
   public void setEnableColors(boolean enableColors) {
+    assertPreRender();
     this.enableColors = enableColors;
   }
 
   /**
-   * Sets whether setting font family name is enabled.
+   * Sets whether setting font family name is enabled (defaults to {@code true}, pre-render).
    * 
-   * @param enableFont true to enable setting font family name
+   * @param enableFont {@code true} to enable setting font family name
    */
   public void setEnableFont(boolean enableFont) {
+    assertPreRender();
     this.enableFont = enableFont;
   }
 
   /**
-   * Sets whether setting font size is enabled.
+   * Sets whether setting font size is enabled (defaults to {@code true}, pre-render).
    * 
-   * @param enableFontSize true to enable setting font size
+   * @param enableFontSize {@code true} to enable setting font size
    */
   public void setEnableFontSize(boolean enableFontSize) {
+    assertPreRender();
     this.enableFontSize = enableFontSize;
   }
 
   /**
-   * Sets whether setting font style is enabled.
+   * Sets whether setting font style is enabled (defaults to {@code true}, pre-render).
    * 
-   * @param enableFormat true to enable setting font style
+   * @param enableFormat {@code true} to enable setting font style
    */
   public void setEnableFormat(boolean enableFormat) {
+    assertPreRender();
     this.enableFormat = enableFormat;
   }
 
   /**
-   * Sets whether creating a hyperlink from selected text is enable.
+   * Sets whether creating a hyperlink from selected text is enable (defaults to {@code true}, pre-render).
    * 
-   * @param enableLinks true to enable creating a hyperlink from selected text
+   * @param enableLinks {@code true} to enable creating a hyperlink from selected text
    */
   public void setEnableLinks(boolean enableLinks) {
+    assertPreRender();
     this.enableLinks = enableLinks;
   }
 
   /**
-   * Sets whether creating lists is enabled.
+   * Sets whether creating lists is enabled (defaults to {@code true}, pre-render).
    * 
-   * @param enableLists true to enable creating lists
+   * @param enableLists {@code true} to enable creating lists
    */
   public void setEnableLists(boolean enableLists) {
+    assertPreRender();
     this.enableLists = enableLists;
+  }
+
+  /**
+   * Sets whether the source edit mode is enabled (defaults to {@code true}, pre-render).
+   * 
+   * @param enable {@code true} if source edit mode is enabled
+   */
+  public void setEnableSourceEditMode(boolean enable) {
+    assertPreRender();
+    this.enableSourceEditMode = enable;
   }
 
   /**
@@ -563,8 +621,8 @@ public class HtmlEditor extends AdapterField<String> {
   }
 
   /**
-   * Sets whether the toolbar should be shown. This property can only be
-   * modified before this component is first attached.
+   * Sets whether the toolbar should be shown. This property can only be modified before this component is first
+   * attached.
    * 
    * @param showToolBar {@code true} to show the toolbar, {@code false} otherwise.
    */
@@ -573,16 +631,77 @@ public class HtmlEditor extends AdapterField<String> {
     this.showToolBar = showToolBar;
   }
 
+  /**
+   * Specifies if the editor should be in source edit mode. Only applies when {@link #setEnableSourceEditMode(boolean)}
+   * is set to {@code true}.
+   * 
+   * @param sourceEditMode {@code true} to put editor in source edit mode
+   */
+  public void setSourceEditMode(boolean sourceEditMode) {
+    this.sourceEditMode = sourceEditMode;
+
+    if (!isRendered()) {
+      return;
+    }
+
+    if (enableSourceEditMode) {
+
+      if (sourceEditMode) {
+        if (sourceTextArea == null) {
+          sourceTextArea = new TextArea();
+        }
+
+        sourceEdit.setValue(true, false);
+
+        sourceTextArea.setHeight(textArea.getOffsetHeight());
+
+        syncValue();
+        container.remove(1);
+        container.add(sourceTextArea, new VerticalLayoutData(1, 1));
+        container.forceLayout();
+
+        sourceTextArea.focus();
+      } else {
+        pushValue();
+        container.remove(1);
+        container.add(textArea, new VerticalLayoutData(1, 1));
+        container.forceLayout();
+
+        sourceEdit.setValue(false, false);
+
+        textArea.setFocus(true);
+      }
+    }
+
+    for (int i = 0; i < toolBar.getWidgetCount(); i++) {
+      Widget w = toolBar.getWidget(i);
+      if (w != sourceEdit && w instanceof Component) {
+        Component c = (Component) w;
+        if (c.getData("gxt-more") != null) {
+          continue;
+        }
+        c.setEnabled(!sourceEdit.getValue());
+      } else {
+        if (w instanceof FocusWidget) {
+          ((FocusWidget) w).setEnabled(!sourceEdit.getValue());
+        }
+      }
+    }
+  }
+
   @Override
   public void setValue(String value) {
     textArea.setHTML(value);
+    if (sourceEditMode && sourceTextArea != null) {
+      syncValue();
+    }
   }
 
   /**
    * Copies the value of the rich text editor to the HTML source editor.
    */
   public void syncValue() {
-    sourceTextArea.setValue(getValue());
+    sourceTextArea.setValue(textArea.getHTML());
   }
 
   protected void initToolBar() {
@@ -747,34 +866,39 @@ public class HtmlEditor extends AdapterField<String> {
     if (enableColors) {
       fontColor = new TextButton();
       configureButton(fontColor, appearance.fontColor(), m.foreColorTipTitle(), m.foreColorTipText());
-      ColorMenu menu = new ColorMenu();
-      menu.getPalette().addValueChangeHandler(new ValueChangeHandler<String>() {
+      final ColorMenu fontColorMenu = new ColorMenu();
+      fontColorMenu.setFocusOnShow(false);
+      fontColorMenu.getPalette().addValueChangeHandler(new ValueChangeHandler<String>() {
 
         @Override
         public void onValueChange(ValueChangeEvent<String> event) {
+          fontColorMenu.hide();
           textArea.getFormatter().setForeColor(event.getValue());
         }
       });
-      fontColor.setMenu(menu);
+
+      fontColor.setMenu(fontColorMenu);
 
       toolBar.add(fontColor);
 
       fontHighlight = new TextButton();
       configureButton(fontHighlight, appearance.fontHighlight(), m.backColorTipTitle(), m.backColorTipText());
 
-      menu = new ColorMenu();
-      menu.getPalette().addValueChangeHandler(new ValueChangeHandler<String>() {
+      final ColorMenu fontHighlightMenu = new ColorMenu();
+      fontHighlightMenu.setFocusOnShow(false);
+      fontHighlightMenu.getPalette().addValueChangeHandler(new ValueChangeHandler<String>() {
         @Override
         public void onValueChange(ValueChangeEvent<String> event) {
+          fontHighlightMenu.hide();
           textArea.getFormatter().setBackColor(event.getValue());
         }
       });
-      fontHighlight.setMenu(menu);
+      fontHighlight.setMenu(fontHighlightMenu);
 
       toolBar.add(fontHighlight);
     }
 
-    if (sourceEditMode) {
+    if (enableSourceEditMode) {
       toolBar.add(new SeparatorToolItem());
       sourceEdit = new ToggleButton();
       configureButton(sourceEdit, appearance.source(), m.sourceEditTipTitle(), m.sourceEditTipText());
@@ -783,7 +907,6 @@ public class HtmlEditor extends AdapterField<String> {
         @Override
         public void onSelect(SelectEvent event) {
           toggleSourceEditMode();
-          focus();
         }
       });
       toolBar.add(sourceEdit);
@@ -795,53 +918,34 @@ public class HtmlEditor extends AdapterField<String> {
   protected void onAfterFirstAttach() {
     super.onAfterFirstAttach();
     initToolBar();
+
+    if (sourceEditMode) {
+      setSourceEditMode(sourceEditMode);
+    }
   }
 
   @Override
   protected void onDisable() {
     super.onDisable();
-    getElement().selectNode("textarea").disable();
+    if (sourceTextArea != null) {
+      sourceTextArea.disable();
+    }
+    textArea.setEnabled(false);
+    mask();
   }
 
   @Override
   protected void onEnable() {
     super.onEnable();
-    getElement().selectNode("textarea").enable();
+    if (sourceTextArea != null) {
+      sourceTextArea.enable();
+    }
+    textArea.setEnabled(true);
+    unmask();
   }
 
   protected void toggleSourceEditMode() {
-    if (sourceEdit.getValue()) {
-      if (sourceTextArea == null) {
-        sourceTextArea = new TextArea();
-      }
-
-      sourceTextArea.setHeight(textArea.getOffsetHeight());
-
-      syncValue();
-      container.remove(1);
-      container.add(sourceTextArea, new VerticalLayoutData(1, 1));
-      container.forceLayout();
-    } else {
-      pushValue();
-      container.remove(1);
-      container.add(textArea, new VerticalLayoutData(1, 1));
-      container.forceLayout();
-    }
-
-    for (int i = 0; i < toolBar.getWidgetCount(); i++) {
-      Widget w = toolBar.getWidget(i);
-      if (w != sourceEdit && w instanceof Component) {
-        Component c = (Component) w;
-        if (c.getData("gxt-more") != null) {
-          continue;
-        }
-        c.setEnabled(!sourceEdit.getValue());
-      } else {
-        if (w instanceof FocusWidget) {
-          ((FocusWidget) w).setEnabled(!sourceEdit.getValue());
-        }
-      }
-    }
+    setSourceEditMode(!isSourceEditMode());
   }
 
   private void configureButton(CellButtonBase<?> button, ImageResource icon, String tipTitle, String tipText) {

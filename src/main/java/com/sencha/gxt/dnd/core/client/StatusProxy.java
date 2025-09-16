@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -34,7 +34,7 @@ public class StatusProxy extends Component {
 
   }
 
-  private static StatusProxy instance;
+  private static final StatusProxy instance = GWT.create(StatusProxy.class);
 
   /**
    * Returns the singleton instance.
@@ -42,27 +42,28 @@ public class StatusProxy extends Component {
    * @return the status proxy
    */
   public static StatusProxy get() {
-    if (instance == null) {
-      instance = new StatusProxy();
-    }
     return instance;
   }
 
   private boolean status;
   private final StatusProxyAppearance appearance;
 
-  StatusProxy() {
+  protected StatusProxy() {
     this(GWT.<StatusProxyAppearance> create(StatusProxyAppearance.class));
   }
 
-  StatusProxy(StatusProxyAppearance appearance) {
+  protected StatusProxy(StatusProxyAppearance appearance) {
     this.appearance = appearance;
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     appearance.render(builder);
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
     setStatus(false);
 
     setShadow(true);
+  }
+
+  public StatusProxyAppearance getAppearance() {
+    return appearance;
   }
 
   /**

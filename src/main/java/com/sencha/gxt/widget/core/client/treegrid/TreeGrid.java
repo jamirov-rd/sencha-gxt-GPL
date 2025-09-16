@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -20,7 +20,6 @@ import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Event;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
@@ -66,65 +65,51 @@ import com.sencha.gxt.widget.core.client.tree.Tree.TreeNode;
 import com.sencha.gxt.widget.core.client.tree.TreeStyle;
 
 /**
- * A {@link TreeGrid} provides support for displaying and editing hierarchical
- * data where each item may contain multiple properties. The tree grid gets its
- * data from a {@link TreeStore} and its column definitions from a
- * {@link ColumnModel}. Each model in the store is rendered as an item in the
- * tree. The fields in the model provide the data for each column associated
- * with the item. Any updates to the store are automatically pushed to the tree
- * grid. This includes inserting, removing, sorting and filter.
+ * A {@link TreeGrid} provides support for displaying and editing hierarchical data where each item may contain multiple
+ * properties. The tree grid gets its data from a {@link TreeStore} and its column definitions from a
+ * {@link ColumnModel}. Each model in the store is rendered as an item in the tree. The fields in the model provide the
+ * data for each column associated with the item. Any updates to the store are automatically pushed to the tree grid.
+ * This includes inserting, removing, sorting and filter.
  * <p/>
- * In GXT version 3, {@link ModelKeyProvider}s and {@link ValueProvider}s
- * provide the interface between your data model and the list store and
- * {@link ColumnConfig} classes. This enables a tree grid to work with data of
- * any object type.
+ * In GXT version 3, {@link ModelKeyProvider}s and {@link ValueProvider}s provide the interface between your data model
+ * and the list store and {@link ColumnConfig} classes. This enables a tree grid to work with data of any object type.
  * <p/>
- * You can provide your own implementation of these interfaces, or you can use a
- * Sencha supplied generator to create them for you automatically. A generator
- * runs at compile time to create a Java class that is compiled to JavaScript.
- * The Sencha supplied generator can create classes for interfaces that extend
- * the {@link PropertyAccess} interface. The generator transparently creates the
- * class at compile time and the {@link GWT#create(Class)} method returns an
- * instance of that class at run time. The generated class is managed by GWT and
- * GXT and you generally do not need to worry about what the class is called,
- * where it is located, or other similar details.
+ * You can provide your own implementation of these interfaces, or you can use a Sencha supplied generator to create
+ * them for you automatically. A generator runs at compile time to create a Java class that is compiled to JavaScript.
+ * The Sencha supplied generator can create classes for interfaces that extend the {@link PropertyAccess} interface. The
+ * generator transparently creates the class at compile time and the {@link GWT#create(Class)} method returns an
+ * instance of that class at run time. The generated class is managed by GWT and GXT and you generally do not need to
+ * worry about what the class is called, where it is located, or other similar details.
  * <p/>
- * Each tree grid has a {@link GridView}. The grid view provides many options
- * for customizing the grid's appearance (e.g. striping, mouse-over tracking,
- * empty text). To set these options, get the current grid view using
+ * Each tree grid has a {@link GridView}. The grid view provides many options for customizing the grid's appearance
+ * (e.g. striping, mouse-over tracking, empty text). To set these options, get the current grid view using
  * {@link TreeGrid#getView()} and then set the desired option on the grid view.
  * <p/>
- * To customize the appearance of a column in a tree grid, provide a cell
- * implementation using {@link ColumnConfig#setCell(Cell)}.
+ * To customize the appearance of a column in a tree grid, provide a cell implementation using
+ * {@link ColumnConfig#setCell(Cell)}.
  * <p/>
  * Tree grids support several ways to manage column widths:
  * <ol>
- * <li>The most basic approach is to simply give pixel widths to each column.
- * Columns widths will match the specified values.</li>
- * <li>A column can be identified as an auto-expand column. As the width of the
- * tree grid changes, or columns are resized, the specified column's width is
- * adjusted so that the column fills the available width with no horizontal
+ * <li>The most basic approach is to simply give pixel widths to each column. Columns widths will match the specified
+ * values.</li>
+ * <li>A column can be identified as an auto-expand column. As the width of the tree grid changes, or columns are
+ * resized, the specified column's width is adjusted so that the column fills the available width with no horizontal
  * scrolling. See @link {@link GridView#setAutoExpandColumn(ColumnConfig)}.</li>
- * <li>The tree grid can resize columns based on relative weights, determined by
- * the pixel width assigned to each column. As the width of the tree grid or
- * columns change, the weight is used to allocate the available space. Use
- * {@link GridView#setAutoFill(boolean)} or
- * {@link GridView#setForceFit(boolean)} to enable this feature:</li>
+ * <li>The tree grid can resize columns based on relative weights, determined by the pixel width assigned to each
+ * column. As the width of the tree grid or columns change, the weight is used to allocate the available space. Use
+ * {@link GridView#setAutoFill(boolean)} or {@link GridView#setForceFit(boolean)} to enable this feature:</li>
  * <ul>
- * <li>With auto fill, the calculations are run when the tree grid is created
- * (or reconfigured). After the tree grid is rendered, the column widths will
- * not be adjusted when the available width changes.</li>
- * <li>With force fit the width calculations are run every time there are
- * changes to the available width or column sizes.</li>
+ * <li>With auto fill, the calculations are run when the tree grid is created (or reconfigured). After the tree grid is
+ * rendered, the column widths will not be adjusted when the available width changes.</li>
+ * <li>With force fit the width calculations are run every time there are changes to the available width or column
+ * sizes.</li>
  * </ul>
- * <li>To prevent a column from participating in auto fill or force fit, use
- * {@link ColumnConfig#setFixed(boolean)}.</li>
+ * <li>To prevent a column from participating in auto fill or force fit, use {@link ColumnConfig#setFixed(boolean)}.</li>
  * </ol>
  * </p>
- * The following code snippet illustrates the creation of a simple tree grid
- * with local data for test purposes. For more practical examples that show how
- * to load data from remote sources, see the Async TreeGrid example in the
- * online Explorer demo.</p>
+ * The following code snippet illustrates the creation of a simple tree grid with local data for test purposes. For more
+ * practical examples that show how to load data from remote sources, see the Async TreeGrid example in the online
+ * Explorer demo.</p>
  * 
  * <pre>{@code 
     // Generate the key provider and value provider for the Data class
@@ -156,15 +141,12 @@ import com.sencha.gxt.widget.core.client.tree.TreeStyle;
     RootPanel.get().add(tg);
  * }</pre>
  * <p/>
- * To use the Sencha supplied generator to create model key providers and value
- * providers, extend the <code>PropertyAccess</code> interface, parameterized
- * with the type of data you want to access (as shown below) and invoke the
- * <code>GWT.create</code> method on its <code>class</code> member (as shown in
- * the code snippet above). This creates an instance of the class that can be
- * used to initialize the tree and tree store. In the following code snippet we
- * define a new interface called <code>DataProperties</code> that extends the
- * <code>PropertyAccess</code> interface and is parameterized with
- * <code>Data</code>, a Plain Old Java Object (POJO).
+ * To use the Sencha supplied generator to create model key providers and value providers, extend the
+ * <code>PropertyAccess</code> interface, parameterized with the type of data you want to access (as shown below) and
+ * invoke the <code>GWT.create</code> method on its <code>class</code> member (as shown in the code snippet above). This
+ * creates an instance of the class that can be used to initialize the tree and tree store. In the following code
+ * snippet we define a new interface called <code>DataProperties</code> that extends the <code>PropertyAccess</code>
+ * interface and is parameterized with <code>Data</code>, a Plain Old Java Object (POJO).
  * <p/>
  * 
  * <pre>
@@ -222,8 +204,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
 
   public static class TreeGridNode<M> extends TreeNode<M> {
 
-    protected TreeGridNode(String id, M m) {
-      super(id, m);
+    protected TreeGridNode(String modelId, M m, String domId) {
+      super(modelId, m, domId);
     }
 
     @Override
@@ -239,6 +221,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   protected boolean filtering;
   protected TreeLoader<M> loader;
   protected Map<String, TreeNode<M>> nodes = new FastMap<TreeNode<M>>();
+  protected Map<String, TreeNode<M>> nodesByDomId = new FastMap<TreeNode<M>>();
   protected StoreHandlers<M> storeHandler = new StoreHandlers<M>() {
 
     @Override
@@ -293,7 +276,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   protected HandlerRegistration storeHandlerRegistration;
   protected TreeGridView<M> treeGridView;
   protected TreeStore<M> treeStore;
-  private GridAppearance appearance;
+  private final GridAppearance appearance;
 
   private boolean autoLoad, autoExpand;
   private boolean caching = true;
@@ -302,6 +285,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   private TreeStyle style = new TreeStyle();
   private TreeAppearance treeAppearance;
   private ColumnConfig<M, ?> treeColumn;
+  private boolean expandOnDoubleClick = true;
 
   /**
    * Creates a new tree grid.
@@ -345,7 +329,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
     getElement().makePositionable();
 
     // Do not remove, this is being used in Grid.css
@@ -364,7 +348,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
     disabledStyle = null;
     storeHandlerRegistration = treeStore.addStoreHandlers(storeHandler);
 
-    setView(new TreeGridView<M>());
+    setView(new TreeGridView<M>(appearance));
     setAllowTextSelection(false);
 
     sinkCellEvents();
@@ -420,7 +404,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
       XElement item = XElement.as(row).selectNode(treeAppearance.itemSelector());
       if (item != null) {
         String id = item.getId();
-        TreeNode<M> node = nodes.get(id);
+        TreeNode<M> node = nodesByDomId.get(id);
         return node;
       }
     }
@@ -518,8 +502,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * Returns true when a loader is queried for it's children each time a node is
-   * expanded. Only applies when using a loader with the tree store.
+   * Returns true when a loader is queried for it's children each time a node is expanded. Only applies when using a
+   * loader with the tree store.
    * 
    * @return true if caching
    */
@@ -539,6 +523,15 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
+   * Returns the expand on double click state.
+   * 
+   * @return the expand on double click state
+   */
+  public boolean isExpandOnDoubleClick() {
+    return expandOnDoubleClick;
+  }
+
+  /**
    * Returns the if expand all and collapse all is enabled on filter changes.
    * 
    * @return the expand all collapse all state
@@ -548,8 +541,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * Returns true if the model is a leaf node. The leaf state allows a tree item
-   * to specify if it has children before the children have been realized.
+   * Returns true if the model is a leaf node. The leaf state allows a tree item to specify if it has children before
+   * the children have been realized.
    * 
    * @param model the model
    * @return the leaf state
@@ -570,6 +563,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
     this.store.clear();
 
     nodes.clear();
+    nodesByDomId.clear();
 
     this.store = createListStore();
 
@@ -612,8 +606,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * If set to true, all non leaf nodes will be expanded automatically (defaults
-   * to false).
+   * If set to true, all non leaf nodes will be expanded automatically (defaults to false).
    * 
    * @param autoExpand the auto expand state to set.
    */
@@ -622,9 +615,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * Sets whether all children should automatically be loaded recursively
-   * (defaults to false). Useful when the tree must be fully populated when
-   * initially rendered.
+   * Sets whether all children should automatically be loaded recursively (defaults to false). Useful when the tree must
+   * be fully populated when initially rendered.
    * 
    * @param autoLoad true to auto load
    */
@@ -633,9 +625,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * Sets whether the children should be cached after first being retrieved from
-   * the store (defaults to true). When <code>false</code>, a load request will
-   * be made each time a node is expanded.
+   * Sets whether the children should be cached after first being retrieved from the store (defaults to true). When
+   * <code>false</code>, a load request will be made each time a node is expanded.
    * 
    * @param caching the caching state
    */
@@ -661,73 +652,85 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
    * @param deep true to expand all children recursively
    */
   public void setExpanded(M model, boolean expand, boolean deep) {
-    TreeNode<M> node = findNode(model);
-    if (node != null) {
-      if (expand) {
-        // make parents visible
-        List<M> list = new ArrayList<M>();
-        M p = model;
-        while ((p = treeStore.getParent(p)) != null) {
-          if (!findNode(p).isExpanded()) {
-            list.add(p);
-          }
-        }
-        for (int i = list.size() - 1; i >= 0; i--) {
-          M item = list.get(i);
-          setExpanded(item, expand, false);
+    if (expand) {
+      // make parents visible
+      List<M> list = new ArrayList<M>();
+      M p = model;
+      while ((p = treeStore.getParent(p)) != null) {
+        TreeNode<M> n = findNode(p);
+        if (n == null || !n.isExpanded()) {
+          list.add(p);
         }
       }
+      for (int i = list.size() - 1; i >= 0; i--) {
+        M item = list.get(i);
+        setExpanded(item, expand, false);
+      }
+    }
 
-      if (expand) {
-        if (!isLeaf(model)) {
-          // if we are loading, ignore it
-          if (node.isLoading()) {
-            return;
-          }
-          // if we have a loader and node is not loaded make
-          // load request and exit method
-          if (!node.isExpanded() && loader != null && (!node.isLoaded() || !caching) && !filtering) {
-            treeStore.removeChildren(model);
-            node.setExpand(true);
-            node.setExpandDeep(deep);
-            node.setLoading(true);
-            treeGridView.onLoading(node);
-            loader.loadChildren(model);
-            return;
-          }
-          if (!node.isExpanded() && fireCancellableEvent(new BeforeExpandItemEvent<M>(model))) {
-            node.setExpanded(true);
-
-            if (!node.isChildrenRendered()) {
-              renderChildren(model, false);
-              node.setChildrenRendered(true);
-            }
-            // expand
-            treeGridView.expand(node);
-            fireEvent(new ExpandItemEvent<M>(model));
-          }
-
-          if (deep) {
-            setExpandChildren(model, true);
-          }
+    TreeNode<M> node = findNode(model);
+    if (node == null) {
+      assert !expand;
+      return;
+    }
+    if (expand) {
+      if (!isLeaf(model)) {
+        // if we are loading, ignore it
+        if (node.isLoading()) {
+          return;
         }
-      } else {
-        if (node.isExpanded() && fireCancellableEvent(new BeforeCollapseItemEvent<M>(model))) {
-          node.setExpanded(false);
-          // collapse
-          treeGridView.collapse(node);
-          fireEvent(new CollapseItemEvent<M>(model));
+        // if we have a loader and node is not loaded make
+        // load request and exit method
+        if (!node.isExpanded() && loader != null && (!node.isLoaded() || !caching) && !filtering) {
+          treeStore.removeChildren(model);
+          node.setExpand(true);
+          node.setExpandDeep(deep);
+          node.setLoading(true);
+          treeGridView.onLoading(node);
+          loader.loadChildren(model);
+          return;
         }
+        if (!node.isExpanded() && fireCancellableEvent(new BeforeExpandItemEvent<M>(model))) {
+          node.setExpanded(true);
+
+          if (!node.isChildrenRendered()) {
+            renderChildren(model, false);
+            node.setChildrenRendered(true);
+          }
+          // expand
+          treeGridView.expand(node);
+          fireEvent(new ExpandItemEvent<M>(model));
+        }
+
         if (deep) {
-          setExpandChildren(model, false);
+          setExpandChildren(model, true);
         }
+      }
+    } else {
+      if (node.isExpanded() && fireCancellableEvent(new BeforeCollapseItemEvent<M>(model))) {
+        node.setExpanded(false);
+        // collapse
+        treeGridView.collapse(node);
+        fireEvent(new CollapseItemEvent<M>(model));
+      }
+      if (deep) {
+        setExpandChildren(model, false);
       }
     }
   }
 
   /**
-   * Sets whether the tree should expand all and collapse all when filters are
-   * applied (defaults to true).
+   * Determines if the nodes should be expanded and collapsed on double clicks (defaults to {@code true}). Set to false
+   * when using two clicks to edit inline editing.
+   * 
+   * @param expandOnDoubleClick true to expand and collapse on double clicks
+   */
+  public void setExpandOnDoubleClick(boolean expandOnDoubleClick) {
+    this.expandOnDoubleClick = expandOnDoubleClick;
+  }
+
+  /**
+   * Sets whether the tree should expand all and collapse all when filters are applied (defaults to true).
    * 
    * @param expandOnFilter true to expand and collapse on filter changes
    */
@@ -736,8 +739,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * Sets the tree's model icon provider which provides the icon style for each
-   * model.
+   * Sets the tree's model icon provider which provides the icon style for each model.
    * 
    * @param iconProvider the icon provider
    */
@@ -746,8 +748,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   /**
-   * Sets the item's leaf state. The leaf state allows control of the expand
-   * icon before the children have been realized.
+   * Sets the item's leaf state. The leaf state allows control of the expand icon before the children have been
+   * realized.
    * 
    * @param model the model
    * @param leaf the leaf state
@@ -843,19 +845,36 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
     };
   }
 
+  /**
+   * Returns the index in the liststore of the last child in the subtree starting at the given model. The given model
+   * (or its children) do not need to already be in the list store, but all other items do. This makes this method
+   * useful for finding where a model and its subtree belong.
+   * 
+   * @param model the model used to find the last open child index.
+   * @return returns the last open child index.
+   */
   protected int findLastOpenChildIndex(M model) {
-    TreeNode<M> mark = findNode(model);
-    M lc = model;
-    while (mark != null && mark.isExpanded()) {
-      M m = treeStore.getLastChild(mark.getModel());
-      if (m != null) {
-        lc = m;
-        mark = findNode(lc);
-      } else {
+    // make sure this node is visible
+    assert treeStore.indexOf(model) != -1;
+
+    // Find the next visible node parallel to or above this one
+    M outer = model;
+    M nextSibling = treeStore.getNextSibling(outer);
+    while (nextSibling == null) {
+      outer = treeStore.getParent(outer);
+      // check if we are at the root
+      if (outer == null) {
         break;
       }
+      nextSibling = treeStore.getNextSibling(outer);
     }
-    return store.indexOf(lc);
+    if (outer == null) {
+      // hit the root, return the last element
+      return store.size() - 1;
+    }
+    // otherwise, we've got the next element - get _its_ index in the liststore, and return that minus one
+    return store.indexOf(nextSibling) - 1;
+
   }
 
   protected TreeNode<M> findNode(M m) {
@@ -864,7 +883,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   }
 
   protected String generateModelId(M m) {
-    return getId() + "_" + (treeStore.getKeyProvider().getKey(m));
+    return treeStore.getKeyProvider().getKey(m);
   }
 
   protected boolean hasChildren(M model) {
@@ -880,41 +899,42 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
 
   protected void onAdd(StoreAddEvent<M> se) {
     if (viewReady) {
+      for (M child : se.getItems()) {
+        register(child);
+      }
       M p = treeStore.getParent(se.getItems().get(0));
+      final int index;
       if (p == null) {
-        for (M child : se.getItems()) {
-          register(child);
-        }
-        if (se.getIndex() > 0) {
-          M prev = treeStore.getChild(se.getIndex() - 1);
-          int index = findLastOpenChildIndex(prev);
-          store.addAll(index + 1, se.getItems());
+        // adding to root
+        if (se.getIndex() == 0) {
+          // no need to adjust index, since we're adding to the top
+          index = se.getIndex();
         } else {
-          store.addAll(se.getIndex(), se.getItems());
+          // adjust index to add to the flattened tree
+          index = findLastOpenChildIndex(se.getItems().get(se.getItems().size() - 1)) + 1;
         }
       } else {
+        // adding to an existing node
         TreeNode<M> node = findNode(p);
-        if (node != null) {
-          for (M child : se.getItems()) {
-            register(child);
-          }
-          if (!node.isExpanded()) {
-            refresh(p);
-            return;
-          }
-          int index = se.getIndex();
-          if (index == 0) {
-            int pindex = store.indexOf(p);
-            store.addAll(pindex + 1, se.getItems());
-          } else {
-            index = store.indexOf(treeStore.getChildren(p).get(index - 1));
-            TreeNode<M> mark = findNode(store.get(index));
-            index = findLastOpenChildIndex(mark.getModel());
-            store.addAll(index + 1, se.getItems());
-          }
-          refresh(p);
+        if (node == null) {
+          // node's parent collapsed
+          return;
         }
+        if (!node.isExpanded()) {
+          refresh(p);
+          return;
+        }
+        if (se.getIndex() == 0) {
+          // inserting at the top of this node, so adjust based on the parent's index
+          index = store.indexOf(p) + 1;
+        } else {
+          // adjust the index to add to the local flattened tree
+          index = findLastOpenChildIndex(se.getItems().get(se.getItems().size() - 1)) + 1;
+        }
+        refresh(p);
+
       }
+      store.addAll(index, se.getItems());
     }
   }
 
@@ -938,9 +958,7 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
         TreeNode<M> node = findNode(m);
         if (node != null) {
           Element jointEl = treeGridView.getJointElement(node);
-          if (jointEl != null
-              && DOM.isOrHasChild((com.google.gwt.user.client.Element) jointEl.cast(),
-                  (com.google.gwt.user.client.Element) (Element.as(eventTarget)).cast())) {
+          if (jointEl != null && jointEl.isOrHasChild((Element.as(eventTarget)))) {
             toggle(m);
           } else {
             super.onClick(event);
@@ -960,10 +978,14 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
     if (parent == null) {
       store.clear();
       nodes.clear();
+      nodesByDomId.clear();
       renderChildren(null, autoLoad);
     } else {
       TreeNode<M> n = findNode(parent);
       if (n != null) {
+        treeGridView.collapse(n);
+        n.setExpanded(false);
+
         n.setLoaded(true);
         n.setLoading(false);
         renderChildren(parent, autoLoad);
@@ -986,11 +1008,13 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   @Override
   protected void onDoubleClick(Event e) {
     super.onDoubleClick(e);
-    if (Element.is(e.getEventTarget())) {
-      int i = getView().findRowIndex(Element.as(e.getEventTarget()));
-      M m = store.get(i);
-      if (m != null) {
-        toggle(m);
+    if (expandOnDoubleClick) {
+      if (Element.is(e.getEventTarget())) {
+        int i = getView().findRowIndex(Element.as(e.getEventTarget()));
+        M m = store.get(i);
+        if (m != null) {
+          toggle(m);
+        }
       }
     }
   }
@@ -1031,7 +1055,8 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
 
   protected void onUpdate(StoreUpdateEvent<M> se) {
     for (M m : se.getItems()) {
-      if (store.indexOf(m) != -1) {
+      // looking up by key instead of by index to allow for different model instance, but no equals() equality
+      if (store.findModelWithKey(store.getKeyProvider().getKey(m)) != null) {
         store.update(m);
       }
     }
@@ -1040,7 +1065,10 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
   protected String register(M m) {
     String id = generateModelId(m);
     if (!nodes.containsKey(id)) {
-      nodes.put(id, new TreeGridNode<M>(id, m));
+      String domId = XDOM.getUniqueId();
+      TreeGridNode<M> node = new TreeGridNode<M>(id, m, domId);
+      nodes.put(id, node);
+      nodesByDomId.put(domId, node);
     }
     return id;
   }
@@ -1060,20 +1088,16 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
       if (autoExpand) {
         final M c = child;
         Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-
           @Override
           public void execute() {
             setExpanded(c, true);
-
           }
         });
-      } else if (loader != null) {
-        if (autoLoad) {
-          if (store.isFiltered() || (!auto)) {
-            renderChildren(child, auto);
-          } else {
-            loader.loadChildren(child);
-          }
+      } else if (loader != null && autoLoad) {
+        if (store.isFiltered() || (!auto)) {
+          renderChildren(child, auto);
+        } else {
+          loader.loadChildren(child);
         }
       }
     }
@@ -1089,7 +1113,9 @@ public class TreeGrid<M> extends Grid<M> implements HasBeforeCollapseItemHandler
     if (node != null) {
       node.clearElements();
 
-      nodes.remove(generateModelId(m));
+      TreeNode<M> removed = nodes.remove(generateModelId(m));
+      assert removed != null;
+      nodesByDomId.remove(removed.getDomId());
     }
   }
 

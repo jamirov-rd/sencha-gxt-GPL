@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -88,7 +88,6 @@ public class TipDefaultAppearance implements TipAppearance {
   }
 
   public interface TipNestedDivFrameStyle extends NestedDivFrameStyle {
-
   }
 
   public interface TipResources extends ClientBundle {
@@ -116,6 +115,8 @@ public class TipDefaultAppearance implements TipAppearance {
 
     String anchorRight();
 
+    String anchorTop();
+
     String heading();
 
     String text();
@@ -123,7 +124,7 @@ public class TipDefaultAppearance implements TipAppearance {
     String tools();
 
     String tip();
-
+    
   }
 
   protected final TipResources resources;
@@ -153,17 +154,10 @@ public class TipDefaultAppearance implements TipAppearance {
 
   @Override
   public void applyAnchorDirectionStyle(XElement anchorEl, Side anchor) {
-    switch (anchor) {
-      case BOTTOM:
-        anchorEl.addClassName(style.anchorBottom());
-        break;
-      case LEFT:
-        anchorEl.addClassName(style.anchorLeft());
-        break;
-      case RIGHT:
-        anchorEl.addClassName(style.anchorRight());
-        break;
-    }
+    anchorEl.setClassName(style.anchorTop(), anchor == Side.TOP);
+    anchorEl.setClassName(style.anchorBottom(), anchor == Side.BOTTOM);
+    anchorEl.setClassName(style.anchorRight(), anchor == Side.RIGHT);
+    anchorEl.setClassName(style.anchorLeft(), anchor == Side.LEFT);
   }
 
   @Override
@@ -203,13 +197,13 @@ public class TipDefaultAppearance implements TipAppearance {
   public int autoWidth(XElement parent, int minWidth, int maxWidth) {
     int tw = getTextElement(parent).getTextWidth();
     int hw = getHeaderElement(parent).getTextWidth();
-    
+
     int w = Math.max(tw, hw);
     // framing
     w += 10;
-    
+
     w += getToolsElement(parent).getOffsetWidth();
-        
+
     return Util.constrain(w, minWidth, maxWidth);
   }
 
@@ -222,7 +216,7 @@ public class TipDefaultAppearance implements TipAppearance {
     } else {
       header.getParentElement().getStyle().setDisplay(Display.NONE);
     }
-    
+
     getTextElement(parent).setInnerHTML(text);
   }
 

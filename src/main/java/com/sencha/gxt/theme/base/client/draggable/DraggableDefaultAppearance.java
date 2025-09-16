@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,10 +8,10 @@
 package com.sencha.gxt.theme.base.client.draggable;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
-import com.google.gwt.user.client.DOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
@@ -55,7 +55,7 @@ public class DraggableDefaultAppearance implements DraggableAppearance {
 
   @Override
   public Element createProxy() {
-    XElement proxyEl = DOM.createDiv().cast();
+    XElement proxyEl = Document.get().createDivElement().cast();
     proxyEl.setVisibility(false);
     proxyEl.setClassName(proxyClass);
     proxyEl.disableTextSelection(true);

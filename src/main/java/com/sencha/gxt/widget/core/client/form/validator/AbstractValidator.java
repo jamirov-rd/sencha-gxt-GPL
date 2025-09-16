@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.form.validator;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.editor.client.Editor;
@@ -27,7 +28,7 @@ public abstract class AbstractValidator<T> implements Validator<T> {
   }
   
   protected static List<EditorError> createError(Editor<?> editor, String message, Object value) {
-    return createError(new DefaultEditorError(editor, message, value));
+    return Collections.<EditorError>singletonList(new DefaultEditorError(editor, message, value));
   }
   
   protected static String encodeMessage(String message) {

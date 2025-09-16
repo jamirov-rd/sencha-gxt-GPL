@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,10 +12,8 @@ import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.Style;
 import com.sencha.gxt.core.client.util.Margins;
-import com.sencha.gxt.core.client.util.Padding;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.button.CellButtonBase;
-import com.sencha.gxt.widget.core.client.button.TextButton;
 import com.sencha.gxt.widget.core.client.container.HBoxLayoutContainer;
 import com.sencha.gxt.widget.core.client.container.HasMargins;
 
@@ -24,13 +22,11 @@ import com.sencha.gxt.widget.core.client.container.HasMargins;
  */
 public class ToolBar extends HBoxLayoutContainer {
 
-  public interface ToolBarAppearance {
+  public interface ToolBarAppearance extends HBoxLayoutContainerAppearance {
 
     String toolBarClassName();
 
   }
-
-  protected ToolBarAppearance appearance;
 
   private int minButtonWidth = Style.DEFAULT;
   private int verticalSpacing = 0;
@@ -49,16 +45,25 @@ public class ToolBar extends HBoxLayoutContainer {
    * @param appearance the tool bar appearance
    */
   public ToolBar(ToolBarAppearance appearance) {
-    this.appearance = appearance;
+    super(appearance);
     setStyleName(appearance.toolBarClassName());
 
     addStyleName("x-toolbar");
     addStyleName("x-toolbar-mark");
     addStyleName("x-small-editor");
-    setPadding(new Padding(2));
+    setSpacing(3);
     setHBoxLayoutAlign(HBoxLayoutAlign.MIDDLE);
 
     sinkEvents(Event.FOCUSEVENTS);
+  }
+
+  /**
+   * Returns the tool bar appearance.
+   *
+   * @return the appearance
+   */
+  public ToolBarAppearance getAppearance() {
+    return (ToolBarAppearance) super.getAppearance();
   }
 
   /**
@@ -97,16 +102,15 @@ public class ToolBar extends HBoxLayoutContainer {
     this.minButtonWidth = minWidth;
     for (int i = 0; i < getWidgetCount(); i++) {
       Widget w = getWidget(i);
-      if (w instanceof TextButton && ((TextButton) w).getMinWidth() == Style.DEFAULT) {
-        ((TextButton) w).setMinWidth(minWidth);
+      if (w instanceof CellButtonBase<?> && w != more) {
+        ((CellButtonBase<?>) w).setMinWidth(minButtonWidth);
       }
     }
   }
 
   /**
-   * Sets the vertical spacing between child items (defaults to 0). Spacing is
-   * implemented using layout data margins. Margins will be overridden by layout
-   * if spacing >= 0. Set spacing to -1 to prevent margin calculations.
+   * Sets the vertical spacing between child items (defaults to 0). Spacing is implemented using layout data margins.
+   * Margins will be overridden by layout if spacing >= 0. Set spacing to -1 to prevent margin calculations.
    * 
    * @param spacing the spacing
    */
@@ -122,9 +126,8 @@ public class ToolBar extends HBoxLayoutContainer {
   }
 
   /**
-   * Sets the horizontal spacing between child items (defaults to 0). Spacing is
-   * implemented using layout data margins. Margins will be overridden by layout
-   * if spacing >= 0. Set spacing to -1 to prevent margin calculations.
+   * Sets the horizontal spacing between child items (defaults to 0). Spacing is implemented using layout data margins.
+   * Margins will be overridden by layout if spacing >= 0. Set spacing to -1 to prevent margin calculations.
    * 
    * @param spacing the spacing
    */
@@ -140,9 +143,8 @@ public class ToolBar extends HBoxLayoutContainer {
   }
 
   /**
-   * Sets both the horizontal and vertical spacing between child items (defaults
-   * to 0). Spacing is implemented using layout data margins. Margins will be
-   * overridden by layout if spacing >= 0. Set spacing to -1 to prevent margin
+   * Sets both the horizontal and vertical spacing between child items (defaults to 2). Spacing is implemented using
+   * layout data margins. Margins will be overridden by layout if spacing >= 0. Set spacing to -1 to prevent margin
    * calculations.
    * 
    * @param spacing the spacing
@@ -197,25 +199,25 @@ public class ToolBar extends HBoxLayoutContainer {
     } else {
       hasMargins = (HasMargins) data;
     }
-    
+
     Margins m = hasMargins.getMargins();
-    
+
     if (m == null) {
       m = new Margins();
       hasMargins.setMargins(m);
     }
-    
+
     if (verticalSpacing != -1) {
       int vs = (int) Math.round(verticalSpacing / 2d);
       m.setTop(vs);
       m.setBottom(vs);
     }
-    
+
     if (horizontalSpacing != -1) {
       int hs = (int) Math.round(horizontalSpacing / 2d);
       m.setLeft(hs);
       m.setRight(hs);
     }
-    
+
   }
 }

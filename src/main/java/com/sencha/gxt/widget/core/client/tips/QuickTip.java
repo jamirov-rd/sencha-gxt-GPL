@@ -1,18 +1,17 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.tips;
 
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseOutEvent;
 import com.google.gwt.event.dom.client.MouseOverEvent;
-import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.util.Util;
@@ -22,8 +21,8 @@ import com.sencha.gxt.widget.core.client.event.XEvent;
  * A specialized tooltip class for tooltips that can be specified in markup.
  * 
  * <p />
- * Quicktips can be configured via tag attributes directly in markup. Below is
- * the summary of the configuration properties which can be used.
+ * Quicktips can be configured via tag attributes directly in markup. Below is the summary of the configuration
+ * properties which can be used.
  * 
  * <ul>
  * <li>text (required)</li>
@@ -32,25 +31,32 @@ import com.sencha.gxt.widget.core.client.event.XEvent;
  * </ul>
  * 
  * <p />
- * To register a quick tip in markup, you simply add one or more of the valid
- * QuickTip attributes The HTML element itself is automatically set as the quick
- * tip target. Here is the summary of supported attributes (optional unless
- * otherwise noted):
+ * To register a quick tip in markup, you simply add one or more of the valid QuickTip attributes. The HTML element
+ * itself is automatically set as the quick tip target. 
  * 
+ *<p />
+ * Tag attribute options: <p />
  * <ul>
- * <li><b>qtip (required)</b>: The quick tip text (equivalent to the 'text'
- * target element config).</li>
- * <li><b>qtitle</b>: The quick tip title (equivalent to the 'title' target
- * element config).</li>
- * <li><b>qwidth</b>: The quick tip width (equivalent to the 'width' target
- * element config).</li>
+ * <li><b>qtip (required)</b>: The quick tip text (equivalent to the 'text' target element config).</li>
+ * <li><b>qtitle</b>: The quick tip title (equivalent to the 'title' target element config).</li>
+ * <li><b>qwidth</b>: The quick tip width (equivalent to the 'width' target element config).</li>
  * </ul>
+ * 
+ * Example using QuickTip tag attributes:
+ * <code><pre>
+ * private void exampleQuickTip() {
+ *   HTML html = new HTML("&lt;span qtitle='Title for Tip' qtip='Display this tip.' qwidth='50px'&gt;Some text.&lt;/span&gt;");
+ *   new QuickTip(html);
+ *   RootPanel.get().add(html);
+ * }
+ * </pre></code>
  */
 public class QuickTip extends ToolTip {
 
   private boolean initialized;
   private boolean interceptTitles;
   private Element targetElem;
+  private Element showElem;
 
   /**
    * Creates a new quick tip instance.
@@ -59,6 +65,16 @@ public class QuickTip extends ToolTip {
    */
   public QuickTip(Widget component) {
     super(component);
+  }
+  
+  /**
+   * Creates a new quick tip instance.
+   * 
+   * @param component the source component
+   * @param appearance the appearance
+   */
+  public QuickTip(Widget component, TipAppearance appearance) {
+    super(component, appearance);
   }
 
   /**
@@ -71,23 +87,12 @@ public class QuickTip extends ToolTip {
   }
 
   /**
-   * True to automatically use the element's DOM title value if available
-   * (defaults to false).
+   * True to automatically use the element's DOM title value if available (defaults to false).
    * 
    * @param interceptTitles true to to intercept titles
    */
   public void setInterceptTitles(boolean interceptTitles) {
     this.interceptTitles = interceptTitles;
-  }
-
-  @Override
-  protected void delayHide() {
-    if (!isAttached()) {
-      targetElem = null;
-      bodyHtml = null;
-      titleHtml = null;
-    }
-    super.delayHide();
   }
 
   @Override
@@ -105,6 +110,12 @@ public class QuickTip extends ToolTip {
 
   @Override
   protected void onTargetMouseOut(MouseOutEvent event) {
+    if (showElem != null) {
+      XEvent xe = event.getNativeEvent().cast();
+      if (!xe.within(showElem)) {
+        clearTimer("show");
+      }
+    }
     onTargetOut(event.getNativeEvent().<Event> cast());
   }
 
@@ -116,9 +127,8 @@ public class QuickTip extends ToolTip {
   @Override
   protected void onTargetOut(Event ce) {
     EventTarget to = ce.getRelatedEventTarget();
-    if (to == null
-        || (Element.is(target.getElement()) && Element.is(to) && !DOM.isOrHasChild(target.getElement(),
-            (Element) Element.as(to)))) {
+    if (to == null || (Element.is(target) && Element.is(to)
+            && !target.isOrHasChild(Element.as(to)))) {
       super.onTargetOut(ce);
     }
   }
@@ -130,7 +140,7 @@ public class QuickTip extends ToolTip {
     }
 
     Element t = ce.getEventTarget().cast();
-    while (t != null && t != target.getElement()) {
+    while (t != null && t != target) {
       if (hasTip(t)) {
         break;
       }
@@ -158,6 +168,13 @@ public class QuickTip extends ToolTip {
     }
     clearTimers();
     targetXY = ce.<XEvent> cast().getXY();
+
+    XEvent xe = ce.cast();
+    if (!xe.within(t)) {
+      return;
+    }
+
+    showElem = t;
     delayShow();
   }
 

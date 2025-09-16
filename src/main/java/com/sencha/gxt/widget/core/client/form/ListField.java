@@ -1,17 +1,19 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.form;
 
+import com.sencha.gxt.core.client.Style.SelectionMode;
 import com.sencha.gxt.data.shared.ListStore;
 import com.sencha.gxt.widget.core.client.ListView;
 
 /**
- * Adapts a {@link ListView} for use as a field.
+ * Adapts a {@link ListView} for use as a field which can have a single value selected. For multi-select,
+ * consider {@link DualListField}.
  * 
  * @param <M> the model type
  * @param <T> the field's data type
@@ -28,6 +30,7 @@ public class ListField<M, T> extends AdapterField<M> {
   public ListField(ListView<M, T> view) {
     super(view);
     this.listView = view;
+    this.listView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
   }
 
   /**
@@ -55,7 +58,22 @@ public class ListField<M, T> extends AdapterField<M> {
 
   @Override
   public void setValue(M value) {
-    listView.getSelectionModel().select(value, false);
+    if (getStore().indexOf(value) == -1) {
+      listView.getSelectionModel().deselectAll();
+    } else {
+      listView.getSelectionModel().select(value, false);
+    }
   }
 
+  @Override
+  protected void onDisable() {
+    super.onDisable();
+    listView.disable();
+  }
+
+  @Override
+  protected void onEnable() {
+    super.onEnable();
+    listView.enable();
+  }
 }

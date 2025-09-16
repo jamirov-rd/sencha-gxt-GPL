@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,6 +9,7 @@ package com.sencha.gxt.core.client.dom;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.dom.client.Element;
@@ -142,7 +143,7 @@ public class CompositeElement {
    * The list of elements.
    */
   public List<Element> getElements() {
-    return new ArrayList<Element>(items);
+    return Collections.unmodifiableList(items);
   }
 
   /**

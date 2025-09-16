@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -26,11 +26,17 @@ import com.google.gwt.dom.client.Node;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.dom.client.Style.Overflow;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.event.logical.shared.ResizeEvent;
+import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
+import com.google.gwt.event.shared.EventHandler;
+import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.event.shared.SimpleEventBus;
+import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
-import com.google.gwt.resources.client.CssResource.Shared;
+import com.google.gwt.resources.client.CssResource.ImportedWithPrefix;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safecss.shared.SafeStylesBuilder;
 import com.google.gwt.safecss.shared.SafeStylesUtils;
@@ -38,11 +44,10 @@ import com.google.gwt.safehtml.client.SafeHtmlTemplates;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.HasHorizontalAlignment.HorizontalAlignmentConstant;
-import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.HasVerticalAlignment.VerticalAlignmentConstant;
 import com.google.gwt.user.client.ui.impl.FocusImpl;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
@@ -72,29 +77,30 @@ import com.sencha.gxt.data.shared.event.StoreRemoveEvent;
 import com.sencha.gxt.data.shared.event.StoreSortEvent;
 import com.sencha.gxt.data.shared.event.StoreUpdateEvent;
 import com.sencha.gxt.messages.client.DefaultMessages;
-import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.ComponentHelper;
 import com.sencha.gxt.widget.core.client.event.BodyScrollEvent;
 import com.sencha.gxt.widget.core.client.event.CheckChangeEvent;
 import com.sencha.gxt.widget.core.client.event.CheckChangeEvent.CheckChangeHandler;
 import com.sencha.gxt.widget.core.client.event.ColumnMoveEvent;
 import com.sencha.gxt.widget.core.client.event.ColumnWidthChangeEvent;
+import com.sencha.gxt.widget.core.client.event.HeaderClickEvent;
+import com.sencha.gxt.widget.core.client.event.HeaderClickEvent.HeaderClickHandler;
 import com.sencha.gxt.widget.core.client.event.RefreshEvent;
 import com.sencha.gxt.widget.core.client.event.SortChangeEvent;
+import com.sencha.gxt.widget.core.client.grid.ColumnHeader.HeaderContextMenuFactory;
 import com.sencha.gxt.widget.core.client.menu.CheckMenuItem;
 import com.sencha.gxt.widget.core.client.menu.Item;
 import com.sencha.gxt.widget.core.client.menu.Menu;
 import com.sencha.gxt.widget.core.client.menu.MenuItem;
 
 /**
- * This class encapsulates the user interface of an {@link Grid}. Methods of
- * this class may be used to access user interface elements to enable special
- * display effects. Do not change the DOM structure of the user interface. </p>
+ * This class encapsulates the user interface of an {@link Grid}. Methods of this class may be used to access user
+ * interface elements to enable special display effects. Do not change the DOM structure of the user interface. </p>
  * <p />
- * This class does not provide ways to manipulate the underlying data. The data
- * model of a Grid is held in a {@link ListStore}.
+ * This class does not provide ways to manipulate the underlying data. The data model of a Grid is held in a
+ * {@link ListStore}.
  */
-public class GridView<M> {
+public class  GridView<M> {
 
   /**
    * Define the appearance of a Grid.
@@ -130,8 +136,75 @@ public class GridView<M> {
 
   }
 
-  @Shared
-  public interface GridDataTableStyles extends CssResource {
+  /**
+   * Marker classes, used only to indicate state and landmark details in the dom. Not to be used directly to style
+   * anything.
+   * <p/>
+   * Attached to a empty file as no real style should be set. This does not need to be injected, and should not be
+   * extended.
+   */
+  @ImportedWithPrefix("grid")
+  public interface GridStateStyles extends CssResource {
+
+    /**
+     * Marker class to indicate that the row is selected
+     * 
+     * @see com.sencha.gxt.theme.base.client.grid.CheckBoxColumnDefaultAppearance
+     * @see com.sencha.gxt.theme.base.client.grid.GroupingViewDefaultAppearance
+     * @see com.sencha.gxt.theme.base.client.grid.RowExpanderDefaultAppearance
+     */
+    String rowSelected();
+
+    /**
+     * Marker class to indicate that the cell is selected
+     * 
+     * @see CellSelectionModel
+     */
+    String cellSelected();
+
+    /**
+     * Marker class for the TD that wraps each cell in the grid.
+     */
+    String cell();
+
+    /**
+     * Marker class for the DIV that each cell is rendered into
+     */
+    String cellInner();
+
+    /**
+     * Marker class for each row in the grid
+     */
+    String row();
+
+    /**
+     * Optional marker class for the DIV that surrounds each row's own individual TABLE.
+     * 
+     * @see GridView#setEnableRowBody(boolean)
+     */
+    String rowWrap();
+
+    /**
+     * Optional marker class for the TR that holds the extra row body.
+     * 
+     * @see GridView#setEnableRowBody(boolean)
+     */
+    String rowBodyRow();
+
+    /**
+     * Optional marker class for the DIV that holds the extra row body.
+     * 
+     * @see GridView#setEnableRowBody(boolean)
+     */
+    String rowBody();
+
+  }
+  interface StateBundle extends ClientBundle {
+    @Source("GridStateStyles.css")
+    GridStateStyles styles();
+  }
+
+  public interface GridStyles extends CssResource {
 
     String cell();
 
@@ -139,9 +212,7 @@ public class GridView<M> {
 
     String cellInner();
 
-    String cellInvalid();
-
-    String cellSelected();
+    String noPadding();
 
     String columnLines();
 
@@ -155,34 +226,22 @@ public class GridView<M> {
 
     String rowBody();
 
-    String rowBodyRow();
-
     String rowDirty();
 
     String rowHighlight();
 
     String rowOver();
 
-    String rowSelected();
-
     String rowWrap();
-
-  }
-
-  public interface GridStyles extends GridDataTableStyles {
 
     String empty();
 
     String footer();
 
     String grid();
-
   }
 
   public interface GridTemplates extends SafeHtmlTemplates {
-    @Template("<div class=\"{0}\">{1}</div>")
-    SafeHtml div(String classes, SafeHtml contents);
-
     @Template("<table cellpadding=\"0\" cellspacing=\"0\" class=\"{0}\" style=\"{1};table-layout: fixed\"><tbody>{3}</tbody><tbody>{2}</tbody></table>")
     SafeHtml table(String classes, SafeStyles tableStyles, SafeHtml contents, SafeHtml sizingHeads);
 
@@ -190,11 +249,19 @@ public class GridView<M> {
     SafeHtml td(int cellIndex, String cellClasses, SafeStyles cellStyles, String textClasses, SafeStyles textStyles,
         SafeHtml contents);
 
-    @Template("<td cellindex=\"{0}\" class=\"{1}\" style=\"{2}\" rowspan=\"{3}\">{4}</td>")
-    SafeHtml tdRowSpan(int cellIndex, String classes, SafeStyles styles, int rowSpan, SafeHtml contents);
+    @Template("<td cellindex=\"{0}\" class=\"{1}\" style=\"{2}\" rowspan=\"{3}\"><div class=\"{4}\">{5}</div></td>")
+    SafeHtml tdRowSpan(int cellIndex, String classes, SafeStyles styles, int rowSpan, String cellInnerClasses,
+        SafeHtml contents);
+
+    @Template("<td cellindex=\"{0}\" class=\"{1}\" style=\"{2}\"><div class=\"{3}\" style=\"{4}\" unselectable=\"on\">{5}</div></td>")
+    SafeHtml tdUnselectable(int cellIndex, String cellClasses, SafeStyles cellStyles, String textClasses,
+        SafeStyles textStyles, SafeHtml contents);
 
     @Template("<td colspan=\"{0}\" class=\"{1}\"><div class=\"{2}\">{3}</div></td>")
     SafeHtml tdWrap(int colspan, String cellClasses, String textClasses, SafeHtml content);
+
+    @Template("<td colspan=\"{0}\" class=\"{1}\"><div class=\"{2}\" unselectable=\"on\">{3}</div></td>")
+    SafeHtml tdWrapUnselectable(int colspan, String cellClasses, String textClasses, SafeHtml content);
 
     @Template("<th class=\"{0}\" style=\"{1}\"></th>")
     SafeHtml th(String classes, SafeStyles cellStyles);
@@ -206,8 +273,7 @@ public class GridView<M> {
   private static Logger logger = Logger.getLogger(GridView.class.getName());
 
   /**
-   * Set to true to auto expand the columns to fit the grid when the grid is
-   * created.
+   * Set to true to auto expand the columns to fit the grid when the grid is created.
    */
   protected boolean autoFill;
 
@@ -217,8 +283,7 @@ public class GridView<M> {
   protected XElement body;
 
   /**
-   * A border width calculation to be applied for browsers that do not use the
-   * old IE box model.
+   * A border width calculation to be applied for browsers that do not use the old IE box model.
    */
   protected int borderWidth = 2;
 
@@ -252,8 +317,7 @@ public class GridView<M> {
   protected String emptyText = "&nbsp;";
 
   /**
-   * True to enable a column spanning row body, as used by {@link RowExpander}
-   * (defaults to false).
+   * True to enable a column spanning row body, as used by {@link RowExpander} (defaults to false).
    */
   protected boolean enableRowBody = false;
 
@@ -263,9 +327,10 @@ public class GridView<M> {
 
   protected ColumnFooter<M> footer;
 
+  protected boolean focusConstrainScheduled = false;
   protected boolean forceFit;
   protected Grid<M> grid;
-  protected ColumnHeader<M> header;
+  private ColumnHeader<M> header;
   protected int headerColumnIndex;
   protected boolean headerDisabled;
   /**
@@ -285,11 +350,11 @@ public class GridView<M> {
 
   protected SortInfo sortState;
   protected int splitterWidth = 5;
+  protected final GridStateStyles states = GWT.<StateBundle> create(StateBundle.class).styles();
   protected StoreSortInfo<M> storeSortInfo;
   protected GridStyles styles;
   protected GridTemplates tpls = GWT.create(GridTemplates.class);
   protected String unselectable = CommonStyles.get().unselectableSingle();
-  protected boolean userResized;
 
   // we first render grid with a vbar, and remove as needed
   protected boolean vbar = true;
@@ -333,8 +398,7 @@ public class GridView<M> {
   };
 
   /**
-   * The numbers of rows the first column should span if row bodies are enabled
-   * (defaults to 1).
+   * The numbers of rows the first column should span if row bodies are enabled (defaults to 1).
    */
   private int rowBodyRowSpan = 1;
 
@@ -343,6 +407,7 @@ public class GridView<M> {
   private boolean stripeRows;
 
   private boolean trackMouseOver = true;
+  private SimpleEventBus eventBus;
 
   /**
    * Creates a new grid view.
@@ -363,7 +428,36 @@ public class GridView<M> {
   }
 
   /**
+   * Adds a handler to receive specific events from this object. Only subclasses typically should need to call this
+   * directly.
+   * 
+   * @param type the type of event to listen for
+   * @param handler the handler to call when the event occurs
+   * @param <H> the handler type
+   * @return the handler registration, enabling the handler to be removed when not needed
+   */
+  public <H extends EventHandler> HandlerRegistration addHandler(GwtEvent.Type<H> type, H handler) {
+    return ensureHandlers().addHandlerToSource(type, this, handler);
+  }
+
+  /**
+   * Ensures the given model (row) is visible.
+   *
+   * @param model the target model
+   * @return the calculated point
+   */
+  public Point ensureVisible(M model) {
+    Element row = getRow(model);
+    if (row == null) {
+      return null;
+    }
+    int rowIndex = findRowIndex(row);
+    return ensureVisible(rowIndex, 0, false);
+  }
+
+  /**
    * Ensured the current row and column is visible.
+   * This can be used to scroll to a row.
    * 
    * @param row the row index
    * @param col the column index
@@ -409,13 +503,15 @@ public class GridView<M> {
     int stop = c.getScrollTop();
     int sbot = stop + ch;
 
+    // EXTGWT-2791
+    int adj = GXT.isIE10() ? 1 : 0;
     if (ctop < stop) {
-      c.setScrollTop(ctop);
+      c.setScrollTop(ctop + adj);
     } else if (cbot > sbot) {
       if ((getTotalWidth() > scroller.getWidth(false) - scrollOffset)) {
         cbot += scrollOffset;
       }
-      c.setScrollTop(cbot -= ch);
+      c.setScrollTop((cbot -= ch) + adj);
     }
 
     if (hscroll && cellEl != null) {
@@ -430,7 +526,8 @@ public class GridView<M> {
       }
     }
 
-    return cellEl != null ? fly(cellEl).getXY() : new Point(c.getAbsoluteLeft() + c.getScrollLeft(), fly(rowEl).getY());
+    return cellEl != null ? cellEl.<XElement> cast().getXY() : new Point(c.getAbsoluteLeft() + c.getScrollLeft(),
+        rowEl.<XElement> cast().getY());
   }
 
   /**
@@ -455,7 +552,7 @@ public class GridView<M> {
    */
   public int findCellIndex(Element elem, String requiredStyle) {
     Element cell = findCell(elem);
-    if (cell != null && (requiredStyle == null || fly(cell).hasClassName(requiredStyle))) {
+    if (cell != null && (requiredStyle == null || elem.hasClassName(requiredStyle))) {
       String index = cell.getAttribute("cellindex");
       return index.equals("") ? -1 : Integer.parseInt(index);
     }
@@ -487,6 +584,17 @@ public class GridView<M> {
       return r.getPropertyInt("rowindex");
     }
     return -1;
+  }
+
+  /**
+   * Fires the given event from this object as its source.
+   * 
+   * @param event the event to fire
+   */
+  public void fireEvent(GwtEvent<?> event) {
+    if (eventBus != null) {
+      eventBus.fireEventFromSource(event, this);
+    }
   }
 
   /**
@@ -625,8 +733,7 @@ public class GridView<M> {
   }
 
   /**
-   * Return the &lt;TR> HtmlElement which represents a Grid row for the
-   * specified index.
+   * Return the &lt;TR> HtmlElement which represents a Grid row for the specified index.
    * 
    * @param row the row index
    * @return the &lt;TR> element
@@ -639,8 +746,7 @@ public class GridView<M> {
   }
 
   /**
-   * Return the &lt;TR> HtmlElement which represents a Grid row for the
-   * specified model.
+   * Return the &lt;TR> HtmlElement which represents a Grid row for the specified model.
    * 
    * @param m the model
    * @return the &lt;TR> element
@@ -654,8 +760,7 @@ public class GridView<M> {
   }
 
   /**
-   * Returns the number of rows the first column should span when row bodies
-   * have been enabled.
+   * Returns the number of rows the first column should span when row bodies have been enabled.
    * 
    * @return the rowspan
    */
@@ -682,6 +787,25 @@ public class GridView<M> {
   }
 
   /**
+   * Returns the grid's sort information.
+   * 
+   * @return the grid's sort information (or null if the grid is not sorted).
+   */
+  public StoreSortInfo<M> getSortState() {
+    if (ds.getSortInfo().size() > 0) {
+      return ds.getSortInfo().get(0);
+    }
+    return null;
+  }
+
+  /**
+   * @return The CssResource instance used to denote structural or stateful details about the grid.
+   */
+  public GridStateStyles getStateStyles() {
+    return states;
+  }
+
+  /**
    * Returns the view config.
    * 
    * @return the view config
@@ -691,8 +815,7 @@ public class GridView<M> {
   }
 
   /**
-   * Returns true if the grid width will be adjusted based on visibility of
-   * horizontal scroll bar.
+   * Returns true if the grid width will be adjusted based on visibility of horizontal scroll bar.
    * 
    * @return true if adjusting
    */
@@ -808,8 +931,7 @@ public class GridView<M> {
   }
 
   /**
-   * Lays out the grid view, adjusting the header and footer width and
-   * accounting for force fit and auto fill settings.
+   * Lays out the grid view, adjusting the header and footer width and accounting for force fit and auto fill settings.
    */
   public void layout() {
     layout(false);
@@ -842,13 +964,9 @@ public class GridView<M> {
 
       if (headerToo) {
         sortState = null;
-        header.release();
 
-        initColumnHeader();
-        renderHeader();
-        if (grid.isAttached()) {
-          ComponentHelper.doAttach(header);
-        }
+        header.refresh();
+
         header.setEnableColumnResizing(grid.isColumnResize());
         header.setEnableColumnReorder(grid.isColumnReordering());
       }
@@ -888,8 +1006,7 @@ public class GridView<M> {
   }
 
   /**
-   * True to adjust the grid width when the horizontal scrollbar is hidden and
-   * visible (defaults to true).
+   * True to adjust the grid width when the horizontal scrollbar is hidden and visible (defaults to true).
    * 
    * @param adjustForHScroll true to adjust for horizontal scroll bar
    */
@@ -898,8 +1015,7 @@ public class GridView<M> {
   }
 
   /**
-   * The id of a column in this grid that should expand to fill unused space
-   * (pre-render). This id can not be 0.
+   * The id of a column in this grid that should expand to fill unused space (pre-render). This id can not be 0.
    * 
    * @param autoExpandColumn the auto expand column
    */
@@ -908,8 +1024,7 @@ public class GridView<M> {
   }
 
   /**
-   * The maximum width the autoExpandColumn can have (if enabled) (defaults to
-   * 500, pre-render).
+   * The maximum width the autoExpandColumn can have (if enabled) (defaults to 500, pre-render).
    * 
    * @param autoExpandMax the auto expand max
    */
@@ -927,8 +1042,7 @@ public class GridView<M> {
   }
 
   /**
-   * True to auto expand the columns to fit the grid <b>when the grid is
-   * created</b>.
+   * True to auto expand the columns to fit the grid <b>when the grid is created</b>.
    * 
    * @param autoFill true to expand
    */
@@ -955,8 +1069,7 @@ public class GridView<M> {
   }
 
   /**
-   * Default text to display in the grid body when no rows are available
-   * (defaults to '').
+   * Default text to display in the grid body when no rows are available (defaults to '').
    * 
    * @param emptyText the empty text
    */
@@ -965,8 +1078,7 @@ public class GridView<M> {
   }
 
   /**
-   * True to enable a column spanning row body, as used by {@link RowExpander}
-   * (defaults to false).
+   * True to enable a column spanning row body, as used by {@link RowExpander} (defaults to false).
    * 
    * @param enableRowBody true to enable row bodies
    */
@@ -975,18 +1087,20 @@ public class GridView<M> {
   }
 
   /**
-   * True to auto expand/contract the size of the columns to fit the grid width
-   * and prevent horizontal scrolling.
+   * True to auto expand/contract the size of the columns to fit the grid width and prevent horizontal scrolling
+   * (defaults to false).
    * 
    * @param forceFit true to force fit
    */
   public void setForceFit(boolean forceFit) {
     this.forceFit = forceFit;
+    if (forceFit) {
+      lastViewWidth = -1;
+    }
   }
 
   /**
-   * Sets the rowspan the first column should span when row bodies have been
-   * enabled (defaults to 1).
+   * Sets the rowspan the first column should span when row bodies have been enabled (defaults to 1).
    * 
    * @param rowBodyRowSpan the rowspan
    */
@@ -995,9 +1109,8 @@ public class GridView<M> {
   }
 
   /**
-   * True to display a red triangle in the upper left corner of any cells which
-   * are "dirty" as defined by any existing records in the data store (defaults
-   * to true).
+   * True to display a red triangle in the upper left corner of any cells which are "dirty" as defined by any existing
+   * records in the data store (defaults to true).
    * 
    * @param showDirtyCells true to display the dirty flag
    */
@@ -1006,8 +1119,7 @@ public class GridView<M> {
   }
 
   /**
-   * True to allow column sorting when the user clicks a column (defaults to
-   * true).
+   * True to allow column sorting when the user clicks a column (defaults to true).
    * 
    * @param sortable true for sortable columns
    */
@@ -1069,23 +1181,16 @@ public class GridView<M> {
       }
     }
 
+    header.adjustColumnWidths(columnWidths);
+
     // safari cell widths incorrect
     if (GXT.isSafari()) {
-      dataTable.getStyle().setProperty("display", "block");
-
-      Scheduler.get().scheduleFinally(new ScheduledCommand() {
-
-        @Override
-        public void execute() {
-          dataTable.getStyle().clearDisplay();
-        }
-      });
+      repaintGrid();
     }
   }
 
   /**
-   * Invoked after the view element is first attached, performs steps that
-   * require that the view element is attached.
+   * Invoked after the view element is first attached, performs steps that require that the view element is attached.
    */
   protected void afterRender() {
     DomHelper.insertHtml("afterBegin", dataTableBody, renderRows(0, -1).asString());
@@ -1094,18 +1199,10 @@ public class GridView<M> {
 
     processRows(0, true);
 
-    // chrome overflow: hidden not working on render
-    // alignment issues with safari and ie8
-    if (GXT.isSafari() || GXT.isChrome() || GXT.isIE8()) {
-      dataTable.getStyle().setProperty("display", "block");
-
-      Scheduler.get().scheduleFinally(new ScheduledCommand() {
-
-        @Override
-        public void execute() {
-          dataTable.getStyle().clearDisplay();
-        }
-      });
+    // overflow: hidden not working on render
+    // alignment issues with some browsers
+    if (GXT.isSafari() || GXT.isChrome() || GXT.isIE()) {
+      repaintGrid();
     }
 
     if (footer != null && grid.getLazyRowRender() > 0) {
@@ -1125,8 +1222,7 @@ public class GridView<M> {
   }
 
   /**
-   * Applies the empty text, normalizing it to non-breaking space if necessary,
-   * then displaying it if the grid is empty.
+   * Applies the empty text, normalizing it to non-breaking space if necessary, then displaying it if the grid is empty.
    */
   protected void applyEmptyText() {
     if (emptyText == null) {
@@ -1146,14 +1242,13 @@ public class GridView<M> {
   }
 
   /**
-   * Expands the column that was specified (via {@link #setAutoExpandColumn}) as
-   * the column in this grid that should expand to fill unused space.
+   * Expands the column that was specified (via {@link #setAutoExpandColumn}) as the column in this grid that should
+   * expand to fill unused space.
    * 
-   * @param preventUpdate true to update the column model width without updating
-   *          the displayed width.
+   * @param preventUpdate true to update the column model width without updating the displayed width.
    */
   protected void autoExpand(boolean preventUpdate) {
-    if (!userResized && getAutoExpandColumn() != null) {
+    if (!cm.isUserResized() && getAutoExpandColumn() != null) {
       int tw = cm.getTotalWidth(false);
       int aw = grid.getOffsetWidth(true) - getScrollAdjust();
       if (tw != aw) {
@@ -1176,11 +1271,9 @@ public class GridView<M> {
   }
 
   /**
-   * Determines whether the need for a vertical scroll bar has changed and if so
-   * updates the display.
+   * Determines whether the need for a vertical scroll bar has changed and if so updates the display.
    * 
-   * @param force true to force the display to update regardless of whether a
-   *          change has occurred.
+   * @param force true to force the display to update regardless of whether a change has occurred.
    */
   protected void calculateVBar(boolean force) {
     if (force) {
@@ -1197,8 +1290,7 @@ public class GridView<M> {
   }
 
   /**
-   * Creates a context menu for the given column, including sort menu items and
-   * column visibility sub-menu.
+   * Creates a context menu for the given column, including sort menu items and column visibility sub-menu.
    * 
    * @param colIndex the column index
    * @return the context menu for the given column
@@ -1244,32 +1336,30 @@ public class GridView<M> {
     int cols = cm.getColumnCount();
     for (int i = 0; i < cols; i++) {
       ColumnConfig<M, ?> config = cm.getColumn(i);
-      if (shouldNotCount(i, false)) {
+      // ignore columns that can't be hidden
+      if (!config.isHideable()) {
         continue;
       }
       final int fcol = i;
       final CheckMenuItem check = new CheckMenuItem();
       check.setHideOnClick(false);
-      check.setText(cm.getColumnHeader(i).asString());
+      check.setHTML(cm.getColumnHeader(i));
       check.setChecked(!cm.isHidden(i));
-
-      if (!config.isHideable()) {
-        check.disable();
-      }
+      check.setData("gxt-column-index", i);
 
       check.addCheckChangeHandler(new CheckChangeHandler<CheckMenuItem>() {
 
         @Override
         public void onCheckChange(CheckChangeEvent<CheckMenuItem> event) {
           cm.setHidden(fcol, !cm.isHidden(fcol));
-          restrictMenu(columnMenu);
+          restrictMenu(cm, columnMenu);
 
         }
       });
       columnMenu.add(check);
     }
 
-    restrictMenu(columnMenu);
+    restrictMenu(cm, columnMenu);
     columns.setEnabled(columnMenu.getWidgetCount() > 0);
     columns.setSubMenu(columnMenu);
     menu.add(columns);
@@ -1277,9 +1367,8 @@ public class GridView<M> {
   }
 
   /**
-   * Helper method that creates a StoreSortInfo from the given ColumnConfig and
-   * sort direction. This will use the provided {@link Comparator}, if any,
-   * otherwise will fall back to assuming that the data in the column is
+   * Helper method that creates a StoreSortInfo from the given ColumnConfig and sort direction. This will use the
+   * provided {@link Comparator}, if any, otherwise will fall back to assuming that the data in the column is
    * {@link Comparable}.
    * 
    * @param column the column config
@@ -1293,10 +1382,11 @@ public class GridView<M> {
       @SuppressWarnings({"unchecked", "rawtypes"})
       ValueProvider<M, Comparable> vp = (ValueProvider) column.getValueProvider();
       @SuppressWarnings("unchecked")
-      StoreSortInfo<M> s = new StoreSortInfo<M>(vp, sortDir);
+      StoreSortInfo<M> s = new StoreSortInfo<M>(ds.wrapRecordValueProvider(vp), sortDir);
       return s;
     } else {
-      return new StoreSortInfo<M>(column.getValueProvider(), column.getComparator(), sortDir);
+      return new StoreSortInfo<M>(ds.wrapRecordValueProvider(column.getValueProvider()), column.getComparator(),
+          sortDir);
     }
   }
 
@@ -1334,19 +1424,19 @@ public class GridView<M> {
 
     final SafeStyles rowStyles = SafeStylesUtils.fromTrustedString("width: " + getTotalWidth() + "px;");
 
-    final String unselectableClass = " " + unselectable;
-    final String rowAltClass = " " + styles.rowAlt();
-    final String rowDirtyClass = " " + styles.rowDirty();
+    final String unselectableClass = unselectable;
+    final String rowAltClass = styles.rowAlt();
+    final String rowDirtyClass = styles.rowDirty();
 
-    final String cellClass = styles.cell();
-    final String cellInnerClass = styles.cellInner();
-    final String cellFirstClass = " x-grid-cell-first";
-    final String cellLastClass = " x-grid-cell-last";
-    final String cellDirty = " " + styles.cellDirty();
+    final String cellClass = styles.cell() + " " + states.cell();
+    final String cellInnerClass = styles.cellInner() + " " + states.cellInner();
+    final String cellFirstClass = "x-grid-cell-first";
+    final String cellLastClass = "x-grid-cell-last";
+    final String cellDirty = styles.cellDirty();
 
-    final String rowWrap = styles.rowWrap();
-    final String rowBody = styles.rowBody();
-    final String rowBodyRow = styles.rowBodyRow();
+    final String rowWrap = styles.rowWrap() + " " + states.rowWrap();
+    final String rowBody = styles.rowBody() + " " + states.rowBody();
+    final String rowBodyRow = states.rowBodyRow();
 
     // loop over all rows
     for (int j = 0; j < rows.size(); j++) {
@@ -1365,17 +1455,17 @@ public class GridView<M> {
 
       int rowIndex = (j + startRow);
 
-      String rowClasses = styles.row();
+      String rowClasses = styles.row() + " " + states.row();
 
       if (!selectable) {
-        rowClasses += unselectableClass;
+        rowClasses += " " + unselectableClass;
       }
       if (isStripeRows() && ((rowIndex + 1) % 2 == 0)) {
-        rowClasses += rowAltClass;
+        rowClasses += " " + rowAltClass;
       }
 
       if (showDirtyCells && r != null && r.isDirty()) {
-        rowClasses += rowDirtyClass;
+        rowClasses += " " + rowDirtyClass;
       }
 
       if (viewConfig != null) {
@@ -1392,28 +1482,29 @@ public class GridView<M> {
 
         String cellClasses = cellClass;
         if (i == 0) {
-          cellClasses += cellFirstClass;
+          cellClasses += " " + cellFirstClass;
         } else if (i == last) {
-          cellClasses += cellLastClass;
+          cellClasses += " " + cellLastClass;
         }
 
         String cellInnerClasses = cellInnerClass;
         if (columnConfig.getColumnTextClassName() != null) {
           cellInnerClasses += " " + columnConfig.getColumnTextClassName();
         }
-
-        String id = columnConfig.getColumnClassSuffix();
+        if (!columnConfig.isCellPadding()) {
+          cellInnerClasses += " " + styles.noPadding();
+        }
 
         if (columnData.getClassNames() != null) {
           cellClasses += " " + columnData.getClassNames();
         }
 
-        if (id != null && !id.equals("")) {
-          cellClasses += " x-grid-td-" + id;
+        if (columnConfig.getCellClassName() != null) {
+          cellClasses += " " + columnConfig.getCellClassName();
         }
 
         if (showDirtyCells && r != null && r.getChange(columnConfig.getValueProvider()) != null) {
-          cellClasses += cellDirty;
+          cellClasses += " " + cellDirty;
         }
 
         if (viewConfig != null) {
@@ -1424,10 +1515,15 @@ public class GridView<M> {
 
         final SafeHtml tdContent;
         if (enableRowBody && i == 0) {
-          tdContent = tpls.tdRowSpan(i, cellClasses, cellStyles, rowBodyRowSpan, rv);
+          tdContent = tpls.tdRowSpan(i, cellClasses, cellStyles, rowBodyRowSpan, cellInnerClasses, rv);
         } else {
-          tdContent = tpls.td(i, cellClasses, cellStyles, cellInnerClasses,
-              columnConfig.getColumnTextStyle(), rv);
+          if (!selectable && GXT.isIE()) {
+            tdContent = tpls.tdUnselectable(i, cellClasses, cellStyles, cellInnerClasses,
+                columnConfig.getColumnTextStyle(), rv);
+          } else {
+            tdContent = tpls.td(i, cellClasses, cellStyles, cellInnerClasses, columnConfig.getColumnTextStyle(), rv);
+          }
+
         }
         trBuilder.append(tdContent);
       }
@@ -1437,13 +1533,18 @@ public class GridView<M> {
 
         SafeHtmlBuilder sb = new SafeHtmlBuilder();
         sb.append(tpls.tr("", trBuilder.toSafeHtml()));
-        sb.appendHtmlConstant("<tr class=" + rowBodyRow + "><td colspan=" + rowBodyColSpanCount + "><div class="
-            + rowBody + "></div></td></tr>");
+        sb.appendHtmlConstant("<tr class='" + rowBodyRow + "'><td colspan=" + rowBodyColSpanCount + "><div class='"
+            + rowBody + "'></div></td></tr>");
 
-        buf.append(tpls.tr(
-            rowClasses,
-            tpls.tdWrap(colCount, "", rowWrap,
-                tpls.table(cls, rowStyles, sb.toSafeHtml(), renderHiddenHeaders(columnWidths)))));
+        SafeHtml tdWrap = null;
+        if (!selectable && GXT.isIE()) {
+          tdWrap = tpls.tdWrapUnselectable(colCount, "", rowWrap,
+              tpls.table(cls, rowStyles, sb.toSafeHtml(), renderHiddenHeaders(columnWidths)));
+        } else {
+          tdWrap = tpls.tdWrap(colCount, "", rowWrap,
+              tpls.table(cls, rowStyles, sb.toSafeHtml(), renderHiddenHeaders(columnWidths)));
+        }
+        buf.append(tpls.tr(rowClasses, tdWrap));
 
       } else {
         buf.append(tpls.tr(rowClasses, trBuilder.toSafeHtml()));
@@ -1468,7 +1569,8 @@ public class GridView<M> {
 
       StoreSortInfo<M> s = createStoreSortInfo(column, sortDir);
 
-      if (sortDir == null && storeSortInfo != null && storeSortInfo.getValueProvider() == column.getValueProvider()) {
+      if (sortDir == null && storeSortInfo != null
+          && storeSortInfo.getValueProvider().getPath().equals(column.getValueProvider().getPath())) {
         s.setDirection(storeSortInfo.getDirection() == SortDir.ASC ? SortDir.DESC : SortDir.ASC);
       } else if (sortDir == null) {
         s.setDirection(SortDir.ASC);
@@ -1507,12 +1609,10 @@ public class GridView<M> {
   }
 
   /**
-   * Distribute the width of the columns amongst the available grid width as
-   * required by {@link #setAutoFill(boolean)} and {@link #setForceFit(boolean)}
-   * .
+   * Distribute the width of the columns amongst the available grid width as required by {@link #setAutoFill(boolean)}
+   * and {@link #setForceFit(boolean)} .
    * 
-   * @param preventRefresh true to perform calculations and update column models
-   *          but do not update display
+   * @param preventRefresh true to perform calculations and update column models but do not update display
    * @param onlyExpand unused in <code>GridView</code> implementation
    * @param omitColumn index of column to exclude from operation
    */
@@ -1554,7 +1654,7 @@ public class GridView<M> {
     while (cols.size() > 0) {
       w = cols.pop();
       int i = cols.pop();
-      int ww = Math.max(grid.getMinColumnWidth(), (int) Math.floor(w + w * frac));
+      int ww = Math.max(header.getMinColumnWidth(), (int) Math.floor(w + w * frac));
       cm.setColumnWidth(i, ww, true);
     }
 
@@ -1563,7 +1663,7 @@ public class GridView<M> {
       width = 0;
       for (int i = 0; i < colCount; i++) {
         w = cm.getColumnWidth(i);
-        if (!cm.isHidden(i) && !cm.isFixed(i) && w > grid.getMinColumnWidth()) {
+        if (!cm.isHidden(i) && !cm.isFixed(i) && w > header.getMinColumnWidth()) {
           cols.push(i);
           cols.push(w);
           width += w;
@@ -1573,7 +1673,7 @@ public class GridView<M> {
       while (cols.size() > 0) {
         w = cols.pop();
         int i = cols.pop();
-        int ww = Math.max(grid.getMinColumnWidth(), (int) Math.floor(w + w * frac));
+        int ww = Math.max(header.getMinColumnWidth(), (int) Math.floor(w + w * frac));
         cm.setColumnWidth(i, ww, true);
       }
     }
@@ -1581,17 +1681,6 @@ public class GridView<M> {
     if (!preventRefresh) {
       updateAllColumnWidths();
     }
-  }
-
-  /**
-   * Efficiently returns an {@link XElement} representation of the given
-   * {@link Element}.
-   * 
-   * @param elem the <code>Element</code> to cast
-   * @return the <code>XElement</code> representation
-   */
-  protected XElement fly(Element elem) {
-    return XElement.as(elem);
   }
 
   /**
@@ -1626,10 +1715,16 @@ public class GridView<M> {
       }
     }
 
-    HorizontalAlignmentConstant align = cm.getColumnAlignment(colIndex);
-    if (align != null) {
-      builder.append(SafeStylesUtils.fromTrustedString("text-align:" + align.getTextAlignString() + ";"));
+    HorizontalAlignmentConstant alignHorz = cm.getColumnHorizontalAlignment(colIndex);
+    if (alignHorz != null) {
+      builder.append(SafeStylesUtils.fromTrustedString("text-align:" + alignHorz.getTextAlignString() + ";"));
     }
+
+    VerticalAlignmentConstant alignVert = cm.getColumnVerticalAlignment(colIndex);
+    if (alignVert != null) {
+      builder.append(SafeStylesUtils.fromTrustedString("vertical-align:" + alignVert.getVerticalAlignString() + ";"));
+    }
+
     return builder.toSafeStyles();
   }
 
@@ -1653,8 +1748,8 @@ public class GridView<M> {
   }
 
   /**
-   * Returns the offset width of the grid including the total visible column
-   * width and the amount required or reserved for the vertical scroll bar.
+   * Returns the offset width of the grid including the total visible column width and the amount required or reserved
+   * for the vertical scroll bar.
    * 
    * @return the grid's offset width
    */
@@ -1696,8 +1791,7 @@ public class GridView<M> {
   /**
    * Returns the HTML elements representing the body of the table.
    * 
-   * @return the HTML elements representing the rows in the table (empty if the
-   *         table has no rows)
+   * @return the HTML elements representing the rows in the table (empty if the table has no rows)
    */
   protected NodeList<Element> getRows() {
     if (!hasRows()) {
@@ -1707,8 +1801,7 @@ public class GridView<M> {
   }
 
   /**
-   * Returns the number of pixels required or reserved for the vertical scroll
-   * bar.
+   * Returns the number of pixels required or reserved for the vertical scroll bar.
    * 
    * @return the nominal width of the vertical scroll bar
    */
@@ -1717,20 +1810,8 @@ public class GridView<M> {
   }
 
   /**
-   * Returns the grid's sort information.
-   * 
-   * @return the grid's sort information (or null if the grid is not sorted).
-   */
-  protected StoreSortInfo<M> getSortState() {
-    if (ds.getSortInfo().size() > 0) {
-      return ds.getSortInfo().get(0);
-    }
-    return null;
-  }
-
-  /**
-   * The total width of the visible columns in the grid (for the width including
-   * the vertical scroll bar, see {@link #getOffsetWidth()}.
+   * The total width of the visible columns in the grid (for the width including the vertical scroll bar, see
+   * {@link #getOffsetWidth()}.
    * 
    * @return the total width of the columns in the grid.
    */
@@ -1739,65 +1820,58 @@ public class GridView<M> {
   }
 
   /**
-   * Handles browser events of interest to the grid view. The default
-   * implementation for {@link GridView} includes support for mouse-over
-   * tracking (see {@link Grid#setTrackMouseOver(boolean)} and scroll bar
-   * synchronization.
+   * Handles browser events of interest to the grid view. The default implementation for {@link GridView} includes
+   * support for mouse-over tracking (see {@link GridView#setTrackMouseOver(boolean)} and scroll bar synchronization.
    * 
    * @param event the browser event
    */
   protected void handleComponentEvent(Event event) {
-    if (trackMouseOver) {
-      Element row = Element.is(event.getEventTarget()) ? findRow((Element) event.getEventTarget().cast()) : null;
+    Element row = Element.is(event.getEventTarget()) ? findRow((Element) event.getEventTarget().cast()) : null;
 
-      switch (event.getTypeInt()) {
-        case Event.ONMOUSEMOVE:
+    switch (event.getTypeInt()) {
+      case Event.ONMOUSEMOVE:
 
-          if (overRow != null && row == null) {
+        if (overRow != null && row == null) {
+          onRowOut(overRow);
+        } else if (row != null && overRow != row) {
+          if (overRow != null) {
             onRowOut(overRow);
-          } else if (row != null && overRow != row) {
-            if (overRow != null) {
-              onRowOut(overRow);
-            }
-            onRowOver(row);
           }
+          onRowOver(row);
+        }
 
-          break;
+        break;
 
-        case Event.ONMOUSEOVER:
-          EventTarget from = event.getRelatedEventTarget();
-          if (from == null
-              || (Element.is(from) && !DOM.isOrHasChild(grid.getElement(),
-                  (com.google.gwt.user.client.Element) Element.as(from)))) {
-            Element r = null;
-            if (Element.is(event.getEventTarget())) {
-              r = findRow(Element.as(event.getEventTarget()));
-            }
-            if (r != null) {
-              onRowOver(r);
-            }
+      case Event.ONMOUSEOVER:
+        EventTarget from = event.getRelatedEventTarget();
+        if (from == null || (Element.is(from) && !grid.getElement().isOrHasChild(Element.as(from)))) {
+          Element r = null;
+          if (Element.is(event.getEventTarget())) {
+            r = findRow(Element.as(event.getEventTarget()));
           }
-          break;
-        case Event.ONMOUSEOUT:
-          EventTarget to = event.getRelatedEventTarget();
-          if (to == null
-              || (Element.is(to) && !DOM.isOrHasChild(grid.getElement(),
-                  (com.google.gwt.user.client.Element) Element.as(to)))) {
-            if (overRow != null) {
-              onRowOut(overRow);
-            }
+          if (r != null) {
+            onRowOver(r);
           }
-          break;
-        case Event.ONMOUSEDOWN:
-          onMouseDown(event);
-          break;
-        case Event.ONSCROLL:
-          if (scroller.isOrHasChild(Element.as(event.getEventTarget()))) {
-            syncScroll();
+        }
+        break;
+      case Event.ONMOUSEOUT:
+        EventTarget to = event.getRelatedEventTarget();
+        if (to == null || (Element.is(to) && !grid.getElement().isOrHasChild(Element.as(to)))) {
+          if (overRow != null) {
+            onRowOut(overRow);
           }
-          break;
-      }
-    } else if (overRow != null) {
+        }
+        break;
+      case Event.ONMOUSEDOWN:
+        onMouseDown(event);
+        break;
+      case Event.ONSCROLL:
+        if (scroller.isOrHasChild(Element.as(event.getEventTarget()))) {
+          syncScroll();
+        }
+        break;
+    }
+    if (!trackMouseOver && overRow != null) {
       trackMouseOver = true;
       onRowOut(overRow);
       trackMouseOver = false;
@@ -1854,7 +1928,21 @@ public class GridView<M> {
     initData(grid.getStore(), cm);
     initUI(grid);
 
-    initColumnHeader();
+    initHeader();
+
+    grid.addHeaderClickHandler(new HeaderClickHandler() {
+      @Override
+      public void onHeaderClick(HeaderClickEvent event) {
+        GridView.this.onHeaderClick(event.getColumnIndex());
+      }
+    });
+
+    header.addResizeHandler(new ResizeHandler() {
+      @Override
+      public void onResize(ResizeEvent event) {
+        resize(); // updates scroller
+      }
+    });
 
     if (cm.getAggregationRows().size() > 0) {
       footer = new ColumnFooter<M>(grid, cm);
@@ -1864,45 +1952,29 @@ public class GridView<M> {
     grid.sinkEvents(Event.ONCLICK | Event.ONDBLCLICK | Event.MOUSEEVENTS);
   }
 
+  public void setColumnHeader(ColumnHeader<M> columnHeader) {
+    // check if we've been assigned a grid instance yet via init, if so, we've already wired up and
+    // attached our own header instance
+    if (grid != null) {
+      throw new IllegalStateException("Can't set a new ColumnHeader after the grid has been rendered");
+    }
+    this.header = columnHeader;
+  }
+
   /**
-   * Creates and initializes the column header and saves reference for future
-   * use.
+   * Initializes the column header and saves reference for future use, creating one if it hasn't yet been set
    */
-  protected void initColumnHeader() {
-    header = new ColumnHeader<M>(grid, cm) {
-
+  protected void initHeader() {
+    if (header == null) {
+      header = new ColumnHeader<M>(grid, cm);
+    }
+    header.setMenuFactory(new HeaderContextMenuFactory() {
       @Override
-      protected Menu getContextMenu(int column) {
-        return createContextMenu(column);
+      public Menu getMenuForColumn(int columnIndex) {
+        return createContextMenu(columnIndex);
       }
-
-      @Override
-      protected void onColumnSplitterMoved(int colIndex, int width) {
-        super.onColumnSplitterMoved(colIndex, width);
-        GridView.this.onColumnSplitterMoved(colIndex, width);
-      }
-
-      @Override
-      protected void onHeaderClick(Event ce, int column) {
-        super.onHeaderClick(ce, column);
-        GridView.this.onHeaderClick(column);
-      }
-
-      @Override
-      protected void onKeyDown(Event ce, int index) {
-        ce.stopPropagation();
-        // auto select on key down
-        if (grid.getSelectionModel() instanceof CellSelectionModel<?>) {
-          CellSelectionModel<?> csm = (CellSelectionModel<?>) grid.getSelectionModel();
-          csm.selectCell(0, index);
-        } else {
-          grid.getSelectionModel().select(0, false);
-        }
-      }
-
-    };
+    });
     header.setSplitterWidth(splitterWidth);
-    header.setMinColumnWidth(grid.getMinColumnWidth());
   }
 
   /**
@@ -1929,11 +2001,15 @@ public class GridView<M> {
       cmHandlerRegistration = cm.addColumnModelHandlers(columnListener);
     }
     this.cm = cm;
+
+    if (this.header != null) {
+      this.header.setColumnModel(cm);
+    }
   }
 
   /**
-   * Collects references to the HTML elements of the grid view and saves them in
-   * instance variables for future reference.
+   * Collects references to the HTML elements of the grid view and saves them in instance variables for future
+   * reference.
    */
   protected void initElements() {
     NodeList<Node> cs = grid.getElement().getChildNodes();
@@ -1970,8 +2046,8 @@ public class GridView<M> {
   }
 
   /**
-   * Creates the grid view listeners, including {@link StoreHandlers} and
-   * {@link ColumnModelHandlers}, and saves references for future use.
+   * Creates the grid view listeners, including {@link StoreHandlers} and {@link ColumnModelHandlers}, and saves
+   * references for future use.
    */
   protected void initListeners() {
     listener = new StoreHandlers<M>() {
@@ -2051,9 +2127,8 @@ public class GridView<M> {
   }
 
   /**
-   * Invoked to perform additional initialization of the grid view's user
-   * interface, after the data has been initialized, the default implementation
-   * for {@link GridView} does nothing.
+   * Invoked to perform additional initialization of the grid view's user interface, after the data has been
+   * initialized, the default implementation for {@link GridView} does nothing.
    * 
    * @param grid the grid for this grid view
    */
@@ -2062,8 +2137,7 @@ public class GridView<M> {
   }
 
   /**
-   * Inserts the given rows (already present in the grid's list store) into the
-   * grid view.
+   * Inserts the given rows (already present in the grid's list store) into the grid view.
    * 
    * @param firstRow the first row index
    * @param lastRow the last row index
@@ -2105,8 +2179,7 @@ public class GridView<M> {
   }
 
   /**
-   * Lays out the grid view, adjusting the header and footer width and
-   * accounting for force fit and auto fill settings.
+   * Lays out the grid view, adjusting the header and footer width and accounting for force fit and auto fill settings.
    * 
    * @param skipResize true to skip resizing of the grid view
    */
@@ -2123,7 +2196,7 @@ public class GridView<M> {
     }
 
     int vw = csize.getWidth();
-    if (vw < 10 || csize.getHeight() < 20) {
+    if (vw < 10 || (csize.getHeight() < 20 && !grid.isHideHeaders())) {
       return;
     }
 
@@ -2152,15 +2225,13 @@ public class GridView<M> {
   }
 
   /**
-   * Invoked after the grid has been hidden, the default implementation for
-   * {@link GridView} does nothing.
+   * Invoked after the grid has been hidden, the default implementation for {@link GridView} does nothing.
    */
   protected void notifyHide() {
   }
 
   /**
-   * Invoked after the grid has been shown, the default implementation for
-   * {@link GridView} does nothing.
+   * Invoked after the grid has been shown, the default implementation for {@link GridView} does nothing.
    */
   protected void notifyShow() {
   }
@@ -2188,6 +2259,7 @@ public class GridView<M> {
     Element cell = getCell(row, col);
     if (cell != null) {
       appearance.onCellSelect(cell, false);
+      cell.removeClassName(states.cellSelected());
     }
   }
 
@@ -2201,6 +2273,7 @@ public class GridView<M> {
     Element cell = getCell(row, col);
     if (cell != null) {
       appearance.onCellSelect(cell, true);
+      cell.addClassName(states.cellSelected());
     }
   }
 
@@ -2214,8 +2287,7 @@ public class GridView<M> {
   }
 
   /**
-   * Handles the click event, the default implementation for {@link GridView}
-   * does nothing.
+   * Handles the click event, the default implementation for {@link GridView} does nothing.
    * 
    * @param ce the click event
    */
@@ -2236,20 +2308,7 @@ public class GridView<M> {
   }
 
   /**
-   * Handles the column splitter move request.
-   * 
-   * @param colIndex the index of the column whose width is being adjusted
-   * @param width the new width
-   */
-  protected void onColumnSplitterMoved(int colIndex, int width) {
-    userResized = true;
-    width = Math.max(grid.getMinColumnWidth(), width);
-    cm.setColumnWidth(colIndex, width);
-  }
-
-  /**
-   * Handles a change to the column model width (see
-   * {@link ColumnModel#setColumnWidth(int, int)});
+   * Handles a change to the column model width (see {@link ColumnModel#setColumnWidth(int, int)});
    * 
    * @param column the index of the column
    * @param width the new width
@@ -2268,8 +2327,7 @@ public class GridView<M> {
   }
 
   /**
-   * Handles a change in the data in the store, including changes to the filter
-   * or sort state.
+   * Handles a change in the data in the store, including changes to the filter or sort state.
    * 
    * @param se the change (may be null)
    */
@@ -2309,8 +2367,7 @@ public class GridView<M> {
   }
 
   /**
-   * Handles a change in the column model's hidden state (see
-   * {@link ColumnModel#setHidden(int, boolean)}).
+   * Handles a change in the column model's hidden state (see {@link ColumnModel#setHidden(int, boolean)}).
    * 
    * @param cm the column model
    * @param col the column index
@@ -2334,10 +2391,25 @@ public class GridView<M> {
   }
 
   /**
-   * Invoked when a mouse down event occurs, the default implementation for
-   * {@link GridView} does nothing.
+   * Invoked when a mouse down event occurs, the default implementation for {@link GridView} does nothing.
    */
   protected void onMouseDown(Event ge) {
+
+  }
+
+  /**
+   * Called with key down is pressed while on last row.
+   * 
+   * @param index the index of the last row
+   */
+  protected void onNoNext(int index) {
+
+  }
+
+  /**
+   * Called when key up is pressed while on first row.
+   */
+  protected void onNoPrev() {
 
   }
 
@@ -2370,6 +2442,7 @@ public class GridView<M> {
     if (row != null) {
       appearance.onRowSelect(row, false);
       appearance.onRowHighlight(row, false);
+      row.removeClassName(states.rowSelected());
     }
   }
 
@@ -2410,6 +2483,7 @@ public class GridView<M> {
     if (row != null) {
       onRowOut(row);
       appearance.onRowSelect(row, true);
+      row.addClassName(states.rowSelected());
     }
   }
 
@@ -2439,19 +2513,18 @@ public class GridView<M> {
   }
 
   /**
-   * Makes a pass through the rows in the grid to finalize the appearance, the
-   * default implementation in {@link GridView} assigns the row index property
-   * and stripes the rows (if striping is enabled).
+   * Makes a pass through the rows in the grid to finalize the appearance, the default implementation in
+   * {@link GridView} assigns the row index property and stripes the rows (if striping is enabled).
    * 
    * @param startRow the row index
-   * @param skipStripe true to prevent striping (striping is always prevented if
-   *          {@link Grid#isStripeRows()} returns false).
+   * @param skipStripe true to prevent striping (striping is always prevented if {@link GridView#isStripeRows()} returns
+   *          false).
    */
   protected void processRows(int startRow, boolean skipStripe) {
     if (ds.size() < 1) {
       return;
     }
-    skipStripe = skipStripe || !grid.view.isStripeRows();
+    skipStripe = skipStripe || !isStripeRows();
     NodeList<Element> rows = getRows();
     String cls = styles.rowAlt();
     for (int i = startRow, len = rows.getLength(); i < len; i++) {
@@ -2464,9 +2537,9 @@ public class GridView<M> {
           continue;
         }
         if (isAlt) {
-          fly(row).addClassName(cls);
+          row.addClassName(cls);
         } else {
-          fly(row).removeClassName(cls);
+          row.removeClassName(cls);
         }
       }
     }
@@ -2502,7 +2575,7 @@ public class GridView<M> {
   protected void removeRow(int row) {
     Element r = getRow(row);
     if (r != null) {
-      fly(r).removeFromParent();
+      r.removeFromParent();
     }
   }
 
@@ -2532,7 +2605,7 @@ public class GridView<M> {
    * Renders the hidden TH elements that keep the column widths.
    * 
    * @param columnWidths the column widths
-   * @return
+   * @return markup representing the hidden table header elements
    */
   protected SafeHtml renderHiddenHeaders(int[] columnWidths) {
     SafeHtmlBuilder heads = new SafeHtmlBuilder();
@@ -2550,8 +2623,7 @@ public class GridView<M> {
    * Renders the grid's rows.
    * 
    * @param startRow the index in the store of the first row to render
-   * @param endRow the index of the last row to render (may be -1 to indicate
-   *          all rows)
+   * @param endRow the index of the last row to render (may be -1 to indicate all rows)
    * @return safe HTML representing the rendered rows
    */
   protected SafeHtml renderRows(int startRow, int endRow) {
@@ -2589,9 +2661,20 @@ public class GridView<M> {
     updateHeaderSortState();
   }
 
+  protected void repaintGrid() {
+    dataTable.getStyle().setProperty("display", "block");
+
+    Scheduler.get().scheduleFinally(new ScheduledCommand() {
+
+      @Override
+      public void execute() {
+        dataTable.getStyle().clearDisplay();
+      }
+    });
+  }
+
   /**
-   * Resizes the grid view, adjusting the scroll bars and accounting for the
-   * footer height (if any).
+   * Resizes the grid view, adjusting the scroll bars and accounting for the footer height (if any).
    */
   protected void resize() {
     if (body == null) {
@@ -2638,8 +2721,7 @@ public class GridView<M> {
   /**
    * Restores the scroll state.
    * 
-   * @param state the state as returned from a previous call to
-   *          {@link #getScrollState()}.
+   * @param state the state as returned from a previous call to {@link #getScrollState()}.
    */
   protected void restoreScroll(Point state) {
     if (state.getY() < scroller.getWidth(false)) {
@@ -2651,8 +2733,7 @@ public class GridView<M> {
   }
 
   /**
-   * Synchronizes the header position (and footer, if present) with the
-   * horizontal scroll bar.
+   * Synchronizes the header position (and footer, if present) with the horizontal scroll bar.
    */
   protected void syncHeaderScroll() {
     int sl = scroller.getScrollLeft();
@@ -2678,32 +2759,28 @@ public class GridView<M> {
   }
 
   /**
-   * Invoked after all column widths have been updated, the default
-   * implementation for {@link GridView} does nothing.
+   * Invoked after all column widths have been updated, the default implementation for {@link GridView} does nothing.
    */
   protected void templateOnAllColumnWidthsUpdated(int[] columnWidths, int tw) {
 
   }
 
   /**
-   * Invoked after the hidden column status been updated, the default
-   * implementation for {@link GridView} does nothing.
+   * Invoked after the hidden column status been updated, the default implementation for {@link GridView} does nothing.
    */
   protected void templateOnColumnHiddenUpdated(int col, boolean hidden, int tw) {
     // template method
   }
 
   /**
-   * Invoked after a column width has been updated, the default implementation
-   * for {@link GridView} does nothing.
+   * Invoked after a column width has been updated, the default implementation for {@link GridView} does nothing.
    */
   protected void templateOnColumnWidthUpdated(int col, int w, int tw) {
     // template method
   }
 
   /**
-   * Synchronizes the displayed width of each column with the defined width of
-   * each column from its column model.
+   * Synchronizes the displayed width of each column with the defined width of each column from its column model.
    */
   protected void updateAllColumnWidths() {
     int tw = getTotalWidth();
@@ -2720,8 +2797,7 @@ public class GridView<M> {
   }
 
   /**
-   * Updates the row width and cell display properties to hide or show the given
-   * column.
+   * Updates the row width and cell display properties to hide or show the given column.
    * 
    * @param index the column index
    * @param hidden true to hide the column
@@ -2755,27 +2831,27 @@ public class GridView<M> {
     dataTable.getStyle().setWidth(tw, Unit.PX);
 
     // cell widths incorrect
-    if (GXT.isIE7() || GXT.isIE8() || GXT.isSafari()) {
-      dataTable.getStyle().setProperty("display", "block");
-
-      Scheduler.get().scheduleFinally(new ScheduledCommand() {
-
-        @Override
-        public void execute() {
-          dataTable.getStyle().clearDisplay();
-        }
-      });
+    if (GXT.isIE() || GXT.isSafari()) {
+      repaintGrid();
     }
 
     lastViewWidth = -1;
-    layout();
+
+    if (isForceFit() && !hidden) {
+      ColumnConfig<M, ?> config = cm.getColumn(index);
+      boolean fixed = config.isFixed();
+      config.setFixed(true);
+      layout();
+      config.setFixed(fixed);
+    }  else {
+      layout();
+    }
 
     templateOnColumnHiddenUpdated(index, hidden, tw);
   }
 
   /**
-   * Updates the column width to the given value, which should have previously
-   * been stored in the column model.
+   * Updates the column width to the given value, which should have previously been stored in the column model.
    * 
    * @param col the column index
    * @param width the width of the column
@@ -2864,11 +2940,24 @@ public class GridView<M> {
   }
 
   private void constrainFocusElement() {
-    int scrollLeft = scroller.getScrollLeft();
-    int scrollTop = scroller.getScrollTop();
-    int left = scroller.getWidth(true) / 2 + scrollLeft;
-    int top = scroller.getHeight(true) / 2 + scrollTop;
-    focusEl.setLeftTop(left, top);
+    if (!focusConstrainScheduled) {
+      focusConstrainScheduled = true;
+      Scheduler.get().scheduleFinally(new ScheduledCommand() {
+        @Override
+        public void execute() {
+          focusConstrainScheduled = false;
+          int scrollLeft = scroller.getScrollLeft();
+          int scrollTop = scroller.getScrollTop();
+          int left = scroller.getWidth(true) / 2 + scrollLeft;
+          int top = scroller.getHeight(true) / 2 + scrollTop;
+          focusEl.setLeftTop(left, top);
+        }
+      });
+    }
+  }
+
+  private SimpleEventBus ensureHandlers() {
+    return eventBus == null ? eventBus = new SimpleEventBus() : eventBus;
   }
 
   private NodeList<Element> getTableHeads(Element table) {
@@ -2889,35 +2978,33 @@ public class GridView<M> {
     }
   }
 
-  private void restrictMenu(Menu columns) {
+  private void restrictMenu(ColumnModel<M> cm, Menu columns) {
     int count = 0;
     for (int i = 0, len = cm.getColumnCount(); i < len; i++) {
-      if (!shouldNotCount(i, true)) {
-        count++;
+      ColumnConfig<M, ?> cc = cm.getColumn(i);
+      if (cc.isHidden() || !cc.isHideable()) {
+        continue;
       }
+      count++;
     }
 
     if (count == 1) {
-      for (Widget item : columns) {
-        CheckMenuItem ci = (CheckMenuItem) item;
+      for (int i = 0, len = columns.getWidgetCount(); i < len; i++) {
+        CheckMenuItem ci = (CheckMenuItem) columns.getWidget(i);
         if (ci.isChecked()) {
           ci.disable();
         }
       }
     } else {
       for (int i = 0, len = columns.getWidgetCount(); i < len; i++) {
-        Widget item = columns.getWidget(i);
-        ColumnConfig<M, ?> config = cm.getColumn(i);
-        if (item instanceof Component && config.isHideable()) {
-          ((Component) item).enable();
+        CheckMenuItem item = (CheckMenuItem) columns.getWidget(i);
+        int col = item.getData("gxt-column-index");
+        ColumnConfig<M, ?> config = cm.getColumn(col);
+        if (config.isHideable()) {
+          item.enable();
         }
       }
     }
-  }
-
-  private boolean shouldNotCount(int columnIndex, boolean includeHidden) {
-    return cm.getColumnHeader(columnIndex) == null || cm.getColumnHeader(columnIndex).asString().equals("")
-        || (includeHidden && cm.isHidden(columnIndex)) || cm.isFixed(columnIndex);
   }
 
 }

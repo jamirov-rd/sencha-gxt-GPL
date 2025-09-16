@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,21 +10,6 @@
   width: auto; /* override gwt-image behavior */
   border-color: #718bb7;
   background-color: #f0f0f0;
-}
-
-.menuListItem {
-  font: normal 11px tahoma, arial, sans-serif;
-}
-
-@sprite .menuItemActive {
-  gwt-image: "itemOver";
-  width: auto; /* override gwt-image behavior */
-  background-color: #ebf3fd;
-  background-repeat: repeat-x;
-  background-position: left bottom;
-  border: 1px solid #aaccf6;
-  padding: 0;
-  color: #233d6d;
 }
 
 .plain {

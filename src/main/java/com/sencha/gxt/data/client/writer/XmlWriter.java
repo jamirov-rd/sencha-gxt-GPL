@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -16,13 +16,22 @@ import com.google.gwt.xml.client.Document;
 import com.google.gwt.xml.client.Element;
 import com.google.gwt.xml.client.XMLParser;
 import com.google.web.bindery.autobean.shared.AutoBean;
+import com.google.web.bindery.autobean.shared.AutoBean.PropertyName;
 import com.google.web.bindery.autobean.shared.AutoBeanFactory;
 import com.google.web.bindery.autobean.shared.AutoBeanUtils;
 import com.google.web.bindery.autobean.shared.AutoBeanVisitor;
+import com.sencha.gxt.data.client.loader.XmlReader;
 import com.sencha.gxt.data.shared.writer.AutoBeanWriter;
 
 /**
- * A <code>AutoBeanWriter</code> that outputs XML.
+ * A <code>AutoBeanWriter</code> that outputs XML. The {@link PropertyName} annotation is read as the path to
+ * the node to write out the values in essentially the same way that {@link XmlReader} works, though conditionals
+ * are not allowed. 
+ * 
+ * XML does not have a concept of {@code null}, so instead this writer omits any null values. In most cases this will
+ * yield the same contents on reading the values back out again, as the lack of a value can be understood to mean
+ * null, but one exception is using a null in a collection. A List with a null entry will have that entry completely
+ * skipped by this writer.
  *
  * @param <M> the starting data format for the model to be inputed
  */
@@ -52,6 +61,10 @@ public class XmlWriter<M> extends AutoBeanWriter<M, String> {
 
     @Override
     public void endVisitReferenceProperty(String propertyName, AutoBean<?> value, PropertyContext ctx) {
+      if (value == null) {
+        //skip null values, as currentPath shouldn't contain references to that value
+        return;
+      }
       if (!"".equals(propertyName)) {
         for (int i = 0; i < propertyName.split("/").length; i++) {
           currentPath.pop();
@@ -61,6 +74,7 @@ public class XmlWriter<M> extends AutoBeanWriter<M, String> {
 
     public String getXml() {
       assert currentPath.size() == 0;
+      assert seen.size() == 0;
       return doc.toString();
     }
 
@@ -89,6 +103,9 @@ public class XmlWriter<M> extends AutoBeanWriter<M, String> {
       }
       String tag = subtags.get(subtags.size() - 1);
       for (Object v : value.as()) {
+        if (v == null) {
+          continue;
+        }
         Element next = doc.createElement(tag);
         elt.appendChild(next);
         currentPath.push(next);
@@ -102,6 +119,10 @@ public class XmlWriter<M> extends AutoBeanWriter<M, String> {
     public boolean visitReferenceProperty(String propertyName, AutoBean<?> value, PropertyContext ctx) {
       if ("".equals(propertyName)) {
         return true;
+      }
+      if (value == null) {
+        //skip null values, don't create new tags or attributes
+        return false;
       }
       assertValidPath(propertyName);
       String[] subtags = propertyName.split("/");
@@ -121,6 +142,11 @@ public class XmlWriter<M> extends AutoBeanWriter<M, String> {
       assertValidPath(propertyName);
 
       assert propertyName.matches("^([^@]+|.*@[^/]+|)$") : "Invalid path to use when writing data out to XML";
+
+      if (value == null) {
+        //skip null values, don't create new tags or attributes
+        return true;
+      }
 
       if ("".equals(propertyName)) {
         getCurrentParent().appendChild(doc.createTextNode(String.valueOf(value)));

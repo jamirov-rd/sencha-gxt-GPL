@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -202,7 +202,7 @@ public class Layer {
    * Shadow position enumeration.
    */
   public enum ShadowPosition {
-    DROP, FRAME, SIDES;
+    DROP, FRAME, SIDES
   }
 
   public interface ShimTemplates extends XTemplates {
@@ -215,7 +215,7 @@ public class Layer {
 
   private static Stack<XElement> shims = new Stack<XElement>();
 
-  private LayerAppearance appearance;
+  private final LayerAppearance appearance;
   private XElement elem;
   private XElement shadow;
   private Rectangle shadowAdjusts;
@@ -224,6 +224,7 @@ public class Layer {
   private XElement shim;
 
   private boolean shimEnabled;
+  private boolean isLegacyIELayer = GXT.isIE6() || GXT.isIE7() || GXT.isIE8() || GXT.isIE9();
 
   public Layer(XElement elem) {
     this(elem, GWT.<LayerAppearance> create(LayerAppearance.class));
@@ -272,6 +273,10 @@ public class Layer {
    */
   public void enableShim() {
     shimEnabled = true;
+  }
+
+  public LayerAppearance getAppearance() {
+    return appearance;
   }
 
   public XElement getElement() {
@@ -397,7 +402,7 @@ public class Layer {
         shadowAdjusts.setWidth(shadowOffset * 2);
         shadowAdjusts.setX(-shadowOffset);
         shadowAdjusts.setY(shadowOffset - 1);
-        if (GXT.isIE()) {
+        if (isLegacyIELayer) {
           shadowAdjusts.setX(shadowAdjusts.getX() - (shadowOffset - radius));
           shadowAdjusts.setY(shadowAdjusts.getY() - (shadowOffset + radius));
           shadowAdjusts.setX(shadowAdjusts.getX() + 1);
@@ -415,7 +420,7 @@ public class Layer {
 
         shadowAdjusts.setHeight(shadowAdjusts.getHeight() - 2);
 
-        if (GXT.isIE()) {
+        if (isLegacyIELayer) {
           shadowAdjusts.setX(shadowAdjusts.getX() - (shadowOffset - radius));
           shadowAdjusts.setY(shadowAdjusts.getY() - (shadowOffset - radius));
           shadowAdjusts.setWidth(shadowAdjusts.getWidth() - (shadowOffset + radius) + 1);
@@ -424,11 +429,11 @@ public class Layer {
         break;
       default:
         shadowAdjusts.setWidth(0);
-        shadowAdjusts.setX(shadowOffset);
         shadowAdjusts.setY(shadowOffset);
+        shadowAdjusts.setX(shadowAdjusts.getY());
+        shadowAdjusts.setY(shadowAdjusts.getY() - 1);
 
-        shadowAdjusts.setY(shadowAdjusts.getY() - 10);
-        if (GXT.isIE()) {
+        if (isLegacyIELayer) {
           shadowAdjusts.setX(shadowAdjusts.getX() - (shadowOffset + radius));
           shadowAdjusts.setY(shadowAdjusts.getX());
           shadowAdjusts.setWidth(shadowAdjusts.getWidth() - radius);
@@ -466,7 +471,7 @@ public class Layer {
         int sh = h + shadowAdjusts.getHeight();
         if (shadow.getOffsetWidth() != sw || shadow.getOffsetHeight() != sh) {
           shadow.setSize(sw, sh);
-          if (!GXT.isIE()) {
+          if (!isLegacyIELayer) {
             int width = Math.max(0, sw - 12);
             XElement.as(shadow.getChildNodes().getItem(0).getChildNodes().getItem(1)).setWidth(width);
             XElement.as(shadow.getChildNodes().getItem(1).getChildNodes().getItem(1)).setWidth(width);
@@ -489,7 +494,7 @@ public class Layer {
         }
         Rectangle a = shadow == null ? new Rectangle(0, 0, 0, 0) : shadowAdjusts;
 
-        if (GXT.isIE() && shadow != null && shadow.isVisible()) {
+        if (isLegacyIELayer && shadow != null && shadow.isVisible()) {
           int shadowOffset = appearance.getShadowOffset();
           w += shadowOffset * 2;
           l -= shadowOffset;
@@ -509,6 +514,8 @@ public class Layer {
       }
     }
   }
+  
+
 
   private final native void bind(XElement elem) /*-{
     elem.layer = this;

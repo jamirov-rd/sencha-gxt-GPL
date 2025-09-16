@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,9 +8,11 @@
 package com.sencha.gxt.dnd.core.client;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
+import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.dnd.core.client.DND.Feedback;
@@ -20,16 +22,17 @@ import com.sencha.gxt.widget.core.client.ListView;
 /**
  * Enables a {@link ListView} to act as the target of a drag and drop operation.
  * <p/>
- * Use {@link #setFeedback(Feedback)} to specify whether to allow inserting
- * items between rows, appending items to the end, or both (defaults to
- * {@link Feedback#BOTH}).
+ * Use {@link #setFeedback(com.sencha.gxt.dnd.core.client.DND.Feedback)} to specify whether to allow inserting items
+ * between rows, appending items to the end, or both (defaults to {@link Feedback#BOTH}).
  * <p/>
- * Use {@link #setOperation(Operation)} to specify whether to move items or copy
+ * Use {@link #setOperation(com.sencha.gxt.dnd.core.client.DND.Operation)} to specify whether to move items or copy
  * them (defaults to {@link Operation#MOVE}).
- * 
+ *
  * @param <M> the model type
  */
 public class ListViewDropTarget<M> extends DropTarget {
+
+  private static final Logger logger = Logger.getLogger(ListViewDropTarget.class.getName());
 
   protected ListView<M, ?> listView;
   protected M activeItem;
@@ -67,8 +70,7 @@ public class ListViewDropTarget<M> extends DropTarget {
   }
 
   /**
-   * True to automatically select any new items created after a drop (defaults
-   * to false).
+   * True to automatically select any new items created after a drop (defaults to false).
    * 
    * @param autoSelect true to auto select
    */
@@ -168,11 +170,20 @@ public class ListViewDropTarget<M> extends DropTarget {
   private void showInsert(DndDragMoveEvent event, Element row) {
     Insert insert = Insert.get();
     insert.show(row.getParentElement());
+
     Rectangle rect = row.<XElement> cast().getBounds();
-    int y = !before ? (rect.getY() + rect.getY() - 4) : rect.getY() - 2;
+
+    int y = rect.getY() - 2;
+    if (!before) {
+      y = rect.getY() + rect.getHeight() - 4;
+    }
 
     insert.getElement().makePositionable(true);
     insert.getElement().setBounds(rect.getX(), y, rect.getWidth(), 6);
+
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("showInsert: y=" + y + " before=" + before + " rect=" + rect);
+    }
   }
 
 }

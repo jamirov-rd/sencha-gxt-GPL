@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,7 +8,9 @@
 package com.sencha.gxt.theme.blue.client.grid;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.resources.client.CssResource.Import;
 import com.sencha.gxt.theme.base.client.grid.GridBaseAppearance;
+import com.sencha.gxt.widget.core.client.grid.GridView.GridStateStyles;
 
 public class BlueGridAppearance extends GridBaseAppearance {
 
@@ -17,7 +19,8 @@ public class BlueGridAppearance extends GridBaseAppearance {
   }
   
   public interface BlueGridResources extends GridResources  {
-    
+
+    @Import(GridStateStyles.class)
     @Source({"com/sencha/gxt/theme/base/client/grid/Grid.css", "BlueGrid.css"})
     @Override
     BlueGridStyle css();

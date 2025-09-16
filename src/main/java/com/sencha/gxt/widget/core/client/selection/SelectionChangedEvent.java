@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.selection;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.event.shared.EventHandler;
@@ -68,7 +69,7 @@ public class SelectionChangedEvent<M> extends GwtEvent<SelectionChangedHandler<M
   private List<M> selection;
 
   public SelectionChangedEvent(List<M> selection) {
-    this.selection = selection;
+    this.selection = Collections.unmodifiableList(selection);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
@@ -86,6 +87,7 @@ public class SelectionChangedEvent<M> extends GwtEvent<SelectionChangedHandler<M
     return selection;
   }
   
+  @Override
   @SuppressWarnings("unchecked")
   public StoreSelectionModel<M> getSource() {
     return (StoreSelectionModel<M>) super.getSource();

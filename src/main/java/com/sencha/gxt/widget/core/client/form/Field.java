@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,7 +22,6 @@ import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.resources.client.CssResource;
-import com.google.gwt.resources.client.CssResource.Shared;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.HasName;
 import com.google.gwt.user.client.ui.HasValue;
@@ -41,42 +40,37 @@ import com.sencha.gxt.widget.core.client.event.ValidEvent;
 import com.sencha.gxt.widget.core.client.event.ValidEvent.HasValidHandlers;
 import com.sencha.gxt.widget.core.client.event.ValidEvent.ValidHandler;
 import com.sencha.gxt.widget.core.client.form.error.DefaultEditorError;
-import com.sencha.gxt.widget.core.client.form.error.ElementErrorHandler;
 import com.sencha.gxt.widget.core.client.form.error.ErrorHandler;
+import com.sencha.gxt.widget.core.client.form.error.HasErrorHandler;
 import com.sencha.gxt.widget.core.client.form.error.SideErrorHandler;
-import com.sencha.gxt.widget.core.client.form.error.TitleErrorHandler;
-import com.sencha.gxt.widget.core.client.form.error.ToolTipErrorHandler;
 
 /**
- * Base class for all cell based fields. Adapts these fields for use as widgets, adding validation
- * features, and the ability to interact with the GWT Editor framework.
+ * Base class for all cell based fields. Adapts these fields for use as widgets, adding validation features, and the
+ * ability to interact with the GWT Editor framework.
  * <p>
- * The Field instance implements several Editor interfaces to participate in the full editing
- * lifecycle.
+ * The Field instance implements several Editor interfaces to participate in the full editing lifecycle.
  * <ul>
- * <li>{@link LeafValueEditor} indicates that this class will have no sub-editors, and can have
- * new values set on it, and retrieved when the driver is flushed.</li>
- * <li>{@link HasEditorDelegate} provides access to the delegate to report validation and parse
- * errors to the driver</li>
- * <li>{@link HasEditorErrors} indicates that the field should be informed when the driver is given
- * an error that applies to the data the field contains, so that it can present it to the user.</li>
- * <li>{@link ValueAwareEditor} is used to learn when the editor driver is flushing values so that
- * current errors can be reported to the error delegate, and collected at the driver</li>
+ * <li>{@link LeafValueEditor} indicates that this class will have no sub-editors, and can have new values set on it,
+ * and retrieved when the driver is flushed.</li>
+ * <li>{@link HasEditorDelegate} provides access to the delegate to report validation and parse errors to the driver</li>
+ * <li>{@link HasEditorErrors} indicates that the field should be informed when the driver is given an error that
+ * applies to the data the field contains, so that it can present it to the user.</li>
+ * <li>{@link ValueAwareEditor} is used to learn when the editor driver is flushing values so that current errors can be
+ * reported to the error delegate, and collected at the driver</li>
  * </ul>
  * </p>
  * <p>
- * All errors are displayed through a {@link ErrorHandler} instance, whether they arrive from the
- * Cell's parsing, the Field's validation, or from validation errors given to an editor driver.
- * Events are also dispatched when the validity of the field changes.
+ * All errors are displayed through a {@link ErrorHandler} instance, whether they arrive from the Cell's parsing, the
+ * Field's validation, or from validation errors given to an editor driver. Events are also dispatched when the validity
+ * of the field changes.
  * </p>
  * 
  * @param <T> the field's data type
  */
 public abstract class Field<T> extends CellComponent<T> implements IsField<T>, HasValue<T>, HasValueChangeHandlers<T>,
     HasName, HasInvalidHandlers, HasValidHandlers, LeafValueEditor<T>, HasEditorErrors<T>, HasEditorDelegate<T>,
-    ValueAwareEditor<T> {
+    ValueAwareEditor<T>, HasErrorHandler {
 
-  @Shared
   public interface FieldStyles extends CssResource {
     String focus();
 
@@ -144,9 +138,7 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
     return addHandler(handler, ValueChangeEvent.getType());
   }
 
-  /**
-   * Clears the value from the field.
-   */
+  @Override
   public void clear() {
     boolean restore = preventMark;
     preventMark = true;
@@ -158,6 +150,7 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   /**
    * Clear any invalid styles / messages for this field.
    */
+  @Override
   public void clearInvalid() {
     valid = true;
     getCell().onValid(getElement(), true);
@@ -169,6 +162,7 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
     fireEvent(new ValidEvent());
   }
 
+  @Override
   public void finishEditing() {
     getCell().finishEditing(getElement(), getValue(), createContext().getKey(), valueUpdater);
   }
@@ -193,9 +187,8 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Forces the field to be invalid using the given error message. When using
-   * this feature, {@link #clearInvalid()} must be called to clear the error.
-   * Also, no other validation logic will execute.
+   * Forces the field to be invalid using the given error message. When using this feature, {@link #clearInvalid()} must
+   * be called to clear the error. Also, no other validation logic will execute.
    * 
    * @param msg the error text
    */
@@ -209,11 +202,12 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
     return (FieldCell<T>) super.getCell();
   }
 
-  /**
-   * Returns the field's error support instance.
-   * 
-   * @return the error support
-   */
+  @Override
+  public List<EditorError> getErrors() {
+    return errors == null ? new ArrayList<EditorError>() : Collections.unmodifiableList(errors);
+  }
+
+  @Override
   public ErrorHandler getErrorSupport() {
     return errorSupport;
   }
@@ -229,9 +223,18 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Returns true if the value is validate on blur.
+   * Returns the original value.
    * 
-   * @return the validate on blur state
+   * @return the original value
+   */
+  public T getOriginalValue() {
+    return originalValue;
+  }
+
+  /**
+   * Returns {@code true} if the value is validate on blur.
+   * 
+   * @return {@code true} if validations run on blur
    */
   public boolean getValidateOnBlur() {
     return validateOnBlur;
@@ -256,31 +259,27 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Returns true if the field value is validated on each key press.
+   * Returns {@code true} if the field value is validated on each key press.
    * 
-   * @return the auto validate state
+   * @return {@code true} if auto validating
    */
   public boolean isAutoValidate() {
     return autoValidate;
   }
 
+  /**
+   * Return {@code true} if the field is being edited.
+   * 
+   * @return {@code true} if editing
+   */
   public boolean isEditing() {
     return getCell().isEditing(createContext(), getElement(), getValue());
   }
 
   /**
-   * Returns the read only state.
-   * 
-   * @return <code>true</code> if read only, otherwise <code>false</code>
-   */
-  public boolean isReadOnly() {
-    return getCell().isReadOnly();
-  }
-
-  /**
    * Returns whether or not the field value is currently valid.
    * 
-   * @return true if valid
+   * @return {@code true} if valid
    */
   public boolean isValid() {
     return isValid(false);
@@ -302,15 +301,14 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Marks this field as invalid. Validation will still run if called again, and
-   * the error message will be changed or cleared based on validation. To set a
-   * error message that will not be cleared until manually cleared see
+   * Marks this field as invalid. Validation will still run if called again, and the error message will be changed or
+   * cleared based on validation. To set a error message that will not be cleared until manually cleared see
    * {@link #forceInvalid(String)}
    * 
    * @param msg the validation message
    */
   public void markInvalid(String msg) {
-    markInvalid(Collections.<EditorError>singletonList(new DefaultEditorError(this, msg, getValue())));
+    markInvalid(Collections.<EditorError> singletonList(new DefaultEditorError(this, msg, getValue())));
   }
 
   @Override
@@ -359,9 +357,9 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Sets whether the value is validated on each key press (defaults to false).
+   * Sets whether the value is validated on each key press (defaults to {@code false}).
    * 
-   * @param autoValidate true to validate on each key press
+   * @param autoValidate {@code true} to validate on each key press
    */
   public void setAutoValidate(boolean autoValidate) {
     if (!this.autoValidate && autoValidate) {
@@ -383,22 +381,18 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
     this.delegate = delegate;
   }
 
-  /**
-   * Sets the field's error support instance.
-   * 
-   * <p />
-   * See the following concrete implementations:
-   * <ul>
-   * <li>{@link SideErrorHandler}</li>
-   * <li>{@link ToolTipErrorHandler}</li>
-   * <li>{@link TitleErrorHandler}</li>
-   * <li>{@link ElementErrorHandler}</li>
-   * </ul>
-   * 
-   * @param error the error support
-   */
+  @Override
   public void setErrorSupport(ErrorHandler error) {
+    if (this.errorSupport != null) {
+      this.errorSupport.clearInvalid();
+      this.errorSupport.release();
+    }
+
     this.errorSupport = error;
+
+    if (this.errorSupport != null && errors != null) {
+      this.errorSupport.markInvalid(errors);
+    }
   }
 
   @Override
@@ -407,6 +401,11 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
     getCell().setName(getElement(), name);
   }
 
+  /**
+   * Sets the value the field will be set to when {@link #reset()} is called.
+   * 
+   * @param value the original value
+   */
   public void setOriginalValue(T value) {
     originalValue = value;
   }
@@ -421,18 +420,16 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Sets whether the field should validate when it loses focus (defaults to
-   * true).
+   * Sets whether the field should validate when it loses focus (defaults to {@code true}).
    * 
-   * @param validateOnBlur true to validate on blur, otherwise false
+   * @param validateOnBlur {@code true} to validate on blur, otherwise false
    */
   public void setValidateOnBlur(boolean validateOnBlur) {
     this.validateOnBlur = validateOnBlur;
   }
 
   /**
-   * Sets length of time in milliseconds after user input begins until
-   * validation is initiated (defaults to 250).
+   * Sets length of time in milliseconds after user input begins until validation is initiated (defaults to 250).
    * 
    * @param validationDelay the delay in milliseconds
    */
@@ -473,19 +470,13 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   /**
    * Validates the field value.
    * 
-   * @return <code>true</code> if valid, otherwise <code>false</code>
+   * @return {@code true} if valid, otherwise {@code false}
    */
   public boolean validate() {
     return validate(false);
   }
 
-  /**
-   * Validates the field value.
-   * 
-   * @param preventMark true to not mark the field valid and fire invalid event
-   *          when invalid
-   * @return true if valid, otherwise false
-   */
+  @Override
   public boolean validate(boolean preventMark) {
     if (disabled) {
       clearInvalid();
@@ -508,8 +499,7 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Actual implementation of markInvalid, which bypasses recording an error in
-   * the editor peer.
+   * Actual implementation of markInvalid, which bypasses recording an error in the editor peer.
    * 
    * @param msg the validation message
    */
@@ -591,9 +581,8 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
   }
 
   /**
-   * Called when a "navigation" key is pressed. The navigation keys fire on
-   * different events (keydown and keypress) for different browers, this method
-   * normailizes this behavior as {@link KeyNav} does.
+   * Called when a "navigation" key is pressed. The navigation keys fire on different events (keydown and keypress) for
+   * different browers, this method normalizes this behavior as {@link KeyNav} does.
    * 
    * @param event the event
    */
@@ -607,6 +596,10 @@ public abstract class Field<T> extends CellComponent<T> implements IsField<T>, H
     if (!valid) {
       getCell().onValid(getElement(), false);
     }
+  }
+
+  protected void setErrors(List<EditorError> errors) {
+    this.errors = errors;
   }
 
   protected boolean validateValue(T value) {

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -25,25 +25,29 @@ public class UserAgentPropertyGenerator implements PropertyProviderGenerator {
     sw.println("{");
 
     sw.println("var ua = navigator.userAgent.toLowerCase();");
-    simpleStatement(sw, "chrome", "chrome");
-    simpleStatement(sw, "opera", "opera");
+    uaContains(sw, "chrome", "chrome");
+    uaContains(sw, "opera", "opera");
 
     sw.println("if (ua.indexOf('msie') != -1) {");
     sw.indent();
+
     // TODO ChromeFrame?
-    simpleStatement(sw, "msie 6", "ie6");
-    simpleStatement(sw, "msie 7", "ie7");
-    simpleStatement(sw, "msie 8", "ie8");
-    // else assume newest
-    // simpleStatement(sw, "msie 9", "ie9");
-    sw.println("return 'ie9';");
+    docModeGreaterThan(sw, 10, "ie10");
+    docModeGreaterThan(sw, 9, "ie9");
+    docModeGreaterThan(sw, 8, "ie8");
+    
+    uaContains(sw, "msie 7", "ie7");
+    uaContains(sw, "msie 6", "ie6");
+    
+    // last assume newest
+    sw.println("return 'ie10';");
     sw.outdent();
     sw.println("}");
 
     sw.println("if (ua.indexOf('safari') != -1) {");
     sw.indent();
-    simpleStatement(sw, "version/3", "safari3");
-    simpleStatement(sw, "version/4", "safari4");
+    uaContains(sw, "version/3", "safari3");
+    uaContains(sw, "version/4", "safari4");
     // else assume newest
     // simpleStatement(sw, "version/5", "safari5");
     sw.println("return 'safari5';");
@@ -52,7 +56,7 @@ public class UserAgentPropertyGenerator implements PropertyProviderGenerator {
 
     sw.println("if (ua.indexOf('gecko') != -1) {");
     sw.indent();
-    simpleStatement(sw, "rv:1.8", "gecko1_8");
+    uaContains(sw, "rv:1.8", "gecko1_8");
     // Don't check for rev 1.9, check instead for the newest version, and treat
     // all
     // gecko browsers that don't match a rule as the newest version
@@ -62,13 +66,17 @@ public class UserAgentPropertyGenerator implements PropertyProviderGenerator {
     sw.println("}");
 
 
-    simpleStatement(sw, "adobeair", "air");
+    uaContains(sw, "adobeair", "air");
 
     sw.println("return null;}");
     return sw.toString();
   }
 
-  private void simpleStatement(SourceWriter sw, String indexOf, String value) {
-    sw.println("if (ua.indexOf('%1$s') != -1) return '%2$s';", indexOf, value);
+  private void docModeGreaterThan(SourceWriter sw, int i, String value) {
+    sw.println("if ($doc.documentMode >= %1$d) return '%2$s'", i, value);
+  }
+
+  private void uaContains(SourceWriter sw, String ua, String value) {
+    sw.println("if (ua.indexOf('%1$s') != -1) return '%2$s';", ua, value);
   }
 }

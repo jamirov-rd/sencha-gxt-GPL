@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,6 +22,7 @@ import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.sencha.gxt.core.client.ValueProvider;
+import com.sencha.gxt.core.shared.FastMap;
 import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
 import com.sencha.gxt.data.shared.event.StoreAddEvent;
 import com.sencha.gxt.data.shared.event.StoreAddEvent.StoreAddHandler;
@@ -115,7 +116,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
     }
 
     public final Object getChangeTag() {
-      return access;
+      return access.getPath();
     }
 
     public V getValue() {
@@ -160,7 +161,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
      */
     public <V> void addChange(ValueProvider<? super M, V> property, V value) {
       if (!isAutoCommit) {
-        PropertyChange<M, V> c = new PropertyChange<M, V>(property, value);
+        Change<M, V> c = new PropertyChange<M, V>(property, value);
         if (c.isCurrentValue(model)) {
           changes.remove(c.getChangeTag());
           if (changes.size() == 0) {
@@ -206,7 +207,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
       // called
       // if we keep this, kill the other addChange, or the Change interface
       // itself
-      return (Change<M, V>) changes.get(property);
+      return (Change<M, V>) changes.get(property.getPath());
     }
 
     /**
@@ -265,7 +266,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
      * @param property the property of the model to revert
      */
     public void revert(ValueProvider<? super M,?> property) {
-      if (changes.remove(property) != null) {
+      if (changes.remove(property.getPath()) != null) {
         fireEvent(new StoreUpdateEvent<M>(Collections.singletonList(this.model)));
       }
     }
@@ -316,7 +317,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
    */
   public static class StoreSortInfo<M> implements Comparator<M> {
     private SortDir direction;
-    private final Comparator<M> comparator;
+    private final Comparator<? super M> comparator;
     private final ValueProvider<? super M, ?> valueProvider;
 
     /**
@@ -328,7 +329,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
      * @param itemComparator the comparator to use to sort the items
      * @param direction the sort direction
      */
-    public StoreSortInfo(Comparator<M> itemComparator, SortDir direction) {
+    public StoreSortInfo(Comparator<? super M> itemComparator, SortDir direction) {
       this.comparator = itemComparator;
       this.direction = direction;
       this.valueProvider = null;
@@ -343,7 +344,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
      * @param itemComparator the comparator to use in the sort
      * @param direction the sort direction
      */
-    public <V> StoreSortInfo(final ValueProvider<? super M, V> property, final Comparator<V> itemComparator, SortDir direction) {
+    public <V> StoreSortInfo(final ValueProvider<? super M, V> property, final Comparator<? super V> itemComparator, SortDir direction) {
       this.valueProvider = property;
       this.direction = direction;
       this.comparator = new Comparator<M>() {
@@ -429,7 +430,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
   }
 
   // TODO lazily init these?
-  private Map<M, Record> records = new HashMap<M, Record>();
+  private final Map<String, Record> records = new FastMap<Record>();
   private Set<Record> modifiedRecords = new HashSet<Record>();
   private boolean isAutoCommit = false;
   private ModelKeyProvider<? super M> keyProvider;
@@ -648,16 +649,18 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
   }
 
   /**
-   * Gets the current Record instance for the given item.
+   * Gets the current Record instance for the given item. If a Record doesn't already exist, one
+   * will be created. Use {@link #hasRecord(Object)} to check if you don't want to create a new one.
    * 
    * @param data the data key
    * @return the record
    */
   public Record getRecord(M data) {
-    Record rec = records.get(data);
+    String key = getKeyProvider().getKey(data);
+    Record rec = records.get(key);
     if (rec == null) {
       rec = new Record(data);
-      records.put(data, rec);
+      records.put(key, rec);
     }
     return rec;
   }
@@ -693,7 +696,7 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
    * @return true if a record exists
    */
   public boolean hasRecord(M data) {
-    return records.get(data) != null;
+    return records.get(getKeyProvider().getKey(data)) != null;
   }
 
   /**
@@ -785,8 +788,9 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
   }
 
   /**
-   * Replaces the item that matches the key of the given item, and fires a
-   * {@link StoreUpdateEvent} to indicate that this change has occurred.
+   * Replaces the item that matches the key of the given item, and fires a {@link StoreUpdateEvent} to indicate that
+   * this change has occurred. Any changes to the previous model via it's record instance will be lost and the record
+   * will be removed.
    * 
    * This will not cause the sort or filter to be re-applied to the object.
    * 
@@ -862,10 +866,42 @@ public abstract class Store<M> implements HasStoreHandlers<M> {
    *         should modify this to return false if necessary
    */
   protected boolean remove(M model) {
-    if (records.containsKey(model)) {
-      modifiedRecords.remove(records.remove(model));
+    String key = getKeyProvider().getKey(model);
+    if (records.containsKey(key)) {
+      modifiedRecords.remove(records.remove(key));
     }
     return true;
   }
 
+  /**
+   * Returns a ValueProvider that will read and write to the corresponding Record object if
+   * necessary instead of the model itself. This allows sorting and filtering to cover the
+   * new value in the record instead of the original value.
+   * @param valueProvider an existing ValueProvider to wrap
+   * @return a new ValueProvider of the same type, able to read and write from this store's records
+   */
+  public <V> ValueProvider<? super M, V> wrapRecordValueProvider(final ValueProvider<? super M, V> valueProvider) {
+    if (isAutoCommit()) {
+      return valueProvider;
+    }
+    return new ValueProvider<M, V>() {
+      @Override
+      public V getValue(M object) {
+        if (hasRecord(object)) {
+          return getRecord(object).getValue(valueProvider);
+        }
+        return valueProvider.getValue(object);
+      }
+
+      @Override
+      public void setValue(M object, V value) {
+        getRecord(object).addChange(valueProvider, value);
+      }
+
+      @Override
+      public String getPath() {
+        return valueProvider.getPath();
+      }
+    };
+  }
 }

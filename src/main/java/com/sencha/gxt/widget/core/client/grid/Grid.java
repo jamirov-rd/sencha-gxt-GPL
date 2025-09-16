@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,6 +14,8 @@ import com.google.gwt.cell.client.Cell;
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.cell.client.ValueUpdater;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.event.shared.HandlerRegistration;
@@ -21,7 +23,6 @@ import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.uibinder.client.UiConstructor;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Timer;
-import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.data.shared.ListStore;
@@ -91,7 +92,7 @@ import com.sencha.gxt.widget.core.client.grid.editing.GridInlineEditing;
  * column definitions from a {@link ColumnModel}. Each model in the store is
  * rendered as a row in the grid. The fields in the model provide the data for
  * each column in the row. Any updates to the store are automatically pushed to
- * the grid. This includes inserting, removing, sorting and filter.
+ * the grid. This includes inserting, removing, sorting and filtering.
  * <p/>
  * In GXT version 3, {@link ModelKeyProvider}s and {@link ValueProvider}s
  * provide the interface between your data model and the list store and
@@ -337,8 +338,16 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
   private LoaderHandler<ListLoadConfig, ListLoadResult<?>> loadHandler = new LoaderHandler<ListLoadConfig, ListLoadResult<?>>() {
 
     @Override
-    public void onBeforeLoad(BeforeLoadEvent<ListLoadConfig> event) {
+    public void onBeforeLoad(final BeforeLoadEvent<ListLoadConfig> event) {
       Grid.this.onLoaderBeforeLoad();
+      Scheduler.get().scheduleFinally(new ScheduledCommand() {
+        @Override
+        public void execute() {
+          if (event.isCancelled()) {
+            Grid.this.onLoadLoader();
+          }
+        }
+      });
     }
 
     @Override
@@ -353,7 +362,6 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
   };
 
   private boolean loadMask;
-  private int minColumnWidth = 25;
 
   /**
    * Creates a new grid with the given data store and column model.
@@ -385,7 +393,7 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     view.getAppearance().render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
     getElement().makePositionable();
 
     sinkCellEvents();
@@ -503,15 +511,6 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
    */
   public ListLoader<?, ?> getLoader() {
     return loader;
-  }
-
-  /**
-   * Returns the minimum column width.
-   * 
-   * @return the min width in pixels
-   */
-  public int getMinColumnWidth() {
-    return minColumnWidth;
   }
 
   /**
@@ -638,6 +637,7 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
     if (!viewReady) {
       this.store = store;
       this.cm = cm;
+      setSelectionModel(sm);
       return;
     }
     if (loadMask) {
@@ -729,15 +729,6 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
   }
 
   /**
-   * The minimum width a column can be resized to (defaults to 25).
-   * 
-   * @param minColumnWidth the min column width
-   */
-  public void setMinColumnWidth(int minColumnWidth) {
-    this.minColumnWidth = minColumnWidth;
-  }
-
-  /**
    * Sets the grid selection model.
    * 
    * @param sm the selection model
@@ -753,11 +744,12 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
   }
 
   /**
-   * Sets the view's grid (pre-render).
+   * Sets the grid's view. May only be called before the Grid is first attached.
    * 
-   * @param view the view
+   * @param view the view to use for this grid
    */
   public void setView(GridView<M> view) {
+    assertPreRender();
     this.view = view;
 
     // rebind the sm
@@ -960,6 +952,8 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
     super.onAttach();
   }
 
+
+
   /**
    * Handles the browser click event. Propagates the event to the cell and row
    * if possible.
@@ -1045,12 +1039,6 @@ public class Grid<M> extends Component implements HasViewReadyHandlers, HasSortC
    * @param e the mouse down event
    */
   protected void onMouseDown(Event e) {
-    if (!isAllowTextSelection() && GXT.isWebKit()) {
-      String tagName = e.getEventTarget().<Element> cast().getTagName();
-      if (!"input".equalsIgnoreCase(tagName) && !"textarea".equalsIgnoreCase(tagName)) {
-        e.preventDefault();
-      }
-    }
     Element target = Element.as(e.getEventTarget());
     int rowIndex = view.findRowIndex(target);
     if (rowIndex != -1) {

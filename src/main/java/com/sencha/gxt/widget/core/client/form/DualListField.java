@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.form;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gwt.cell.client.Cell;
@@ -18,6 +19,7 @@ import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.data.shared.ListStore;
+import com.sencha.gxt.data.shared.ModelKeyProvider;
 import com.sencha.gxt.dnd.core.client.DND.Feedback;
 import com.sencha.gxt.dnd.core.client.ListViewDragSource;
 import com.sencha.gxt.dnd.core.client.ListViewDropTarget;
@@ -73,7 +75,7 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
    * The DND mode enumeration.
    */
   public enum Mode {
-    APPEND, INSERT;
+    APPEND, INSERT
   }
 
   protected class DualListFieldDefaultMessages implements DualListFieldMessages {
@@ -113,11 +115,11 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
   protected Mode mode = Mode.APPEND;
   protected ListViewDragSource<M> sourceFromField;
   protected ListViewDragSource<M> sourceToField;
-  protected ListViewDropTarget<M> targetFromField;
 
+  protected ListViewDropTarget<M> targetFromField;
   protected ListViewDropTarget<M> targetToField;
+
   private DualListFieldMessages messages;
-  private HorizontalPanel panel;
   private VerticalPanel buttonBar;
   private ListView<M, T> fromView, toView;
   private ListStore<M> fromStore, toStore;
@@ -129,23 +131,49 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
 
   /**
    * Creates a dual list field that allows selections to be moved between two
+   * list views using buttons or by dragging and dropping selections
+   * @param keyProvider the key provider to use to track items
+   * @param valueProvider the interface to {@code <M>}
+   * @param cell displays the data in the list views (e.g. {@link TextCell})
+   */
+  public DualListField(ModelKeyProvider<? super M> keyProvider, ValueProvider<? super M, T> valueProvider, Cell<T> cell) {
+    this (new ListStore<M>(keyProvider), new ListStore<M>(keyProvider), valueProvider, cell);
+  }
+
+  /**
+   * Creates a dual list field that allows selections to be moved between two
    * list views using buttons or by dragging and dropping selections.
    * 
    * @param fromStore the store containing the base set of items
    * @param toStore the store containing the items selected by the user
    * @param valueProvider the interface to {@code <M>}
-   * @param cell displays the data in the list view (e.g. {@link TextCell}).
+   * @param cell displays the data in the list view (e.g. {@link TextCell})
    */
   @UiConstructor
   public DualListField(ListStore<M> fromStore, ListStore<M> toStore, ValueProvider<? super M, T> valueProvider,
       Cell<T> cell) {
+    this(fromStore, toStore, valueProvider, cell, GWT.<DualListFieldAppearance>create(DualListFieldAppearance.class));
+  }
+
+  /**
+   * Creates a dual list field that allows selections to be moved between two
+   * list views using buttons or by dragging and dropping selections.
+   *
+   * @param fromStore the store containing the base set of items
+   * @param toStore the store containing the items selected by the user
+   * @param valueProvider the interface to {@code <M>}
+   * @param cell displays the data in the list view (e.g. {@link TextCell})
+   * @param appearance the appearance instance to use when rendering this widget
+   */
+  public DualListField(ListStore<M> fromStore, ListStore<M> toStore, ValueProvider<? super M, T> valueProvider,
+                       Cell<T> cell, DualListFieldAppearance appearance) {
     super(new HorizontalPanel());
 
-    this.appearance = GWT.create(DualListFieldAppearance.class);
+    this.appearance = appearance;
 
     this.fromStore = fromStore;
     this.toStore = toStore;
-    this.panel = (HorizontalPanel) getWidget();
+    HorizontalPanel panel = (HorizontalPanel) getWidget();
     this.buttonBar = new VerticalPanel();
 
     fromView = new ListView<M, T>(this.fromStore, valueProvider);
@@ -233,6 +261,10 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
 
   }
 
+  public DualListFieldAppearance getAppearance() {
+    return appearance;
+  }
+
   /**
    * Returns the DND group name.
    * 
@@ -248,7 +280,6 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
    * @return the drag source
    */
   public ListViewDragSource<M> getDragSourceFromField() {
-    assert isOrWasAttached() : "Can only be called post-render";
     return sourceFromField;
   }
 
@@ -258,7 +289,6 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
    * @return the drag source
    */
   public ListViewDragSource<M> getDragSourceToField() {
-    assert isOrWasAttached() : "Can only be called post-render";
     return sourceToField;
   }
 
@@ -268,7 +298,6 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
    * @return the drag source
    */
   public ListViewDropTarget<M> getDropTargetFromField() {
-    assert isOrWasAttached() : "Can only be called post-render";
     return targetFromField;
   }
 
@@ -278,7 +307,6 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
    * @return the drag source
    */
   public ListViewDropTarget<M> getDropTargetToField() {
-    assert isOrWasAttached() : "Can only be called post-render";
     return targetToField;
   }
 
@@ -289,6 +317,14 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
    */
   public ListView<M, T> getFromView() {
     return fromView;
+  }
+
+  /**
+   * Returns the ListStore that manages the source of selectable items.
+   * @return the list store that manages the source of selectable items
+   */
+  public ListStore<M> getFromStore() {
+    return fromStore;
   }
 
   /**
@@ -321,9 +357,18 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
     return toView;
   }
 
+  /**
+   * Returns the ListStore that manages the destination for selectable items.
+   *
+   * @return the ListStore that manages the destination for selectable items
+   */
+  public ListStore<M> getToStore() {
+    return toStore;
+  }
+
   @Override
   public List<M> getValue() {
-    return toView.getSelectionModel().getSelectedItems();
+    return toStore.getAll();
   }
 
   /**
@@ -440,7 +485,28 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
 
   @Override
   public void setValue(List<M> value) {
-    toView.getSelectionModel().setSelection(value);
+    if (value == null || value.isEmpty()) {
+      onAllLeft();
+      return;
+    }
+    //copy value list so we can modify it
+    value = new ArrayList<M>(value);
+
+    //first we collect all items used in either list
+    //at this point, 'nonSelectedItems' is actually all items
+    List<M> nonSelectedItems = new ArrayList<M>(toStore.getAll());
+    nonSelectedItems.addAll(fromStore.getAll());
+
+    //then remove any item *not* in either from the set of items to select
+    value.retainAll(nonSelectedItems);
+
+    //now we remove the items that are not selected, making it really nonSelectedItems
+    nonSelectedItems.removeAll(value);
+
+    //assign the stores to these new items
+    fromStore.replaceAll(nonSelectedItems);
+    toStore.replaceAll(value);
+
   }
 
   protected void onAllLeft() {
@@ -455,8 +521,34 @@ public class DualListField<M, T> extends AdapterField<List<M>> {
     fromStore.clear();
   }
 
+  @Override
+  protected void onDisable() {
+    super.onDisable();
+    fromView.disable();
+    toView.disable();
+    allLeft.disable();
+    allRight.disable();
+    right.disable();
+    left.disable();
+    up.disable();
+    down.disable();
+  }
+
   protected void onDown() {
     toView.moveSelectedDown();
+  }
+
+  @Override
+  protected void onEnable() {
+    super.onEnable();
+    fromView.enable();
+    toView.enable();
+    allLeft.enable();
+    allRight.enable();
+    right.enable();
+    left.enable();
+    up.enable();
+    down.enable();
   }
 
   protected void onLeft() {

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -49,14 +49,14 @@ public abstract class FramedPanelBaseAppearance extends ContentPanelBaseAppearan
 
   @Override
   public int getFrameHeight(XElement parent) {
-    int h = frame.getFrameSize().getHeight();
+    int h = frame.getFrameSize(parent).getHeight();
     h += frame.getContentElem(parent).getFrameSize().getHeight();
     return h;
   }
 
   @Override
   public int getFrameWidth(XElement parent) {
-    int w = frame.getFrameSize().getWidth();
+    int w = frame.getFrameSize(parent).getWidth();
 
     XElement content = getContentElem(parent);
     w += content.getFrameWidth(Side.LEFT, Side.RIGHT);
@@ -71,12 +71,13 @@ public abstract class FramedPanelBaseAppearance extends ContentPanelBaseAppearan
 
   @Override
   public void onBodyBorder(XElement parent, boolean border) {
-    getContentElem(parent).setClassName(ThemeStyles.getStyle().border(), border);
+    getContentElem(parent).setClassName(ThemeStyles.get().style().border(), border);
   }
 
   @Override
   public void onHideHeader(XElement parent, boolean hide) {
     parent.setClassName("noheader", hide);
+    frame.onHideHeader(parent, hide);
   }
 
   @Override

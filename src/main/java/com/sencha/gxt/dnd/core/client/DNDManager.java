@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,8 +10,7 @@ package com.sencha.gxt.dnd.core.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Element;
+import com.google.gwt.dom.client.Element;
 import com.sencha.gxt.core.client.util.Util;
 
 class DNDManager {
@@ -33,9 +32,8 @@ class DNDManager {
     for (DropTarget t : targets) {
       if (t.isEnabled()
           && Util.equalWithNull(t.getGroup(), source.getGroup())
-          && DOM.isOrHasChild(t.component.getElement(), elem)
-          && (target == null || (target != null && DOM.isOrHasChild(target.component.getElement(),
-              t.component.getElement())))) {
+          && t.component.getElement().isOrHasChild(elem)
+          && (target == null || (target.component.getElement().isOrHasChild(t.component.getElement())))) {
         target = t;
       }
     }

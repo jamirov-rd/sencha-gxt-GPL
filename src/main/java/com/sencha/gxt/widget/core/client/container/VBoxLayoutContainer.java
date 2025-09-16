@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,7 +12,9 @@ import java.util.logging.Logger;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
+import com.sencha.gxt.core.client.Style;
 import com.sencha.gxt.core.client.dom.XElement;
+import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.Margins;
 import com.sencha.gxt.core.client.util.Size;
 import com.sencha.gxt.core.client.util.Util;
@@ -113,6 +115,70 @@ public class VBoxLayoutContainer extends BoxLayoutContainer {
 
     int w = size.getWidth() - getScrollOffset();
     int h = size.getHeight();
+    
+    int styleHeight = Util.parseInt(getElement().getStyle().getProperty("height"), Style.DEFAULT);
+    int styleWidth = Util.parseInt(getElement().getStyle().getProperty("width"), Style.DEFAULT);
+
+    boolean findWidth = styleWidth == -1;
+    boolean findHeight = styleHeight == -1;
+
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest(getId() + " findWidth: " + findWidth + " findHeight: " + findHeight);
+    }
+
+    int calculateHeight = 0;
+
+    int maxWidgetWidth = 0;
+    int maxMarginLeft = 0;
+    int maxMarginRight = 0;
+
+    for (int i = 0, len = getWidgetCount(); i < len; i++) {
+      Widget widget = getWidget(i);
+
+      BoxLayoutData layoutData = null;
+      Object d = widget.getLayoutData();
+      if (d instanceof BoxLayoutData) {
+        layoutData = (BoxLayoutData) d;
+      } else {
+        layoutData = new BoxLayoutData();
+        widget.setLayoutData(layoutData);
+      }
+
+      Margins cm = layoutData.getMargins();
+      if (cm == null) {
+        cm = new Margins(0);
+        layoutData.setMargins(cm);
+      }
+    }
+    
+    if (findWidth || findHeight) {
+      for (int i = 0, len = getWidgetCount(); i < len; i++) {
+        Widget widget = getWidget(i);
+
+        if (!widget.isVisible()) {
+          continue;
+        }
+
+        BoxLayoutData layoutData = (BoxLayoutData) widget.getLayoutData();
+        Margins cm = layoutData.getMargins();
+
+        calculateHeight += widget.getOffsetHeight();
+        maxWidgetWidth = Math.max(maxWidgetWidth, widget.getOffsetWidth());
+
+        calculateHeight += (cm.getTop() + cm.getBottom());
+        maxMarginLeft = Math.max(maxMarginLeft, cm.getLeft());
+        maxMarginRight = Math.max(maxMarginRight, cm.getRight());
+      }
+      maxWidgetWidth += (maxMarginLeft + maxMarginRight);
+
+      if (findHeight) {
+        h = calculateHeight;
+      }
+
+      if (findWidth) {
+        w = maxWidgetWidth;
+      }
+    }
 
     int pl = 0;
     int pt = 0;
@@ -124,6 +190,14 @@ public class VBoxLayoutContainer extends BoxLayoutContainer {
       pb = getPadding().getBottom();
       pr = getPadding().getRight();
     }
+    
+    if (findHeight) {
+      h += pt + pb;
+    }
+    if (findWidth) {
+      w += pl + pr;
+    }
+
 
     int stretchWidth = w - pl - pr;
     int totalFlex = 0;
@@ -131,21 +205,15 @@ public class VBoxLayoutContainer extends BoxLayoutContainer {
     int maxWidth = 0;
     for (int i = 0, len = getWidgetCount(); i < len; i++) {
       Widget widget = getWidget(i);
+      widget.addStyleName(CommonStyles.get().positionable());
+
       widget.getElement().getStyle().setMargin(0, Unit.PX);
 
       // callLayout(widget, false);
 
-      BoxLayoutData layoutData = null;
-      Object d = widget.getLayoutData();
-      if (d != null && d instanceof BoxLayoutData) {
-        layoutData = (BoxLayoutData) d;
-      } else {
-        layoutData = new BoxLayoutData();
-      }
+      BoxLayoutData layoutData = (BoxLayoutData) widget.getLayoutData();
       Margins cm = layoutData.getMargins();
-      if (cm == null) {
-        cm = new Margins(0);
-      }
+      
       totalFlex += layoutData.getFlex();
       totalHeight += widget.getOffsetHeight() + cm.getTop() + cm.getBottom();
       maxWidth = Math.max(maxWidth, widget.getOffsetWidth() + cm.getLeft() + cm.getRight());
@@ -172,17 +240,10 @@ public class VBoxLayoutContainer extends BoxLayoutContainer {
 
     for (int i = 0, len = getWidgetCount(); i < len; i++) {
       Widget widget = getWidget(i);
-      BoxLayoutData layoutData = null;
-      Object d = widget.getLayoutData();
-      if (d != null && d instanceof BoxLayoutData) {
-        layoutData = (BoxLayoutData) d;
-      } else {
-        layoutData = new BoxLayoutData();
-      }
+
+      BoxLayoutData layoutData = (BoxLayoutData) widget.getLayoutData();
       Margins cm = layoutData.getMargins();
-      if (cm == null) {
-        cm = new Margins(0);
-      }
+      
       cw = widget.getOffsetWidth();
       ch = widget.getOffsetHeight();
       pt += cm.getTop();

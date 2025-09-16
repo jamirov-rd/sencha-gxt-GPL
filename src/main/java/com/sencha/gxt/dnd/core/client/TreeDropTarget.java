@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -30,13 +30,13 @@ import com.sencha.gxt.widget.core.client.treegrid.TreeGrid;
 /**
  * Enables a {@link Tree} to act as the target of a drag and drop operation.
  * <p/>
- * Use {@link #setFeedback(Feedback)} to specify whether to allow inserting
+ * Use {@link #setFeedback(com.sencha.gxt.dnd.core.client.DND.Feedback)} to specify whether to allow inserting
  * items between items, appending items to the end, or both (defaults to
  * {@link Feedback#BOTH}).
  * <p/>
- * Use {@link #setOperation(Operation)} to specify whether to move items or copy
+ * Use {@link #setOperation(com.sencha.gxt.dnd.core.client.DND.Operation)} to specify whether to move items or copy
  * them (defaults to {@link Operation#MOVE}).
- * 
+ *
  * @param <M> the model type
  */
 public class TreeDropTarget<M> extends DropTarget {

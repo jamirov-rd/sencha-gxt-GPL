@@ -1,50 +1,68 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.form;
 
-import com.google.gwt.editor.client.LeafValueEditor;
-import com.google.gwt.user.client.ui.IsWidget;
+import java.util.List;
 
-public interface IsField<T> extends IsWidget, LeafValueEditor<T> {
-  
+import com.google.gwt.editor.client.EditorError;
+import com.google.gwt.editor.client.LeafValueEditor;
+import com.google.gwt.event.logical.shared.HasValueChangeHandlers;
+import com.google.gwt.user.client.ui.IsWidget;
+import com.sencha.gxt.widget.core.client.event.BlurEvent.HasBlurHandlers;
+
+public interface IsField<T> extends IsWidget, LeafValueEditor<T>, HasBlurHandlers, HasValueChangeHandlers<T> {
+
   /**
    * Clears the value from the field.
+   *
+   * @see #clearInvalid() to remove validation messages
+   * @see #reset() to restore to original value and remove validation messages
    */
-  public void clear();
+  void clear();
 
   /**
    * Clear any invalid styles / messages for this field.
    */
-  public void clearInvalid();
+  void clearInvalid();
 
   /**
-   * Resets the current field value to the originally loaded value and clears
-   * any validation messages.
+   * Used to indicate that this field must be completed with its editing process, as it may be able to be removed from
+   * the dom, hidden, or its current results used.
    */
-  public void reset();
+  void finishEditing();
+
+  /**
+   * Returns a list of the current errors.
+   * 
+   * @return the errors, or empty list if no errors
+   */
+  List<EditorError> getErrors();
 
   /**
    * Returns whether or not the field value is currently valid.
    * 
-   * @param preventMark true for silent validation (no invalid event and field
-   *          is not marked invalid)
+   * @param preventMark {@code true} for silent validation (no invalid event and field is not marked invalid)
    * 
-   * @return true if the value is valid, otherwise false
+   * @return {@code true} if the value is valid, otherwise false
    */
-  public boolean isValid(boolean preventMark);
-  
+  boolean isValid(boolean preventMark);
+
+  /**
+   * Resets the current field value to the originally loaded value and clears any validation messages.
+   */
+  void reset();
+
   /**
    * Validates the field value.
    * 
-   * @param preventMark true to not mark the field valid and fire invalid event
-   *          when invalid
-   * @return true if valid, otherwise false
+   * @param preventMark {@code true} to not mark the field valid and fire invalid event when invalid
+   * @return {@code true} if valid, otherwise false
    */
-  public boolean validate(boolean preventMark);
-  
+  boolean validate(boolean preventMark);
+
 }

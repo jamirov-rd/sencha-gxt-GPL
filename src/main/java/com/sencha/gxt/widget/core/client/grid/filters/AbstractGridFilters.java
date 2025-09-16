@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,6 +12,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
+import com.google.gwt.event.logical.shared.AttachEvent;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.util.DelayedTask;
@@ -32,6 +36,8 @@ import com.sencha.gxt.widget.core.client.event.ActivateEvent;
 import com.sencha.gxt.widget.core.client.event.ActivateEvent.ActivateHandler;
 import com.sencha.gxt.widget.core.client.event.CheckChangeEvent;
 import com.sencha.gxt.widget.core.client.event.CheckChangeEvent.CheckChangeHandler;
+import com.sencha.gxt.widget.core.client.event.ColumnMoveEvent;
+import com.sencha.gxt.widget.core.client.event.ColumnMoveEvent.ColumnMoveHandler;
 import com.sencha.gxt.widget.core.client.event.DeactivateEvent;
 import com.sencha.gxt.widget.core.client.event.DeactivateEvent.DeactivateHandler;
 import com.sencha.gxt.widget.core.client.event.HeaderContextMenuEvent;
@@ -40,6 +46,8 @@ import com.sencha.gxt.widget.core.client.event.ReconfigureEvent;
 import com.sencha.gxt.widget.core.client.event.ReconfigureEvent.ReconfigureHandler;
 import com.sencha.gxt.widget.core.client.event.UpdateEvent;
 import com.sencha.gxt.widget.core.client.event.UpdateEvent.UpdateHandler;
+import com.sencha.gxt.widget.core.client.event.ViewReadyEvent;
+import com.sencha.gxt.widget.core.client.event.ViewReadyEvent.ViewReadyHandler;
 import com.sencha.gxt.widget.core.client.grid.ColumnConfig;
 import com.sencha.gxt.widget.core.client.grid.ColumnHeader;
 import com.sencha.gxt.widget.core.client.grid.ColumnHeader.Head;
@@ -54,22 +62,17 @@ import com.sencha.gxt.widget.core.client.menu.SeparatorMenuItem;
 /**
  * Provides an abstract base class that applies filters to the rows in a grid.
  * <p/>
- * A filter is applied to a grid to reduce the amount of information that is
- * displayed, thus highlighting the information of interest to the user. A
- * filter is generally invoked from a header menu.
+ * A filter is applied to a grid to reduce the amount of information that is displayed, thus highlighting the
+ * information of interest to the user. A filter is generally invoked from a header menu.
  * <p/>
- * The filters can be applied locally using {@link Store} filtering or passed to
- * a remote data source using a {@link FilterPagingLoadConfig}. To enable local
- * filtering, use <code>setLocal(true)</code>. To enable remote filtering, use
- * the {@link AbstractGridFilters#AbstractGridFilters(Loader)} form of the
- * constructor.
+ * The filters can be applied locally using {@link Store} filtering or passed to a remote data source using a
+ * {@link FilterPagingLoadConfig}. To enable local filtering, use <code>setLocal(true)</code>. To enable remote
+ * filtering, use the {@link AbstractGridFilters#AbstractGridFilters(Loader)} form of the constructor.
  * <p/>
- * To add a filter to a {@link Grid} column, create an instance of a concrete
- * subclass of {@link Filter}, passing to the constructor the
- * {@link ValueProvider} for the column, then add the filter to a
- * {@link GridFilters} using {@link GridFilters#addFilter(Filter)} and invoke
- * {@link GridFilters#initPlugin(Grid)}. The filter then appears in the grid
- * header menu item for any column that uses the supplied value provider.
+ * To add a filter to a {@link Grid} column, create an instance of a concrete subclass of {@link Filter}, passing to the
+ * constructor the {@link ValueProvider} for the column, then add the filter to a {@link GridFilters} using
+ * {@link GridFilters#addFilter(Filter)} and invoke {@link GridFilters#initPlugin(Grid)}. The filter then appears in the
+ * grid header menu item for any column that uses the supplied value provider.
  * <p/>
  * Derived classes must provide an implementation of {@link #getStore()}.
  * 
@@ -97,6 +100,10 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
     String filterText();
   }
 
+  public interface GridFiltersAppearance {
+    String filteredStyle();
+  }
+
   private class Handler implements UpdateHandler, ActivateHandler<Filter<M, ?>>, DeactivateHandler<Filter<M, ?>> {
 
     @Override
@@ -117,6 +124,46 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
 
   }
 
+  private class HeaderUpdateHandler implements ColumnHiddenChangeHandler, ColumnMoveHandler, ViewReadyHandler,
+      AttachEvent.Handler {
+    private boolean scheduled = false;
+
+    @Override
+    public void onAttachOrDetach(AttachEvent event) {
+      if (event.isAttached()) {
+        update();
+      }
+    }
+
+    @Override
+    public void onColumnHiddenChange(ColumnHiddenChangeEvent event) {
+      update();
+    }
+
+    @Override
+    public void onColumnMove(ColumnMoveEvent event) {
+      update();
+    }
+
+    @Override
+    public void onViewReady(ViewReadyEvent event) {
+      update();
+    }
+
+    private void update() {
+      if (scheduled) {
+        return;
+      }
+      scheduled = true;
+      Scheduler.get().scheduleFinally(new ScheduledCommand() {
+        @Override
+        public void execute() {
+          scheduled = false;
+          updateColumnHeadings();
+        }
+      });
+    }
+  }
   @SuppressWarnings("rawtypes")
   private class LoaderHandler implements BeforeLoadHandler<FilterPagingLoadConfig>, LoadHandler {
 
@@ -132,13 +179,7 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
 
   }
 
-  private ColumnHiddenChangeHandler columnHandler = new ColumnHiddenChangeHandler() {
-
-    @Override
-    public void onColumnHiddenChange(ColumnHiddenChangeEvent event) {
-      updateColumnHeadings();
-    }
-  };
+  private HeaderUpdateHandler columnHandler = new HeaderUpdateHandler();
 
   protected ColumnModel<M> columnModel;
   protected StoreFilter<M> currentFilter;
@@ -146,6 +187,8 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   protected Store<M> store;
 
   protected Loader<FilterPagingLoadConfig, ?> loader;
+
+  private final GridFiltersAppearance appearance;
   private boolean autoReload = true;
   private CheckMenuItem checkFilterItem;
 
@@ -159,10 +202,9 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
 
   private Map<String, Filter<M, ?>> filters;
   private Map<Filter<M, ?>, HandlerRegistration> registrations;
-  private HandlerRegistration columnHandlerRegistration;
+  private GroupingHandlerRegistration columnHandlerRegistration;
 
   private Menu filterMenu;
-  private String filterStyle = "x-filtered-column";
   private Handler handler = new Handler();
   private LoaderHandler loadHandler = new LoaderHandler();
   private boolean local = false;
@@ -171,30 +213,50 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   private int updateBuffer = 500;
 
   /**
-   * Creates grid filters that are applied locally. Caller must also invoke
-   * <code>setLocal(true)</code>.
+   * Creates grid filters that are applied locally. Caller must also invoke <code>setLocal(true)</code>.
    */
   public AbstractGridFilters() {
-    filters = new HashMap<String, Filter<M, ?>>();
-    registrations = new HashMap<Filter<M, ?>, HandlerRegistration>();
+    this(GWT.<GridFiltersAppearance> create(GridFiltersAppearance.class));
   }
 
   /**
-   * Creates grid filters to be applied remotely. The grid filters are
-   * automatically added to the {@link FilterPagingLoadConfig} during the
-   * loading processing and passed by the {@link Loader} to the
-   * {@link DataProxy} so that they are available for the remote data source to
-   * use as needed.
+   * Creates grid filters that are applied locally. Caller must also invoke <code>setLocal(true)</code>.
+   * 
+   * @param appearance the appearance
+   */
+  public AbstractGridFilters(GridFiltersAppearance appearance) {
+    filters = new HashMap<String, Filter<M, ?>>();
+    registrations = new HashMap<Filter<M, ?>, HandlerRegistration>();
+
+    this.appearance = appearance;
+  }
+
+  /**
+   * Creates grid filters to be applied remotely. The grid filters are automatically added to the
+   * {@link FilterPagingLoadConfig} during the loading processing and passed by the {@link Loader} to the
+   * {@link DataProxy} so that they are available for the remote data source to use as needed.
    * 
    * @param loader the remote loader
    */
-  @SuppressWarnings("unchecked")
-  public AbstractGridFilters(Loader<FilterPagingLoadConfig, ?> loader) {
-    this();
-    this.loader = loader;
+  public AbstractGridFilters(Loader<? extends FilterPagingLoadConfig, ?> loader) {
+    this(loader, GWT.<GridFiltersAppearance> create(GridFiltersAppearance.class));
+  }
 
-    loader.addBeforeLoadHandler(loadHandler);
-    loader.addLoadHandler(loadHandler);
+  /**
+   * Creates grid filters to be applied remotely. The grid filters are automatically added to the
+   * {@link FilterPagingLoadConfig} during the loading processing and passed by the {@link Loader} to the
+   * {@link DataProxy} so that they are available for the remote data source to use as needed.
+   * 
+   * @param loader the remote loader
+   * @param appearance the appearance
+   */
+  @SuppressWarnings("unchecked")
+  public AbstractGridFilters(Loader<? extends FilterPagingLoadConfig, ?> loader,
+      GridFiltersAppearance appearance) {
+    this(appearance);
+    this.loader = (Loader<FilterPagingLoadConfig, ?>) loader;
+    this.loader.addBeforeLoadHandler(loadHandler);
+    this.loader.addLoadHandler(loadHandler);
   }
 
   /**
@@ -213,8 +275,7 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   }
 
   /**
-   * Builds a query consisting of a list of loader filter configurations from a
-   * list of grid filters.
+   * Builds a query consisting of a list of loader filter configurations from a list of grid filters.
    * 
    * @param filters
    * @return a query consisting of a list of loader filter configurations
@@ -241,13 +302,16 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   }
 
   /**
-   * Turns all filters off. This does not clear the configuration information
-   * (see {@link #removeAll}).
+   * Turns all filters off. This does not clear the configuration information (see {@link #removeAll}).
    */
   public void clearFilters() {
     for (Filter<M, ?> f : filters.values()) {
       f.setActive(false, false);
     }
+  }
+
+  public GridFiltersAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -273,6 +337,15 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
       }
     }
     return configs;
+  }
+
+  /**
+   * Returns the loader.
+   * 
+   * @return the loader or <code>null</code> for local filtering
+   */
+  public Loader<FilterPagingLoadConfig, ?> getLoader() {
+    return loader;
   }
 
   /**
@@ -307,8 +380,16 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
       }
     });
 
+    grid.addAttachHandler(new AttachEvent.Handler() {
+      @Override
+      public void onAttachOrDetach(AttachEvent event) {
+        updateColumnHeadings();
+      }
+    });
+
     bindStore(getStore());
     bindColumnModel(grid.getColumnModel());
+
   }
 
   /**
@@ -318,6 +399,25 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
    */
   public boolean isAutoReload() {
     return autoReload;
+  }
+
+  public void reload() {
+    if (local) {
+      if (currentFilter != null) {
+        store.removeFilter(currentFilter);
+      }
+      currentFilter = getModelFilter();
+      store.addFilter(currentFilter);
+      if (!store.isFiltered()) {
+        store.setEnableFilters(true);
+      }
+    } else {
+      deferredUpdate.cancel();
+
+      if (loader != null) {
+        loader.load();
+      }
+    }
   }
 
   /**
@@ -338,16 +438,15 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   public void removeFilter(Filter<M, ?> filter) {
     filters.remove(filter.getValueProvider().getPath());
 
-    HandlerRegistration r = registrations.get(filter);
+    HandlerRegistration r = registrations.remove(filter);
     if (r != null) {
       r.removeHandler();
     }
   }
 
   /**
-   * Tree to reload the datasource when a filter change happens (defaults to
-   * true). Set this to false to prevent the datastore from being reloaded if
-   * there are changes to the filters.
+   * Tree to reload the datasource when a filter change happens (defaults to true). Set this to false to prevent the
+   * datastore from being reloaded if there are changes to the filters.
    * 
    * @param autoLoad true to enable auto reload
    */
@@ -356,8 +455,7 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   }
 
   /**
-   * Number of milliseconds to defer store updates since the last filter change
-   * (defaults to 500).
+   * Number of milliseconds to defer store updates since the last filter change (defaults to 500).
    * 
    * @param updateBuffer the buffer in milliseconds
    */
@@ -377,7 +475,7 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
           if (h != null && h.isRendered()) {
             Filter<M, ?> f = getFilter(config.getValueProvider().getPath());
             if (f != null) {
-              h.getElement().setClassName(filterStyle, f.isActive());
+              h.getElement().setClassName(appearance.filteredStyle(), f.isActive());
             }
           }
         }
@@ -386,13 +484,18 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
   }
 
   protected void bindColumnModel(ColumnModel<M> columnModel) {
-    if (this.columnModel != null) {
-      columnHandlerRegistration = this.columnModel.addColumnHiddenChangeHandler(columnHandler);
-    }
-    if (columnModel != null && columnHandlerRegistration != null) {
+    if (this.columnModel != null && columnHandlerRegistration != null) {
       columnHandlerRegistration.removeHandler();
+      columnHandlerRegistration = null;
     }
     this.columnModel = columnModel;
+    if (columnModel != null) {
+      columnHandlerRegistration = new GroupingHandlerRegistration();
+      columnHandlerRegistration.add(columnModel.addColumnHiddenChangeHandler(columnHandler));
+      columnHandlerRegistration.add(grid.addViewReadyHandler(columnHandler));
+      columnHandlerRegistration.add(columnModel.addColumnMoveHandler(columnHandler));
+      columnHandlerRegistration.add(grid.addAttachHandler(columnHandler));
+    }
 
   }
 
@@ -496,28 +599,9 @@ public abstract class AbstractGridFilters<M> implements ComponentPlugin<Grid<M>>
     updateColumnHeadings();
   }
 
-  protected void reload() {
-    if (local) {
-      if (currentFilter != null) {
-        store.removeFilter(currentFilter);
-      }
-      currentFilter = getModelFilter();
-      store.addFilter(currentFilter);
-      if (!store.isFiltered()) {
-        store.setEnableFilters(true);
-      }
-    } else {
-      deferredUpdate.cancel();
-
-      if (loader != null) {
-        loader.load();
-      }
-    }
-  }
-
   /**
-   * True to use Store filter functions (local filtering) instead of the default
-   * server side filtering (defaults to false).
+   * True to use Store filter functions (local filtering) instead of the default server side filtering (defaults to
+   * false).
    * 
    * @param local true for local
    */

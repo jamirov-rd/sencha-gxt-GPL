@@ -1,11 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.grid;
+
+import java.util.logging.Logger;
 
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
@@ -13,8 +15,8 @@ import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.dom.client.Style.Overflow;
 import com.google.gwt.event.shared.HandlerRegistration;
-import com.google.gwt.event.shared.SimpleEventBus;
 import com.google.gwt.user.client.Event;
+import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
@@ -25,6 +27,10 @@ import com.sencha.gxt.data.shared.SortInfoBean;
 import com.sencha.gxt.data.shared.event.StoreDataChangeEvent;
 import com.sencha.gxt.data.shared.event.StoreDataChangeEvent.StoreDataChangeHandler;
 import com.sencha.gxt.data.shared.loader.ListLoadResult;
+import com.sencha.gxt.data.shared.loader.LoadEvent;
+import com.sencha.gxt.data.shared.loader.LoadExceptionEvent;
+import com.sencha.gxt.data.shared.loader.LoadExceptionEvent.LoadExceptionHandler;
+import com.sencha.gxt.data.shared.loader.LoadHandler;
 import com.sencha.gxt.data.shared.loader.LoadResultListStoreBinding;
 import com.sencha.gxt.data.shared.loader.Loader;
 import com.sencha.gxt.data.shared.loader.PagingLoader;
@@ -34,17 +40,62 @@ import com.sencha.gxt.widget.core.client.event.LiveGridViewUpdateEvent.HasLiveGr
 import com.sencha.gxt.widget.core.client.event.LiveGridViewUpdateEvent.LiveGridViewUpdateHandler;
 
 /**
- * LiveGridView for displaying large amount of data. Data is loaded on demand as
- * the user scrolls the grid.
+ * LiveGridView for displaying large amount of data. Data is loaded on demand as the user scrolls the grid.
  */
 public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdateHandlers {
 
-  protected ListStore<M> cacheStore;
-  protected XElement liveScroller;
-  protected int liveStoreOffset = 0;
-  protected int totalCount = 0;
-  protected int viewIndex;
+  private static class NavKeyCallback<M> implements LoadHandler<Object, ListLoadResult<M>>,
+      LoadExceptionHandler<Object> {
+    private HandlerRegistration registration;
+    private Grid<M> grid;
+    private int index;
 
+    public NavKeyCallback(Grid<M> grid, int index) {
+      this.grid = grid;
+      this.index = index;
+      @SuppressWarnings("unchecked")
+      Loader<Object, ListLoadResult<M>> l = (Loader<Object, ListLoadResult<M>>) grid.getLoader();
+      registration = l.addLoadHandler(this);
+    }
+
+    @Override
+    public void onLoad(LoadEvent<Object, ListLoadResult<M>> event) {
+      LiveGridView<M> view = (LiveGridView<M>) grid.getView();
+      grid.getSelectionModel().select(index, false);
+      view.ensureVisible(index, -1, false);
+      registration.removeHandler();
+    }
+
+    @Override
+    public void onLoadException(LoadExceptionEvent<Object> event) {
+      registration.removeHandler();
+    }
+
+  }
+
+  private static Logger logger = Logger.getLogger(LiveGridView.class.getName());
+
+  /**
+   * The secondary store.
+   */
+  protected ListStore<M> cacheStore;
+
+  protected XElement liveScroller;
+
+  /**
+   * The paging offset.
+   */
+  protected int liveStoreOffset = 0;
+
+  /**
+   * The total rows in data set. The total count from the loader when using a paging loader.
+   */
+  protected int totalCount = 0;
+
+  /**
+   * The current index of the view.
+   */
+  protected int viewIndex;
   private int cacheSize = 200;
   private StoreDataChangeHandler<M> cacheStoreHandler;
   private HandlerRegistration cacheStoreHandlerRegistration;
@@ -59,12 +110,33 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
   private double prefetchFactor = .2;
   private int rowHeight = 20;
   private int viewIndexReload = -1;
-  private int barWidth = XDOM.getScrollBarWidth() == 0 ? 16 : XDOM.getScrollBarWidth();
-  private SimpleEventBus eventBus;
-  
+  private int barWidth = XDOM.getScrollBarWidth() == 0 ? 16 : XDOM.getScrollBarWidth() + 2;
+
+  private int lastViewIndex = -1;
+  private int lastScrollDirection = 0;
+  private int rowHeightAdjust;
+  private boolean measureRowHeight = true;
+  private boolean adjustScrollHeight;
+
+  /**
+   * Creates a new live grid view.
+   */
+  public LiveGridView() {
+    super();
+  }
+
+  /**
+   * Creates a new live grid view instance with the given appearance.
+   * 
+   * @param appearance the appearance to use when rendering the grid view
+   */
+  public LiveGridView(GridAppearance appearance) {
+    super(appearance);
+  }
+
   @Override
   public HandlerRegistration addLiveGridViewUpdateHandler(LiveGridViewUpdateHandler handler) {
-    return ensureHandlers().addHandler(LiveGridViewUpdateEvent.getType(), handler);
+    return addHandler(LiveGridViewUpdateEvent.getType(), handler);
   }
 
   /**
@@ -107,10 +179,29 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     return rowHeight;
   }
 
+  /**
+   * Returns the total number of rows that are visible given the current grid height.
+   * 
+   * @return the visible row count
+   */
   public int getVisibleRowCount() {
-    int rh = getCalculatedRowHeight();
+    int rh = getRowHeight();
     int visibleHeight = getLiveScrollerHeight();
-    return (int) ((visibleHeight < 1) ? 0 : Math.floor((double) visibleHeight / rh));
+    int result = (int) ((visibleHeight < 1) ? 0 : Math.floor((double) visibleHeight / rh));
+
+    int calcHeight = rh * result;
+
+    while (calcHeight < visibleHeight) {
+      result++;
+      calcHeight = rh * result;
+    }
+
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("row height: " + rh + " visibleHeight: " + visibleHeight + " visible rows: " + result
+          + " calcHeight: " + calcHeight);
+    }
+
+    return result;
   }
 
   /**
@@ -139,13 +230,11 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
   }
 
   /**
-   * Sets the amount of rows that should be cached (default to 200). The cache
-   * size is the number of rows that are retrieved each time a data request is
-   * made. The cache size should always be greater than the number of visible
-   * rows of the grid. The number of visible rows will vary depending on the
-   * grid height and the height of each row. If the set cache size is smaller
-   * than the number of visible rows of the grid than it gets set to the number
-   * of visible rows of the grid.
+   * Sets the amount of rows that should be cached (default to 200). The cache size is the number of rows that are
+   * retrieved each time a data request is made. The cache size should always be greater than the number of visible rows
+   * of the grid. The number of visible rows will vary depending on the grid height and the height of each row. If the
+   * set cache size is smaller than the number of visible rows of the grid than it gets set to the number of visible
+   * rows of the grid.
    * 
    * @param cacheSize the new cache size
    */
@@ -163,14 +252,12 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
   }
 
   /**
-   * Sets the pre-fetch factor (defaults to .2). The pre-fetch factor is used to
-   * determine when new data should be fetched as the user scrolls the grid. The
-   * factor is used with the cache size.
+   * Sets the pre-fetch factor (defaults to .2). The pre-fetch factor is used to determine when new data should be
+   * fetched as the user scrolls the grid. The factor is used with the cache size.
    * 
    * <p />
-   * For example, if the cache size is 1000 with a pre-fetch of .20, the grid
-   * will request new data when the 800th (1000 * .20) row of the grid becomes
-   * visible.
+   * For example, if the cache size is 1000 with a pre-fetch of .20, the grid will request new data when the 800th (1000
+   * * .20) row of the grid becomes visible.
    * 
    * @param prefetchFactor the pre-fetch factor
    */
@@ -179,15 +266,27 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
   }
 
   /**
-   * Sets the height of one row (defaults to 20). <code>LiveGridView</code> will
-   * only work with fixed row heights with all rows being the same height.
-   * Changing this value will not physically resize the row heights, rather, the
-   * specified height will be used internally for calculations.
+   * Sets the height of one row (defaults to 20). This method only need to be called when the row height changes after
+   * the first time the grid is rendered.
    * 
    * @param rowHeight the new row height.
    */
-  public void setRowHeight(int rowHeight) {
+  protected void setRowHeight(int rowHeight) {
     this.rowHeight = rowHeight;
+
+    int rh = getRowHeight();
+    int visibleHeight = getLiveScrollerHeight();
+    int result = (int) ((visibleHeight < 1) ? 0 : Math.floor((double) visibleHeight / rh));
+    int calcHeight = rh * result;
+
+    rowHeightAdjust = rowHeight + (calcHeight - visibleHeight);
+
+    if (liveScroller != null) {
+      updateScrollerHeight();
+    } else {
+      adjustScrollHeight = true;
+    }
+
   }
 
   @Override
@@ -208,19 +307,17 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
       });
     }
     if (grid.getLoader() instanceof PagingLoader<?, ?>) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("doLoad() with paging loader, loaderOffset: " + loaderOffset + " cacheSize: " + getCacheSize());
+      }
       ((PagingLoader<?, ?>) grid.getLoader()).load(loaderOffset, getCacheSize());
     } else {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("doLoad() with non paging loader");
+      }
       grid.getLoader().load();
     }
   }
-
-  // @Override
-  // protected void afterRender() {
-  // mainBody.setInnerHTML(renderRows(0, -1).asString());
-  // processRows(0, true);
-  // applyEmptyText();
-  // refresh();
-  // }
 
   @Override
   protected void doSort(int colIndex, SortDir sortDir) {
@@ -242,11 +339,6 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     grid.getLoader().addSortInfo(bean);
     maskView();
     loadLiveStore(getLiveStoreCalculatedIndex(viewIndex));
-  }
-
-  protected int getCalculatedRowHeight() {
-    return rowHeight + borderWidth; // TODO: Use a height field or rename
-                                    // borderWidth
   }
 
   protected int getLiveScrollerHeight() {
@@ -271,16 +363,19 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     int type = ge.getTypeInt();
     EventTarget t = ge.getEventTarget();
 
-    if (!ignoreScroll && Element.is(t) && (type == Event.ONSCROLL && liveScroller.isOrHasChild(Element.as(t)))
-        || (type == Event.ONMOUSEWHEEL && dataTable.isOrHasChild(Element.as(t)))) {
+    if (ignoreScroll || !Element.is(t)) {
+      return;
+    }
+
+    Element target = Element.as(t);
+
+    if (type == Event.ONMOUSEWHEEL && dataTable.isOrHasChild(target)) {
+      int v = ge.getMouseWheelVelocityY() * getRowHeight();
+      liveScroller.setScrollTop(liveScroller.getScrollTop() + v);
+    } else if (type == Event.ONSCROLL && liveScroller.isOrHasChild(target)) {
       ge.stopPropagation();
       ge.preventDefault();
-      if (type == Event.ONMOUSEWHEEL) {
-        int v = ge.getMouseWheelVelocityY() * getCalculatedRowHeight();
-        liveScroller.setScrollTop(liveScroller.getScrollTop() + v);
-      } else {
-        updateRows((int) Math.ceil((double) liveScroller.getScrollTop() / getCalculatedRowHeight()), false);
-      }
+      updateRows((int) Math.ceil((double) liveScroller.getScrollTop() / getRowHeight()), false);
     }
   }
 
@@ -294,36 +389,14 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
         public void onDataChange(StoreDataChangeEvent<M> event) {
           liveStoreOffset = getLoaderOffset();
 
+          if (GXTLogConfiguration.loggingIsEnabled()) {
+            logger.finest("cache store handle onDataChanged liveStoreOffset: " + liveStoreOffset + " totalCount: "
+                + getLoaderTotalCount());
+          }
+
           if (totalCount != getLoaderTotalCount()) {
             totalCount = getLoaderTotalCount();
-            int height = totalCount * getCalculatedRowHeight();
-            // 1000000 as browser maxheight hack
-            int count = height / 1000000;
-            int h = 0;
-
-            StringBuilder sb = new StringBuilder();
-
-            if (count > 0) {
-              h = height / count;
-
-              for (int i = 0; i < count; i++) {
-                sb.append("<div style=\"width: ");
-                sb.append(barWidth);
-                sb.append("px; height:");
-                sb.append(h);
-                sb.append("px;\">&nbsp;</div>");
-              }
-            }
-            int diff = height - count * h;
-            if (diff != 0) {
-              sb.append("<div style=\"width: ");
-              sb.append(barWidth);
-              sb.append("px; height:");
-              sb.append(diff);
-              sb.append("px;\"></div>");
-            }
-            liveScroller.setInnerHTML(sb.toString());
-
+            setRowHeight(rowHeight);
           }
           if (totalCount > 0 && viewIndexReload != -1 && !isCached(viewIndexReload)) {
             loadLiveStore(getLiveStoreCalculatedIndex(viewIndexReload));
@@ -338,10 +411,9 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
             isLoading = false;
             if (isMasked) {
               isMasked = false;
-              scroller.unmask();
+              grid.unmask();
             }
           }
-
         }
       };
 
@@ -365,19 +437,47 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     super.initData(ds, cm);
   }
 
+  @Override
+  protected void insertRows(int firstRow, int lastRow, boolean isUpdate) {
+    super.insertRows(firstRow, lastRow, isUpdate);
+
+    if (measureRowHeight) {
+      measureRowHeight = false;
+      int rh = measureRowHeight();
+      if (rowHeight != rh) {
+        setRowHeight(rh);
+      }
+    }
+    if (adjustScrollHeight) {
+      adjustScrollHeight = false;
+      updateScrollerHeight();
+    }
+  }
+
   protected boolean isCached(int index) {
     if ((cacheStore.size() == 0 && totalCount > 0) || (index < liveStoreOffset)
         || (index > (liveStoreOffset + getCacheSize() - getVisibleRowCount()))) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("isCached() FALSE index: " + index + " cacheSize: " + cacheStore.size() + " totalCount: "
+            + totalCount + " liveStoreOffset: " + liveStoreOffset);
+      }
       return false;
+    }
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("isCached() TRUE index: " + index + " cacheSize: " + cacheStore.size() + " totalCount: "
+          + totalCount + " liveStoreOffset: " + liveStoreOffset);
     }
     return true;
   }
 
   protected boolean isHorizontalScrollBarShowing() {
-    return cm.getTotalWidth() + getScrollAdjust() > scroller.getOffsetWidth();
+    return cm.getTotalWidth() > scroller.getOffsetWidth();
   }
 
   protected boolean loadLiveStore(int offset) {
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("loadLiveStore() offset: " + offset);
+    }
     if (loaderTask == null) {
       loaderTask = new DelayedTask() {
         @Override
@@ -396,10 +496,58 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     }
   }
 
+  protected int measureRowHeight() {
+    Element row = getRow(0);
+    if (row != null) {
+      measureRowHeight = false;
+      int rh = row.getOffsetHeight();
+      return rh;
+    }
+    return -1;
+  }
+
   @Override
   protected void notifyShow() {
     super.notifyShow();
-    updateRows((int) Math.ceil((double) liveScroller.getScrollTop() / getCalculatedRowHeight()), true);
+    updateRows((int) Math.ceil((double) liveScroller.getScrollTop() / getRowHeight()), true);
+  }
+
+  @Override
+  protected void onNoNext(final int index) {
+    if (isLoading) {
+      return;
+    }
+    if (viewIndex + 1 < getLoaderTotalCount()) {
+      updateRows(viewIndex + 1, false);
+      liveScroller.setScrollTop(liveScroller.getScrollTop() + getRowHeight());
+      // updateRow call may initiate new async call therefore we need to wait till data is returned before
+      // updating the selection and scrolling into view
+      if (!isLoading) {
+        grid.getSelectionModel().select(index, false);
+        ensureVisible(index, -1, false);
+      } else {
+        new NavKeyCallback<M>(grid, index);
+      }
+    }
+  }
+
+  @Override
+  protected void onNoPrev() {
+    if (isLoading) {
+      return;
+    }
+    if (viewIndex > 0) {
+      updateRows(viewIndex - 1, false);
+
+      // updateRow call may initiate new async call therefore we need to wait till data is returned before
+      // updating the selection and scrolling into view
+      if (!isLoading) {
+        grid.getSelectionModel().select(0, false);
+        liveScroller.setScrollTop(liveScroller.getScrollTop() - getRowHeight());
+      } else {
+        new NavKeyCallback<M>(grid, 0);
+      }
+    }
   }
 
   @Override
@@ -408,8 +556,8 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     scroller.getStyle().setOverflowY(Overflow.HIDDEN);
 
     liveScroller = grid.getElement().insertFirst(
-        "<div style=\"position: absolute; right: 0px; overflow-y: scroll; overflow-x: hidden;z-index: 1\"><div style=\"width: "
-            + barWidth + "px;\">&nbsp;</div></div>");
+        "<div style=\"position: absolute; right: 0px; overflow-y: scroll; overflow-x: hidden;z-index: 1;width: "
+            + barWidth + "px;\"><div style=\"width: " + barWidth + "px;\">&nbsp;</div></div>");
     positionLiveScroller();
 
     liveScroller.addEventsSunk(Event.ONSCROLL);
@@ -440,7 +588,13 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     double low = liveStoreOffset + i;
     double high = liveStoreOffset + cz - getVisibleRowCount() - i;
     if ((index < low && liveStoreOffset > 0) || (index > high && liveStoreOffset != totalCount - cz)) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("shouldCache() TRUE index: " + index + " cache size: " + cz + " low: " + low + " high: " + high);
+      }
       return true;
+    }
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("shouldCache() FALSE index: " + index + " cache size: " + cz + " low: " + low + " high: " + high);
     }
     return false;
   }
@@ -449,33 +603,50 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
   protected void updateAllColumnWidths() {
     super.updateAllColumnWidths();
     resizeLiveScroller();
-    updateRows(viewIndex, true);
+    updateRows(viewIndex, false);
   }
 
   @Override
   protected void updateColumnHidden(int index, boolean hidden) {
     super.updateColumnHidden(index, hidden);
     resizeLiveScroller();
-    updateRows(viewIndex, true);
+    updateRows(viewIndex, false);
   }
 
   @Override
   protected void updateColumnWidth(int col, int width) {
     super.updateColumnWidth(col, width);
     resizeLiveScroller();
-    updateRows(viewIndex, true);
+    updateRows(viewIndex, false);
   }
 
+  /**
+   * Updates the rows based on the new index.
+   * 
+   * @param newIndex the new index
+   * @param reload true to reload the data
+   */
   protected void updateRows(int newIndex, boolean reload) {
+    // the number of rows visible within the grid's viewport
     int rowCount = getVisibleRowCount();
 
     newIndex = Math.min(newIndex, Math.max(0, totalCount - rowCount));
 
     int diff = newIndex - viewIndex;
+
+    // the difference from the view index and the new index
     int delta = Math.abs(diff);
+
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("updateRows() newIndex: " + newIndex + " viewIndex: " + viewIndex + " visible rows: " + rowCount
+          + " diff: " + diff);
+    }
 
     // nothing has changed and we are not forcing a reload
     if (delta == 0 && !reload) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("updateRows() nothing changed and not forcing reload");
+      }
       return;
     }
 
@@ -484,6 +655,9 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
 
     // load data if not already cached
     if (!isCached(viewIndex)) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("updateRows() not cached, loading data");
+      }
       maskView();
       if (loadLiveStore(getLiveStoreCalculatedIndex(viewIndex))) {
         viewIndexReload = viewIndex;
@@ -502,6 +676,10 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     }
 
     if (reload) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("updateRows() newIndex: " + newIndex + " viewIndex: " + viewIndex + " visible rows: " + rowCount
+            + " diff: " + diff);
+      }
       delta = diff = rc;
       if (ds.size() > 0) {
         boolean p = preventScrollToTopOnRefresh;
@@ -522,6 +700,10 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
         ds.remove(0);
       }
       count = ds.size();
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("updateRows() forward adding to store from cache, liveStoreIndex: " + liveStoreIndex + " count: "
+            + count);
+      }
       ds.addAll(cacheStore.subList(liveStoreIndex + count, liveStoreIndex + count + delta));
     } else {
       // rolling back
@@ -529,14 +711,28 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
         ds.remove(count - c - 1);
       }
 
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("updateRows() reverse adding to store from cache, liveStoreIndex: " + liveStoreIndex + " count: "
+            + count);
+      }
+
       ds.addAll(0, cacheStore.subList(liveStoreIndex, liveStoreIndex + delta));
     }
 
-    ensureHandlers().fireEvent(new LiveGridViewUpdateEvent(liveStoreOffset, viewIndex, totalCount, rowCount));
-  }
+    if (!measureRowHeight) {
+      if (viewIndex > lastViewIndex) {
+        scroller.setScrollTop(rowHeightAdjust);
+        lastScrollDirection = 1;
+      } else if (viewIndex < lastViewIndex) {
+        lastScrollDirection = 0;
+        scroller.setScrollTop(0);
+      } else {
+        scroller.setScrollTop(lastScrollDirection == 0 ? 0 : rowHeightAdjust);
+      }
+    }
 
-  SimpleEventBus ensureHandlers() {
-    return eventBus == null ? eventBus = new SimpleEventBus() : eventBus;
+    fireEvent(new LiveGridViewUpdateEvent(liveStoreOffset, viewIndex, totalCount, getVisibleRowCount()));
+    lastViewIndex = viewIndex;
   }
 
   private int getLoaderOffset() {
@@ -557,7 +753,7 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
 
   private void maskView() {
     if (!isMasked && grid.isLoadMask()) {
-      scroller.mask(DefaultMessages.getMessages().loadMask_msg());
+      grid.mask(DefaultMessages.getMessages().loadMask_msg());
       isMasked = true;
     }
   }
@@ -576,5 +772,35 @@ public class LiveGridView<M> extends GridView<M> implements HasLiveGridViewUpdat
     }
     liveScroller.setHeight(h, true);
 
+  }
+
+  private void updateScrollerHeight() {
+    int height = totalCount * getRowHeight();
+    // 1000000 as browser maxheight hack
+    int count = height / 1000000;
+    int h = 0;
+
+    StringBuilder sb = new StringBuilder();
+
+    if (count > 0) {
+      h = height / count;
+
+      for (int i = 0; i < count; i++) {
+        sb.append("<div style=\"width: ");
+        sb.append(barWidth);
+        sb.append("px; height:");
+        sb.append(h);
+        sb.append("px;\">&nbsp;</div>");
+      }
+    }
+    int diff = height - count * h;
+    if (diff != 0) {
+      sb.append("<div style=\"width: ");
+      sb.append(barWidth);
+      sb.append("px; height:");
+      sb.append(diff);
+      sb.append("px;\"></div>");
+    }
+    liveScroller.setInnerHTML(sb.toString());
   }
 }

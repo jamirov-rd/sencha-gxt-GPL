@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,6 +10,7 @@ package com.sencha.gxt.widget.core.client.button;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.uibinder.client.UiConstructor;
 import com.sencha.gxt.widget.core.client.button.Tools.ToolStyle;
+import com.sencha.gxt.widget.core.client.button.testing.ToolsTestingImpl;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
 
 /**
@@ -18,7 +19,7 @@ import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
  */
 public class ToolButton extends IconButton {
 
-  private static ToolStyle style = GWT.<Tools> create(Tools.class).icons();
+  private static ToolStyle style = GWT.isClient() ? GWT.<Tools> create(Tools.class).icons() : new ToolsTestingImpl().icons();
 
   public static IconConfig CLOSE = new IconConfig(style.close(), style.closeOver());
   public static IconConfig COLLAPSE = new IconConfig(style.collapse(), style.collapseOver());

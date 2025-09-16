@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -37,13 +37,11 @@ import com.sencha.gxt.widget.core.client.event.RowClickEvent;
 import com.sencha.gxt.widget.core.client.event.RowClickEvent.RowClickHandler;
 
 /**
- * A {@link ColumnConfig} subclass and a {@link ComponentPlugin} that adds the
- * ability for each row to be expanded, showing custom content that spans all
- * the rows columns.
+ * A {@link ColumnConfig} subclass and a {@link ComponentPlugin} that adds the ability for each row to be expanded,
+ * showing custom content that spans all the rows columns.
  * 
  * <p />
- * As with all component plugins, {@link #initPlugin(Grid)} must be called to
- * initialize the row expander.
+ * As with all component plugins, {@link #initPlugin(Grid)} must be called to initialize the row expander.
  * 
  * @param <M> the model type
  */
@@ -54,6 +52,8 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
   public interface RowExpanderAppearance<M> {
     String getRowStyles(M model, int rowIndex);
 
+    String getCellClassName();
+
     boolean isExpanded(XElement row);
 
     boolean isExpandElement(XElement target);
@@ -61,6 +61,8 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
     void onExpand(XElement row, boolean expand);
 
     void renderExpander(Context context, M value, SafeHtmlBuilder sb);
+
+    void finishInit(XElement gridParent);
   }
 
   protected Grid<M> grid;
@@ -71,7 +73,16 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
 
   /**
    * Creates a new row expander.
-   * 
+   *
+   * @param contentCell the content cell
+   */
+  public RowExpander(Cell<M> contentCell) {
+    this(new IdentityValueProvider<M>(), contentCell, GWT.<RowExpanderAppearance<M>> create(RowExpanderAppearance.class));
+  }
+
+  /**
+   * Creates a new row expander.
+   *
    * @param valueProvider the value provider
    * @param contentCell the content cell
    */
@@ -94,12 +105,13 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
     this.appearance = appearance;
 
     setHeader("");
-    setColumnClassSuffix("expander");
     setWidth(20);
     setSortable(false);
     setResizable(false);
     setFixed(true);
     setMenuDisabled(true);
+    setCellPadding(false);
+    setCellClassName(appearance.getCellClassName());
 
     setCell(new AbstractCell<M>() {
       @Override
@@ -154,6 +166,10 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
     }
   }
 
+  public RowExpanderAppearance<M> getAppearance() {
+    return appearance;
+  }
+
   /**
    * Returns the content cell.
    * 
@@ -169,7 +185,7 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
     grid.getView().setEnableRowBody(true);
     grid.getView().setRowBodyRowSpan(2);
 
-    grid.addStyleName("x-expander");
+    appearance.finishInit(grid.getElement());
 
     GridView<M> view = grid.getView();
 
@@ -199,6 +215,17 @@ public class RowExpander<M> extends ColumnConfig<M, M> implements ComponentPlugi
         onMouseDown(event);
       }
     });
+  }
+
+  /**
+   * Returns true if the row is expanded.
+   * 
+   * @param rowIndex the row index
+   * @return true if expanded
+   */
+  public boolean isExpanded(int rowIndex) {
+    XElement row = grid.getView().getRow(rowIndex).<XElement>cast();
+    return row == null ? false : isExpanded(grid.getView().getRow(rowIndex).<XElement>cast());
   }
 
   /**

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,12 +13,11 @@ import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
-import com.google.gwt.user.client.Event;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
-import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
+import com.sencha.gxt.core.client.resources.ThemeStyles;
 import com.sencha.gxt.core.client.util.IconHelper;
 import com.sencha.gxt.widget.core.client.TabItemConfig;
 import com.sencha.gxt.widget.core.client.TabPanel.TabPanelAppearance;
@@ -142,6 +141,7 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     this.itemTemplate = itemTemplate;
   }
 
+  @Override
   public void createScrollers(XElement parent) {
     int h = getStripWrap(parent).getOffsetHeight();
     XElement scrollLeft = getBar(parent).insertFirst("<div class='" + style.tabScrollerLeft() + "'></div>");
@@ -153,8 +153,9 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     scrollRight.setHeight(h);
   }
 
+  @Override
   public XElement getBar(XElement parent) {
-    return parent.selectNode("." + style.tabHeader());
+    return parent.getFirstChildElement().cast();
   }
 
   @Override
@@ -167,10 +168,12 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     return ITEM_SELECTOR;
   }
 
+  @Override
   public XElement getScrollLeft(XElement parent) {
     return getBar(parent).selectNode("." + style.tabScrollerLeft());
   }
 
+  @Override
   public XElement getScrollRight(XElement parent) {
     return getBar(parent).selectNode("." + style.tabScrollerRight());
   }
@@ -179,17 +182,20 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     return parent.selectNode("." + style.tabStrip());
   }
 
+  @Override
   public XElement getStripEdge(XElement parent) {
     return parent.selectNode("." + style.tabEdge());
   }
 
+  @Override
   public XElement getStripWrap(XElement parent) {
     return parent.selectNode("." + style.tabStripWrap());
   }
 
+  @Override
   public void insert(XElement parent, TabItemConfig config, int index) {
     XElement item = XDOM.create(itemTemplate.render(style, config).asString());
-    item.setClassName(CommonStyles.get().disabled(), !config.isEnabled());
+    item.setClassName(ThemeStyles.get().style().disabled(), !config.isEnabled());
     
     if (config.isHTML()) {
       XElement textEl = item.selectNode("." + style.tabStripText());
@@ -217,12 +223,12 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     item.removeClassName(style.tabStripActive());
   }
 
-  public void onMouseOut(XElement parent, Event event) {
+  @Override
+  public void onMouseOut(XElement parent, XElement target) {
     NodeList<Element> nodeList = parent.select("." + style.tabStripOver());
     for (int i = 0; i < nodeList.getLength(); i++) {
       nodeList.getItem(i).removeClassName(style.tabStripOver());
     }
-    XElement target = event.getEventTarget().cast();
     if (target.is("." + style.tabScrollerLeft())) {
       target.removeClassName(style.tabScrollerLeftOver());
     } else if (target.is("." + style.tabScrollerRight())) {
@@ -230,9 +236,9 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     }
   }
 
-  public void onMouseOver(Event event) {
-    XElement target = event.getEventTarget().cast();
-    Element item = findItem(event.getEventTarget().<Element> cast());
+  @Override
+  public void onMouseOver(XElement parent, XElement target) {
+    Element item = findItem(target);
     if (item != null) {
       item.addClassName(style.tabStripOver());
     } else if (target.is("." + style.tabScrollerLeft())) {
@@ -252,6 +258,7 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
     item.addClassName(style.tabStripActive());
   }
 
+  @Override
   public void render(SafeHtmlBuilder builder) {
     builder.append(template.render(style));
   }
@@ -276,9 +283,12 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
 
     setItemIcon(item, config.getIcon());
 
-    item.setClassName(CommonStyles.get().disabled(), !config.isEnabled());
+    item.setClassName(ThemeStyles.get().style().disabled(), !config.isEnabled());
+
+    item.setClassName(style.tabStripClosable(), config.isClosable());
   }
 
+  @Override
   public void updateScrollButtons(XElement parent) {
     int pos = getScrollPos(parent);
     getScrollLeft(parent).setClassName(style.tabScrollerLeftDisabled(), pos == 0);
@@ -287,7 +297,7 @@ public abstract class TabPanelBaseAppearance implements TabPanelAppearance {
   }
 
   protected Element findItem(Element target) {
-    return target.<XElement> cast().findParentElement(ITEM_SELECTOR, 5);
+    return target.<XElement> cast().findParentElement(ITEM_SELECTOR, -1);
   }
 
   protected void setItemIcon(XElement item, ImageResource icon) {

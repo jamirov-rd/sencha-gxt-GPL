@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,13 +9,13 @@ package com.sencha.gxt.widget.core.client;
 
 import java.util.Collections;
 
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
-import com.google.gwt.user.client.Element;
 import com.sencha.gxt.core.client.Style.SelectionMode;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.KeyNav;
@@ -32,6 +32,27 @@ import com.sencha.gxt.widget.core.client.selection.AbstractStoreSelectionModel;
  * @param <M> the model type
  */
 public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
+
+  private class Handler implements MouseDownHandler, ClickHandler, RefreshHandler {
+
+    @Override
+    public void onClick(ClickEvent event) {
+      onMouseClick(event);
+    }
+
+    @Override
+    public void onMouseDown(MouseDownEvent event) {
+      ListViewSelectionModel.this.onMouseDown(event);
+    }
+
+    @Override
+    public void onRefresh(RefreshEvent event) {
+      refresh();
+      if (getLastFocused() != null) {
+        listView.onHighlightRow(listStore.indexOf(getLastFocused()), true);
+      }
+    }
+  }
 
   protected boolean enableNavKeys = true;
   protected KeyNav keyNav = new KeyNav() {
@@ -70,38 +91,27 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     }
 
   };
+
   protected ListStore<M> listStore;
   protected ListView<M, ?> listView;
 
+  /**
+   * True to deselect a selected item on click (defaults to {@code true).
+   */
+  protected boolean deselectOnSimpleClick = true;
+
   private boolean isVertical = true;
   private Handler handler = new Handler();
-
   private GroupingHandlerRegistration handlerRegistration = new GroupingHandlerRegistration();
 
-  private class Handler implements MouseDownHandler, ClickHandler, RefreshHandler {
-
-    @Override
-    public void onClick(ClickEvent event) {
-      handleMouseClick(event);
-    }
-
-    @Override
-    public void onMouseDown(MouseDownEvent event) {
-      handleMouseDown(event);
-    }
-
-    @Override
-    public void onRefresh(RefreshEvent event) {
-      refresh();
-      if (getLastFocused() != null) {
-        listView.onHighlightRow(listStore.indexOf(getLastFocused()), true);
-      }
-    }
-  }
+  /**
+   * Track the selection index, when the shift combined with and so then this is the starting point of the selection.
+   */
+  private int indexOnSelectNoShift;
 
   /**
    * Binds the list view to the selection model.
-   * 
+   *
    * @param listView the list view
    */
   public void bindList(ListView<M, ?> listView) {
@@ -126,9 +136,17 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * Returns true if up and down arrow keys are used for navigation. Else left
-   * and right arrow keys are used.
-   * 
+   * Returns the currently bound list view.
+   *
+   * @return the list view
+   */
+  public ListView<M, ?> getListView() {
+    return listView;
+  }
+
+  /**
+   * Returns {@code true} if up and down arrow keys are used for navigation. Else left and right arrow keys are used.
+   *
    * @return the isVertical
    */
   public boolean isVertical() {
@@ -136,30 +154,29 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * Sets if up and down arrow keys or left and right arrow keys should be used
-   * (defaults to true).
-   * 
+   * Sets if up and down arrow keys or left and right arrow keys should be used (defaults to {@code true}).
+   *
    * @param isVertical the isVertical to set
    */
   public void setVertical(boolean isVertical) {
     this.isVertical = isVertical;
   }
 
-  protected void handleMouseClick(ClickEvent ce) {
-    XEvent e = ce.getNativeEvent().<XEvent> cast();
+  protected void onMouseClick(ClickEvent ce) {
+    XEvent e = ce.getNativeEvent().<XEvent>cast();
     XElement target = e.getEventTargetEl();
-   
+
     if (isLocked() || isInput(target)) {
       return;
     }
-    
+
     if (fireSelectionChangeOnClick) {
       fireSelectionChange();
       fireSelectionChangeOnClick = false;
     }
-    
+
     int index = listView.findElementIndex(target);
-    
+
     if (index == -1) {
       deselectAll();
       return;
@@ -167,8 +184,12 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     if (selectionMode == SelectionMode.MULTI) {
       M sel = listStore.get(index);
       if (e.getCtrlOrMetaKey() && isSelected(sel)) {
+        // reset the starting location of the click
+        indexOnSelectNoShift = index;
         doDeselect(Collections.singletonList(sel), false);
       } else if (e.getCtrlOrMetaKey()) {
+        // reset the starting location of the click
+        indexOnSelectNoShift = index;
         doSelect(Collections.singletonList(sel), true, false);
         listView.focusItem(index);
       } else if (isSelected(sel) && !e.getShiftKey() && !e.getCtrlOrMetaKey() && selected.size() > 1) {
@@ -176,54 +197,86 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
         listView.focusItem(index);
       }
     }
-
   }
 
-  protected void handleMouseDown(MouseDownEvent mde) {
-    XEvent e = mde.getNativeEvent().<XEvent> cast();
+  protected void onMouseDown(MouseDownEvent mde) {
+    XEvent e = mde.getNativeEvent().<XEvent>cast();
     XElement target = e.getEventTargetEl();
-    int index = listView.findElementIndex(target);
+    int selIndex = listView.findElementIndex(target);
 
-    if (index == -1 || isLocked() || isInput(target)) {
+    if (selIndex == -1 || isLocked() || isInput(target)) {
       return;
     }
-    
+
     mouseDown = true;
-    
+
     if (e.isRightClick()) {
-      if (selectionMode != SelectionMode.SINGLE && isSelected(listStore.get(index))) {
+      if (selectionMode != SelectionMode.SINGLE && isSelected(listStore.get(selIndex))) {
         return;
       }
-      select(index, false);
-      listView.focusItem(index);
+      select(selIndex, false);
+      listView.focusItem(selIndex);
     } else {
-      M sel = listStore.get(index);
-      if (selectionMode == SelectionMode.SIMPLE) {
-        if (!isSelected(sel)) {
-          listView.focusItem(index);
-          select(sel, true);
-        }
+      M sel = listStore.get(selIndex);
+      if (sel == null) {
+        return;
+      }
+      
+      boolean isSelected = isSelected(sel);
+      boolean isMeta = e.getCtrlOrMetaKey();
+      boolean isShift = e.getShiftKey();
+      
+      switch (selectionMode) {
+        case SIMPLE:
+          listView.focusItem(selIndex);
+          if (!isSelected) {
+            select(sel, true);
+          } else if (isSelected && deselectOnSimpleClick) {
+            deselect(sel);
+          }
+          break;
+          
+        case SINGLE:
+          if (isMeta && isSelected) {
+            deselect(sel);
+          } else if (!isSelected) {
+            listView.focusItem(selIndex);
+            select(sel, false);
+          }
+          break;
+          
+        case MULTI:
+          if (isMeta) {
+            break;
+          }
+          
+          if (isShift && lastSelected != null) {
+            int last = listStore.indexOf(lastSelected);
+            listView.focusItem(last);
 
-      } else if (selectionMode == SelectionMode.SINGLE) {
-        if (e.getCtrlOrMetaKey() && isSelected(sel)) {
-          deselect(sel);
-        } else if (!isSelected(sel)) {
-          listView.focusItem(index);
-          select(sel, false);
-        }
-      } else if (!e.getCtrlOrMetaKey()) {
-        if (e.getShiftKey() && lastSelected != null) {
-          int last = listStore.indexOf(lastSelected);
-          listView.focusItem(last);
-          select(last, index, e.getCtrlOrMetaKey());
+            int start;
+            int end;
+            // This deals with flipping directions
+            if (indexOnSelectNoShift < selIndex) {
+              start = indexOnSelectNoShift;
+              end = selIndex;
+            } else {
+              start = selIndex;
+              end = indexOnSelectNoShift;
+            }
+            
+            select(start, end, false);
+          } else if (!isSelected) {
+            // reset the starting location of multi select
+            indexOnSelectNoShift = selIndex;
 
-        } else if (!isSelected(sel)) {
-          listView.focusItem(index);
-          doSelect(Collections.singletonList(sel), false, false);
-        }
+            listView.focusItem(selIndex);
+            doSelect(Collections.singletonList(sel), false, false);
+          }
+          break;
       }
     }
-    
+
     mouseDown = false;
   }
 
@@ -233,7 +286,7 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   protected void onKeyDown(NativeEvent event) {
-    XEvent e = event.<XEvent> cast();
+    XEvent e = event.<XEvent>cast();
 
     if (!e.getCtrlOrMetaKey() && selected.size() == 0 && getLastFocused() == null) {
       select(0, false);
@@ -269,7 +322,7 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   protected void onKeyPress(NativeEvent event) {
-    XEvent e = event.<XEvent> cast();
+    XEvent e = event.<XEvent>cast();
 
     if (lastSelected != null && enableNavKeys) {
       int kc = e.getKeyCode();
@@ -305,7 +358,7 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   protected void onKeyUp(NativeEvent event) {
-    XEvent e = event.<XEvent> cast();
+    XEvent e = event.<XEvent>cast();
     int idx = listStore.indexOf(getLastFocused());
     if (idx >= 1) {
       if (e.getCtrlOrMetaKey() || (e.getShiftKey() && isSelected(listStore.get(idx - 1)))) {
@@ -353,6 +406,11 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     }
   }
 
+  @Override
+  protected void onSelectChange(M model, boolean select) {
+    listView.onSelectChange(model, select);
+  }
+
   void onRowUpdated(M model) {
     if (isSelected(model)) {
       onSelectChange(model, true);
@@ -360,11 +418,6 @@ public class ListViewSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     if (getLastFocused() == model) {
       setLastFocused(getLastFocused());
     }
-  }
-
-  @Override
-  protected void onSelectChange(M model, boolean select) {
-    listView.onSelectChange(model, select);
   }
 
 }

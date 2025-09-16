@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style.Cursor;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -65,6 +66,8 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
     String proxyClass();
 
     void render(SafeHtmlBuilder sb, LayoutRegion region);
+
+    int getDefaultBarWidth();
   }
 
   private class Handler implements AttachEvent.Handler, ResizeHandler, MoveHandler, HideHandler, ShowHandler {
@@ -106,7 +109,7 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
   private int minSize = 10;
   private int maxSize = 2000;
 
-  private int handleWidth = 5;
+  private int handleWidth;
   private int barWidth = 2;
   private XElement resizeEl, miniEl;
   private Component resizeWidget;
@@ -157,10 +160,12 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
     this.resizeWidget = resizeWidget;
     this.resizeEl = resizeWidget.getElement();
 
+    this.handleWidth = appearance.getDefaultBarWidth();
+
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder, region);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
 
     setAllowTextSelection(false);
     getElement().makePositionable(true);
@@ -382,8 +387,7 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
   }
 
   /**
-   * True to update the size of the the resize widget after a drag operation
-   * using a proxy (defaults to true).
+   * True to update the size of the the resize widget after a drag operation using a proxy (defaults to true).
    * 
    * @param autoSize the auto size state
    */
@@ -401,20 +405,21 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
   }
 
   /**
-   * True to show a mini-collapse tool in the split bar (defaults to false).
-   * When clicked, the collapse event is fired.
+   * True to show a mini-collapse tool in the split bar (defaults to false). When clicked, the collapse event is fired.
    * 
    * @param collapsible true to add the mini-collapse tool
    */
   public void setCollapsible(boolean collapsible) {
     this.collapsible = collapsible;
-    if (miniEl == null) {
+    if (collapsible && miniEl == null) {
       miniEl = XElement.createElement("div");
       miniEl.setClassName(CommonStyles.get().nodrag() + " " + appearance.miniClass(Direction.LEFT));
       getElement().appendChild(miniEl);
 
     }
-    miniEl.setDisplayed(collapsible);
+    if (miniEl != null) {
+      miniEl.setDisplayed(collapsible);
+    }
   }
 
   /**
@@ -454,8 +459,7 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
   }
 
   /**
-   * Sets the amount of pixels the bar should be offset to the top (defaults to
-   * 0).
+   * Sets the amount of pixels the bar should be offset to the top (defaults to 0).
    * 
    * @param y the yOffset to set
    */
@@ -490,7 +494,7 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
         getElement().setBounds(x + getXOffset(), y + h + getYOffset(), w, getHandleWidth(), false);
         break;
       case WEST:
-        getElement().setBounds(x - getHandleWidth() + getYOffset(), y + getXOffset(), getHandleWidth(), h, false);
+        getElement().setBounds(x - getHandleWidth() + getXOffset(), y + getYOffset(), getHandleWidth(), h, false);
         break;
       case NORTH:
         getElement().setBounds(x + getXOffset(), y - getHandleWidth() + getYOffset(), w, getHandleWidth(), false);
@@ -498,6 +502,8 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
       case EAST:
         getElement().setBounds(Math.max(0, x + w + getXOffset()), y + getYOffset(), getHandleWidth(), h, false);
         break;
+      case CENTER:
+        // do nothing
     }
 
   }
@@ -614,6 +620,8 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
         }
         break;
       }
+      case CENTER:
+        // do nothing  
     }
     fireEvent(new SplitBarDragEvent(false, size));
   }
@@ -642,6 +650,8 @@ public class SplitBar extends Component implements HasClickHandlers, HasDoubleCl
           int w = containerWidget.getOffsetWidth(true);
           de.setWidth(w);
           break;
+        case CENTER:
+          // do nothing
       }
     }
     startBounds = new Rectangle();

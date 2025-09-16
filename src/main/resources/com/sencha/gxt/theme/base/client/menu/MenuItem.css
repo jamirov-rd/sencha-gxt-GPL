@@ -1,31 +1,17 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 @if user.agent gecko gecko1_8 {
   .menuItem {
-    -moz-user-select: none;
-  }
-}
-
-@if user.agent safari {
-  .menuItem {
-    -khtml-user-select: none;
-    -webkit-user-select: ignore
-  }
-}
-
-@if user.agent gecko gecko1_8 {
-  a.menuItem {
     outline-color: -moz-use-text-color;
   }
 }
 
-a.menuItem {
-  cursor: pointer;
+.menuItem {
   display: block;
   line-height: 16px;
   outline-style: none;
@@ -40,6 +26,7 @@ a.menuItem {
   white-space: nowrap;
   display: block;
   padding: 1px;
+  cursor: pointer;
 }
 
 .menuItemIcon {

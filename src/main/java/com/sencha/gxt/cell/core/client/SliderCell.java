@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -15,24 +15,24 @@ import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
-import com.google.gwt.user.client.Window;
 import com.sencha.gxt.cell.core.client.form.FieldCell;
+import com.sencha.gxt.core.client.Style.Side;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
 import com.sencha.gxt.core.client.util.Format;
 import com.sencha.gxt.core.client.util.Point;
 import com.sencha.gxt.core.client.util.Util;
-import com.sencha.gxt.widget.core.client.tips.Tip;
+import com.sencha.gxt.widget.core.client.tips.ToolTip;
+import com.sencha.gxt.widget.core.client.tips.ToolTipConfig;
 
 public class SliderCell extends FieldCell<Integer> {
 
   public interface HorizontalSliderAppearance extends SliderAppearance {
-
   }
 
   public interface SliderAppearance extends FieldAppearance {
 
-    int getClickedValue(Context context, Element parent, NativeEvent event);
+    int getClickedValue(Context context, Element parent, Point location);
 
     int getSliderLength(XElement parent);
 
@@ -40,21 +40,21 @@ public class SliderCell extends FieldCell<Integer> {
 
     boolean isVertical();
 
-    void onMouseDown(Context context, Element parent, NativeEvent event);
+    void onMouseDown(Context context, Element parent);
 
-    void onMouseOut(Context context, Element parent, NativeEvent event);
+    void onMouseOut(Context context, Element parent);
 
-    void onMouseOver(Context context, Element parent, NativeEvent event);
+    void onMouseOver(Context context, Element parent);
 
-    void onMouseUp(Context context, Element parent, NativeEvent event);
+    void onMouseUp(Context context, Element parent);
 
     void render(double fractionalValue, int width, int height, SafeHtmlBuilder sb);
 
     void setThumbPosition(Element parent, int left);
 
   }
+
   public interface VerticalSliderAppearance extends SliderAppearance {
-    
   }
 
   protected class DragPreview extends BaseEventPreview {
@@ -72,7 +72,7 @@ public class SliderCell extends FieldCell<Integer> {
       this.parent = parent;
       this.valueUpdater = valueUpdater;
 
-      XElement t = appearance.getThumb(parent).cast();
+      XElement t = getAppearance().getThumb(parent).cast();
       thumbWidth = t.getOffsetWidth();
       thumbHeight = t.getOffsetHeight();
 
@@ -84,17 +84,16 @@ public class SliderCell extends FieldCell<Integer> {
       boolean allow = super.onPreview(event);
 
       switch (event.getTypeInt()) {
-        case Event.ONMOUSEMOVE: {
+        case Event.ONMOUSEMOVE:
           positionTip(event.getNativeEvent());
           break;
-        }
         case Event.ONMOUSEUP:
           this.remove();
           XElement p = XElement.as(parent);
-          int v = setValue(p, reverseValue(p, appearance.getClickedValue(context, p, event.getNativeEvent())));
+          int v = setValue(p, reverseValue(p, getAppearance().getClickedValue(context, p, new Point(event.getNativeEvent().getClientX(), event.getNativeEvent().getClientY()))));
           valueUpdater.update(v);
-          appearance.onMouseUp(context, parent, event.getNativeEvent());
-          appearance.onMouseOut(context, parent, event.getNativeEvent());
+          getAppearance().onMouseUp(context, parent);
+          getAppearance().onMouseOut(context, parent);
           tip.hide();
           break;
       }
@@ -102,72 +101,81 @@ public class SliderCell extends FieldCell<Integer> {
       return allow;
     }
 
-    private void positionTip(NativeEvent e) {
-      Point thumbPosition = appearance.getThumb(parent).<XElement> cast().getPosition(false);
-
-      int x = thumbPosition.getX();
-      int y = thumbPosition.getY();
-
-      XElement p = XElement.as(parent);
-      int v = setValue(p, reverseValue(p, appearance.getClickedValue(context, p, e)));
-      tip.getAppearance().getTextElement(tip.getElement()).setInnerText(onFormatValue(v));
-
-      tip.showAt(-5000, -5000);
-      int w = tip.getOffsetWidth();
-      int h = tip.getOffsetHeight();
-
-      if (!vertical) {
-        boolean top = y > 35;
-        if (top) {
-          thumbPosition.setX(x - (w / 2) + (thumbWidth / 2));
-          thumbPosition.setY(y - h - 5);
-
-        } else {
-          thumbPosition.setX(x - (w / 2) + (thumbWidth / 2));
-          thumbPosition.setY(y + thumbHeight + 5);
-        }
-      } else {
-        int vleft = Window.getClientWidth();
-        boolean right = x < (vleft - 30);
-        if (right) {
-          thumbPosition.setX(parent.getAbsoluteLeft() + parent.getOffsetWidth() + 5);
-          thumbPosition.setY(Math.max(0, y - (h / 2)));
-        } else {
-          thumbPosition.setX(parent.getAbsoluteLeft() - w - 5);
-          thumbPosition.setY(Math.max(0, y - (h / 2)));
-        }
+    private void positionTip(NativeEvent event) {
+      if (!showMessage) {
+        return;
       }
 
-      tip.showAt(thumbPosition);
+      XElement p = XElement.as(parent);
+      int v = setValue(p, reverseValue(p, getAppearance().getClickedValue(context, p, new Point(event.getClientX(), event.getClientY()))));
+      Element thumb = getAppearance().getThumb(parent);
+
+      tip.setText(onFormatValue(v));
+
+      tip.onMouseMove(thumbWidth, thumbHeight, thumb);
     }
 
   }
 
-  private SliderAppearance appearance;
+  private class ToolTipExt extends ToolTip {
+    public ToolTipExt(ToolTipConfig config) {
+      super(config);
+    }
+
+    public void setText(String text) {
+      bodyHtml = text;
+    }
+
+    public void onMouseMove(int thumbWidth, int thumbHeight, Element target) {
+      this.target = target;
+      Side origAnchor = toolTipConfig.getAnchor();
+      Point p = getTargetXY(0);
+      p.setX(p.getX() - (thumbWidth / 2));
+      p.setY(p.getY() - (thumbHeight / 2));
+      super.showAt(p.getX(), p.getY());
+      toolTipConfig.setAnchor(origAnchor);
+    }
+  }
+
   private String message = "{0}";
+  private boolean showMessage = true;
   private boolean vertical = false;
   private int maxValue = 100;
   private int minValue = 0;
-  private final Tip tip = new Tip() {
-    protected void onAfterFirstAttach() {
-      super.onAfterFirstAttach();
-      constrainPosition = false;
-    };
-  };
-
+  private ToolTipExt tip;
+  private ToolTipConfig toolTipConfig;
   private int increment = 10;
 
   public SliderCell() {
-    this(GWT.<SliderAppearance> create(SliderAppearance.class));
+    this(GWT.<SliderAppearance>create(SliderAppearance.class));
   }
 
   public SliderCell(SliderAppearance appearance) {
     super(appearance, "mousedown", "mouseover", "mouseout", "keydown");
-    this.appearance = appearance;
 
     vertical = appearance.isVertical();
-    tip.setMinWidth(25);
 
+    toolTipConfig = new ToolTipConfig();
+    toolTipConfig.setAnchorArrow(false);
+    toolTipConfig.setMinWidth(25);
+    toolTipConfig.setAutoHide(true);
+    toolTipConfig.setDismissDelay(1000);
+    if (vertical) {
+      toolTipConfig.setAnchor(Side.LEFT);
+      toolTipConfig.setMouseOffsetX(25);
+      toolTipConfig.setMouseOffsetY(0);
+    } else {
+      toolTipConfig.setAnchor(Side.TOP);
+      toolTipConfig.setMouseOffsetX(0);
+      toolTipConfig.setMouseOffsetY(25);
+    }
+
+    tip = new ToolTipExt(toolTipConfig);
+  }
+
+  @Override
+  public SliderAppearance getAppearance() {
+    return (SliderAppearance) super.getAppearance();
   }
 
   /**
@@ -206,57 +214,82 @@ public class SliderCell extends FieldCell<Integer> {
     return minValue;
   }
 
+  /**
+   * Returns true if the tool tip message is shown
+   * 
+   * @return the showMessage state
+   */
+  public boolean isShowMessage() {
+    return showMessage;
+  }
+
   @Override
   public void onBrowserEvent(Context context, Element parent, Integer value, NativeEvent event,
       ValueUpdater<Integer> valueUpdater) {
     Element target = event.getEventTarget().cast();
-    if (!parent.isOrHasChild(target)) {
+    if (!parent.isOrHasChild(target) || isDisabled()) {
       return;
     }
     super.onBrowserEvent(context, parent, value, event, valueUpdater);
 
     String eventType = event.getType();
+
     if ("mousedown".equals(eventType)) {
       onMouseDown(context, parent, event, valueUpdater);
     } else if ("mouseover".equals(eventType)) {
-      appearance.onMouseOver(context, parent, event);
+      getAppearance().onMouseOver(context, parent);
     } else if ("mouseout".equals(eventType)) {
-      appearance.onMouseOut(context, parent, event);
+      getAppearance().onMouseOut(context, parent);
     } else if ("keydown".equals(eventType)) {
       int key = event.getKeyCode();
       if (!vertical) {
         switch (key) {
-          case KeyCodes.KEY_LEFT: {
+          case KeyCodes.KEY_LEFT:
             int v = setValue(parent, value - increment);
             valueUpdater.update(v);
+            positionTip(parent, v);
             break;
-          }
-          case KeyCodes.KEY_RIGHT: {
-            int v = setValue(parent, value + increment);
+          case KeyCodes.KEY_RIGHT:
+            v = setValue(parent, value + increment);
             valueUpdater.update(v);
+            positionTip(parent, v);
             break;
-          }
         }
       } else {
         switch (key) {
-          case KeyCodes.KEY_DOWN: {
+          case KeyCodes.KEY_DOWN:
             int v = setValue(parent, value - increment);
             valueUpdater.update(v);
+            positionTip(parent, v);
             break;
-          }
-          case KeyCodes.KEY_UP: {
-            int v = setValue(parent, value + increment);
+          case KeyCodes.KEY_UP:
+            v = setValue(parent, value + increment);
             valueUpdater.update(v);
+            positionTip(parent, v);
             break;
-          }
         }
       }
     }
   }
 
+  private void positionTip(Element parent, int v) {
+    if (!showMessage) {
+      return;
+    }
+    Element thumb = getAppearance().getThumb(parent);
+
+    XElement t = thumb.cast();
+    int thumbWidth = t.getOffsetWidth();
+    int thumbHeight = t.getOffsetHeight();
+
+    tip.setText(onFormatValue(v));
+
+    tip.onMouseMove(thumbWidth, thumbHeight, thumb);
+  }
+
   @Override
   public void onEmpty(XElement parent, boolean empty) {
-    appearance.onEmpty(parent, empty);
+    getAppearance().onEmpty(parent, empty);
   }
 
   @Override
@@ -272,13 +305,12 @@ public class SliderCell extends FieldCell<Integer> {
     } else {
       fractionalValue = 1.0 * (value - minValue) / (maxValue - minValue);
     }
-    appearance.render(fractionalValue, getWidth(), getHeight(), sb);
-
+    getAppearance().render(fractionalValue, getWidth(), getHeight(), sb);
   }
 
   /**
-   * How many units to change the slider when adjusting by drag and drop. Use
-   * this option to enable 'snapping' (default to 10).
+   * How many units to change the slider when adjusting by drag and drop. Use this option to enable 'snapping' (default
+   * to 10).
    * 
    * @param increment the increment
    */
@@ -296,8 +328,7 @@ public class SliderCell extends FieldCell<Integer> {
   }
 
   /**
-   * Sets the tool tip message (defaults to '{0}'). "{0} will be substituted
-   * with the current slider value.
+   * Sets the tool tip message (defaults to '{0}'). "{0} will be substituted with the current slider value.
    * 
    * @param message the tool tip message
    */
@@ -312,6 +343,30 @@ public class SliderCell extends FieldCell<Integer> {
    */
   public void setMinValue(int minValue) {
     this.minValue = minValue;
+  }
+
+  /**
+   * Sets if the tool tip message should be displayed (defaults to true, pre-render).
+   * 
+   * @param showMessage true to show tool tip message
+   */
+  public void setShowMessage(boolean showMessage) {
+    this.showMessage = showMessage;
+  }
+
+  /**
+   * Set the tooltip config. This is the tooltip for the message configuration. Set {@link #setShowMessage(boolean)} to
+   * true to use this feature.
+   * <p/>
+   * {@link ToolTipConfig#setAnchor(com.sencha.gxt.core.client.Style.Side)} is a required setting for toolTipConfig.
+   * 
+   * @param toolTipConfig is the tooltip configuration.
+   */
+  public void setToolTipConfig(ToolTipConfig toolTipConfig) {
+    assert toolTipConfig != null : "The toolTipConfig parameter is null and it is required.";
+    assert toolTipConfig.getAnchor() != null : "The toolTipConfig must have an anchor Side set. "
+        + "Like toolTipConfig.setAnchor(Side.RIGHT);";
+    this.toolTipConfig = toolTipConfig;
   }
 
   protected int constrain(int value) {
@@ -336,13 +391,8 @@ public class SliderCell extends FieldCell<Integer> {
 
   protected double getRatio(XElement parent) {
     int v = maxValue - minValue;
-    if (vertical) {
-      int h = appearance.getSliderLength(parent);
-      return v == 0 ? h : ((double) h / v);
-    } else {
-      int w = appearance.getSliderLength(parent);
-      return v == 0 ? w : ((double) w / v);
-    }
+    int length = getAppearance().getSliderLength(parent);
+    return v == 0 ? length : ((double) length / v);
   }
 
   protected int normalizeValue(int value) {
@@ -358,46 +408,49 @@ public class SliderCell extends FieldCell<Integer> {
   protected void onMouseDown(final Context context, final Element parent, NativeEvent event,
       final ValueUpdater<Integer> valueUpdater) {
     Element target = Element.as(event.getEventTarget());
-    if (!appearance.getThumb(parent).isOrHasChild(target)) {
-      int value = appearance.getClickedValue(context, parent, event);
+    if (!getAppearance().getThumb(parent).isOrHasChild(target)) {
+      int value = getAppearance().getClickedValue(context, parent, new Point(event.getClientX(), event.getClientY()));
       value = reverseValue(parent.<XElement> cast(), value);
       value = normalizeValue(value);
-
       valueUpdater.update(value);
-
-      int pos = translateValue(parent.<XElement> cast(), value);
-      appearance.setThumbPosition(parent, pos);
-
       return;
     }
 
     BaseEventPreview preview = new DragPreview(context, parent, valueUpdater, event);
-    appearance.onMouseDown(context, parent, event);
+    getAppearance().onMouseDown(context, parent);
     preview.add();
   }
 
   protected int reverseValue(XElement parent, int pos) {
     double ratio = getRatio(parent);
     if (vertical) {
-      int length = appearance.getSliderLength(parent);
+      int length = getAppearance().getSliderLength(parent);
       return (int) (((minValue * ratio) + length - pos) / ratio);
     } else {
-      int halfThumb = appearance.getThumb(parent).getOffsetWidth() / 2;
+      int halfThumb = getAppearance().getThumb(parent).getOffsetWidth() / 2;
       return (int) ((pos + halfThumb + (minValue * ratio)) / ratio);
     }
   }
 
   protected int translateValue(XElement parent, int v) {
+    int halfThumb;
+    if (vertical) {
+      halfThumb = getAppearance().getThumb(parent).getOffsetHeight() / 2;
+    } else {
+      halfThumb = getAppearance().getThumb(parent).getOffsetWidth() / 2;
+    }
+
     double ratio = getRatio(parent);
-    int halfThumb = appearance.getThumb(parent).getOffsetWidth() / 2;
+
     return (int) ((v * ratio) - (minValue * ratio) - halfThumb);
   }
 
   private int setValue(Element parent, int value) {
     value = normalizeValue(value);
-    int left = translateValue(parent.<XElement> cast(), value);
 
-    appearance.setThumbPosition(parent, left);
+    // move thumb
+    int pos = translateValue(parent.<XElement> cast(), value);
+    getAppearance().setThumbPosition(parent, pos);
 
     return value;
   }

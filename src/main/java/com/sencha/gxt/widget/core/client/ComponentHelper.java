@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -31,7 +31,7 @@ public class ComponentHelper {
   public static Widget getWidgetWithElement(Element element) {
     assert element != null : "Cannot find a widget for a null element";
     do {
-      EventListener eventListener = DOM.getEventListener((com.google.gwt.user.client.Element) element);
+      EventListener eventListener = DOM.getEventListener(element);
       if (eventListener instanceof Widget) {
         return (Widget) eventListener;
       }

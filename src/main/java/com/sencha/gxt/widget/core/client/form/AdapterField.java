@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,16 +8,20 @@
 package com.sencha.gxt.widget.core.client.form;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.editor.client.EditorDelegate;
 import com.google.gwt.editor.client.EditorError;
 import com.google.gwt.editor.client.HasEditorDelegate;
 import com.google.gwt.editor.client.HasEditorErrors;
+import com.google.gwt.editor.client.ValueAwareEditor;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.Widget;
-import com.sencha.gxt.core.client.util.Util;
+import com.google.gwt.user.client.ui.impl.FocusImpl;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.container.SimpleContainer;
 import com.sencha.gxt.widget.core.client.event.InvalidEvent;
@@ -36,19 +40,18 @@ import com.sencha.gxt.widget.core.client.form.error.SideErrorHandler;
  * @param <T> the field's data type
  */
 public abstract class AdapterField<T> extends SimpleContainer implements IsField<T>, HasInvalidHandlers,
-    HasValidHandlers, HasEditorErrors<T>, HasEditorDelegate<T> {
+    HasValidHandlers, HasEditorErrors<T>, HasEditorDelegate<T>, ValueAwareEditor<T> {
 
-  protected Widget widget;
   protected String forceInvalidText;
   protected boolean preventMark;
 
   private List<Validator<T>> validators = new ArrayList<Validator<T>>();
   private EditorDelegate<T> delegate;
   private ErrorHandler errorSupport;
+  private List<EditorError> errors;
 
   /**
-   * Creates an adapter field that wraps the specified widget so that it can be
-   * used like a {@link Field}.
+   * Creates an adapter field that wraps the specified widget so that it can be used like a {@link Field}.
    * 
    * @param widget the widget to wrap
    */
@@ -63,8 +66,7 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
   }
 
   /**
-   * Adds a validator to be invoked when {@link #validateValue(Object)} is
-   * invoked.
+   * Adds a validator to be invoked when {@link #validateValue(Object)} is invoked.
    * 
    * @param validator the validator to add
    */
@@ -75,6 +77,11 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
   @Override
   public HandlerRegistration addValidHandler(ValidHandler handler) {
     return addHandler(handler, ValidEvent.getType());
+  }
+
+  @Override
+  public HandlerRegistration addValueChangeHandler(ValueChangeHandler<T> valueChangeHandler) {
+    return addHandler(valueChangeHandler, ValueChangeEvent.getType());
   }
 
   /**
@@ -117,16 +124,41 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
     }
   }
 
+  @Override
+  public void finishEditing() {
+  }
+
+  @Override
+  public void flush() {
+    if (delegate == null) {
+      return;
+    }
+    if (forceInvalidText != null) {
+      delegate.recordError(forceInvalidText, "", this);
+    } else {
+      validate();
+      if (errors != null) {
+        for (EditorError e : errors) {
+          delegate.recordError(e.getMessage(), e.getValue(), this);
+        }
+      }
+    }
+  }
+
   /**
-   * Forces the field to be invalid using the given error message. When using
-   * this feature, {@link #clearInvalid()} must be called to clear the error.
-   * Also, no other validation logic will execute.
+   * Forces the field to be invalid using the given error message. When using this feature, {@link #clearInvalid()} must
+   * be called to clear the error. Also, no other validation logic will execute.
    * 
    * @param msg the error text
    */
   public void forceInvalid(String msg) {
     forceInvalidText = msg;
     markInvalid(msg);
+  }
+
+  @Override
+  public List<EditorError> getErrors() {
+    return errors == null ? Collections.<EditorError> emptyList() : Collections.unmodifiableList(errors);
   }
 
   /**
@@ -166,15 +198,15 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
     boolean result = validateValue(getValue());
     if (result) {
       // activeErrorMessage = null;
+      errors = null;
     }
     this.preventMark = restore;
     return result;
   }
 
   /**
-   * Marks this field as invalid. Validation will still run if called again, and
-   * the error message will be changed or cleared based on validation. To set a
-   * error message that will not be cleared until manually cleared see
+   * Marks this field as invalid. Validation will still run if called again, and the error message will be changed or
+   * cleared based on validation. To set a error message that will not be cleared until manually cleared see
    * {@link #forceInvalid(String)}
    * 
    * Calling this will also register an error in the editor, if any.
@@ -182,15 +214,16 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
    * @param msg the validation message
    */
   public void markInvalid(String msg) {
-    if (delegate != null) {
-      delegate.recordError(forceInvalidText, getValue(), null);
-    }
-    markInvalid(Util.<EditorError> createList(new DefaultEditorError(this, msg, getValue())));
+    markInvalid(Collections.<EditorError> singletonList(new DefaultEditorError(this, msg, getValue())));
+  }
+
+  @Override
+  public void onPropertyChange(String... strings) {
+    // no-op, subclasses can override if required
   }
 
   /**
-   * Removes a validator from this list of validators that are run when
-   * {@link #validateValue(Object)} is invoked.
+   * Removes a validator from this list of validators that are run when {@link #validateValue(Object)} is invoked.
    * 
    * @param validator the validator to remove
    */
@@ -199,8 +232,7 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
   }
 
   /**
-   * Resets the current field value to the originally loaded value and clears
-   * any validation messages.
+   * Resets the current field value to the originally loaded value and clears any validation messages.
    */
   public void reset() {
     boolean restore = preventMark;
@@ -228,6 +260,10 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
   public void showErrors(List<EditorError> errors) {
     for (EditorError error : errors) {
       assert error.getEditor() == this;
+      // skip the error if sent by a field (this field)
+      if (error.getUserData() == this) {
+        continue;
+      }
       error.setConsumed(true);
     }
 
@@ -250,8 +286,7 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
   /**
    * Validates the field value.
    * 
-   * @param preventMark true to not mark the field valid and fire invalid event
-   *          when invalid
+   * @param preventMark true to not mark the field valid and fire invalid event when invalid
    * @return <code>true</code> if valid, otherwise <code>false</code>
    */
   public boolean validate(boolean preventMark) {
@@ -265,17 +300,18 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
     this.preventMark = restore;
     if (result) {
       clearInvalid();
+      errors = null;
     }
     return result;
   }
 
   /**
-   * Actual implementation of markInvalid, which bypasses recording an error in
-   * the editor peer.
+   * Actual implementation of markInvalid, which bypasses recording an error in the editor peer.
    * 
    * @param msg the validation message
    */
   protected void markInvalid(List<EditorError> msg) {
+    this.errors = msg;
     if (preventMark) {
       return;
     }
@@ -291,7 +327,7 @@ public abstract class AdapterField<T> extends SimpleContainer implements IsField
     if (widget instanceof Component) {
       ((Component) widget).focus();
     } else {
-      widget.getElement().focus();
+      FocusImpl.getFocusImplForWidget().focus(widget.getElement());
     }
   }
 

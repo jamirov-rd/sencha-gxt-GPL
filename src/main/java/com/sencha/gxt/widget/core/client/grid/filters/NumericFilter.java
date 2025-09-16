@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,10 +18,9 @@ import com.sencha.gxt.widget.core.client.form.NumberPropertyEditor;
 import com.sencha.gxt.widget.core.client.grid.filters.RangeMenu.RangeItem;
 
 /**
- * Filter class for numeric fields. by default, converts data to {@code double}
- * before comparing, but this behavior can be change by overriding
- * {@link #equals(Number, Number)} and {@link #greaterThan(Number, Number)}. See
- * {@link Filter} for more information.
+ * Filter class for numeric fields. by default, converts data to {@code double} before comparing, but this behavior can
+ * be change by overriding {@link #equals(Number, Number)} and {@link #greaterThan(Number, Number)}. See {@link Filter}
+ * for more information.
  * 
  * @param <M> the model in the store and in each grid row
  * @param <V> the numeric type in the column to filter
@@ -52,8 +51,8 @@ public class NumericFilter<M, V extends Number> extends Filter<M, V> {
   private int width = 125;
 
   /**
-   * Creates a numeric filter for the specified value provider. See
-   * {@link Filter#Filter(ValueProvider)} for more information.
+   * Creates a numeric filter for the specified value provider. See {@link Filter#Filter(ValueProvider)} for more
+   * information.
    * 
    * @param valueProvider the value provider
    * @param propertyEditor property editor for numeric type {@code <V>}
@@ -74,6 +73,37 @@ public class NumericFilter<M, V extends Number> extends Filter<M, V> {
     rangeMenu.setRangeItems(rangeItems);
 
     setWidth(getWidth());
+  }
+
+  /**
+   * Sets the less than value.
+   * 
+   * @param value the value
+   */
+  public void setLessThanValue(V value) {
+    rangeMenu.lt.setValue(value);
+  }
+
+  /**
+   * Sets the greater than value.
+   * 
+   * @param value the value
+   */
+  public void setGreaterThanValue(V value) {
+    rangeMenu.gt.setValue(value);
+  }
+
+  /**
+   * Sets the equal value.
+   * 
+   * @param value the equal value
+   */
+  public void setEqualValue(V value) {
+    rangeMenu.eq.setValue(value);
+  }
+
+  public void setValue(List<FilterConfig> values) {
+    rangeMenu.setValue(values);
   }
 
   @SuppressWarnings("unchecked")
@@ -135,26 +165,22 @@ public class NumericFilter<M, V extends Number> extends Filter<M, V> {
   }
 
   /**
-   * Compares the two values for equality. Can be overridden to provide an
-   * equality check that allows for floating point approximation issues, such as
-   * using an epsilon value to allow them to be the same within a few decimal
-   * points:
+   * Compares the two values for equality. Can be overridden to provide an equality check that allows for floating point
+   * approximation issues, such as using an epsilon value to allow them to be the same within a few decimal points:
    * 
    * <code><pre>
-return Math.abs(val.doubleValue() - userVal.doubleValue()) < epsilon * val.doubleValue();
+return Math.abs(modelValue.doubleValue() - filterValue.doubleValue()) < epsilon * modelValue.doubleValue();
 </code></pre>
    * 
-   * where {@code epsilon} would represent the magnitude of difference between
-   * the two values. If the magnitude of the values is known, this could instead
-   * be <code><pre>
-return Math.abs(val.doubleValue() - userVal.doubleValue()) < epsilon;
+   * where {@code epsilon} would represent the magnitude of difference between the two values. If the magnitude of the
+   * values is known, this could instead be <code><pre>
+return Math.abs(modelValue.doubleValue() - filterValue.doubleValue()) < epsilon;
 </code></pre> where {@code epsilon} is instead the maximum difference
    * allowed.
    * 
    * @param a
    * @param b
-   * @return true if the two values should be considered to be equal for the
-   *         purposes of filtering
+   * @return true if the two values should be considered to be equal for the purposes of filtering
    */
   protected boolean equals(V a, V b) {
     return a.equals(b.doubleValue());
@@ -170,42 +196,49 @@ return Math.abs(val.doubleValue() - userVal.doubleValue()) < epsilon;
   }
 
   /**
-   * Compares the values given, and returns true if the first is greater than
-   * the second. Default implementation converts to {@code double} before
-   * comparing.
+   * Compares the values given, and returns true if the first is greater than the second. Default implementation
+   * converts to {@code double} before comparing.
    * 
    * @param a
    * @param b
-   * @return true if the second parameter is greater than the first parameter
+   * @return true if the first parameter is greater than the second parameter
    */
   protected boolean greaterThan(V a, V b) {
     return Double.compare(a.doubleValue(), b.doubleValue()) > 0;
   }
 
+  @Override
   protected boolean validateModel(M model) {
-    V val = getValueProvider().getValue(model);
-
-    if (rangeMenu.eq != null) {
-      V userVal = rangeMenu.eq.getCurrentValue();
-      if (userVal != null && (val == null || !equals(val, userVal))) {
-        return false;
+    boolean isValid = true;
+    V modelValue = getValueProvider().getValue(model);
+    if (modelValue != null) {
+      if (rangeMenu.eq != null) {
+        V filterValue = rangeMenu.eq.getCurrentValue();
+        isValid = filterValue == null || equals(modelValue, filterValue);
+      }
+      if (isValid && rangeMenu.lt != null) {
+        V filterValue = rangeMenu.lt.getCurrentValue();
+        isValid = filterValue == null || greaterThan(filterValue, modelValue); // filterValue > modelValue
+      }
+      if (isValid && rangeMenu.gt != null) {
+        V filterValue = rangeMenu.gt.getCurrentValue();
+        isValid = filterValue == null || greaterThan(modelValue, filterValue); // modelValue > filterValue
       }
     }
+    return isValid;
+  }
 
-    if (rangeMenu.lt != null) {
-      V userVal = rangeMenu.lt.getCurrentValue();
-      if (userVal != null && (val == null || greaterThan(val, userVal))) {
-        return false;
+  @Override
+  public void setFilterConfig(List<FilterConfig> configs) {
+    boolean hasValue = false;
+    for (int i = 0; i < configs.size(); i++) {
+      FilterConfig config = configs.get(i);
+      if (config.getValue() != null && !"".equals(config.getValue())) {
+        hasValue = true;
       }
     }
-
-    if (rangeMenu.gt != null) {
-      V userVal = rangeMenu.gt.getCurrentValue();
-      if (userVal != null && (val == null || greaterThan(userVal, val))) {
-        return false;
-      }
-    }
-    return true;
+    setValue(configs);
+    setActive(hasValue, false);
   }
 
 }

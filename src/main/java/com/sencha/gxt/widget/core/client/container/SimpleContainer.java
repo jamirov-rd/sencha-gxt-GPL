@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,8 +9,8 @@ package com.sencha.gxt.widget.core.client.container;
 
 import java.util.logging.Logger;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.uibinder.client.UiChild;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.ui.HasOneWidget;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Widget;
@@ -47,7 +47,7 @@ public class SimpleContainer extends ResizeContainer implements HasOneWidget {
 
   protected SimpleContainer(boolean deferElement) {
     if (!deferElement) {
-      setElement(DOM.createDiv());
+      setElement(Document.get().createDivElement());
     }
   }
 

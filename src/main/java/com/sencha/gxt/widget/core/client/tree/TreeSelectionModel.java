@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,6 +18,7 @@ import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
 import com.sencha.gxt.core.client.Style.SelectionMode;
+import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.KeyNav;
 import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
 import com.sencha.gxt.data.shared.TreeStore;
@@ -27,7 +28,7 @@ import com.sencha.gxt.widget.core.client.tree.Tree.TreeNode;
 
 /**
  * <code>Tree</code> selection model.
- * 
+ *
  * @param <M> the model type
  */
 public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
@@ -35,12 +36,12 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
 
     @Override
     public void onClick(ClickEvent event) {
-      onMouseClick(event.getNativeEvent());
+      onMouseClick(event);
     }
 
     @Override
     public void onMouseDown(MouseDownEvent event) {
-      TreeSelectionModel.this.onMouseDown(event.getNativeEvent());
+      TreeSelectionModel.this.onMouseDown(event);
     }
 
   }
@@ -48,7 +49,7 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   protected KeyNav keyNav = new KeyNav() {
     public void onDown(NativeEvent evt) {
       onKeyDown(evt);
-    };
+    }
 
     @Override
     public void onLeft(NativeEvent evt) {
@@ -66,7 +67,7 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     }
   };
 
-  protected Tree<M,?> tree;
+  protected Tree<M, ?> tree;
 
   protected TreeStore<M> treeStore;
 
@@ -106,6 +107,15 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     assert false : "This method not implemented for trees";
   }
 
+  /**
+   * Returns the currently bound tree.
+   *
+   * @return the tree
+   */
+  public Tree<M, ?> getTree() {
+    return tree;
+  }
+
   @Override
   public boolean isSelected(M item) {
     return selected.contains(item);
@@ -117,8 +127,7 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * Selects the item below the selected item in the tree, intelligently walking
-   * the nodes.
+   * Selects the item below the selected item in the tree, intelligently walking the nodes.
    */
   public void selectNext() {
     M next = next();
@@ -128,8 +137,7 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * Selects the item above the selected item in the tree, intelligently walking
-   * the nodes.
+   * Selects the item above the selected item in the tree, intelligently walking the nodes.
    */
   public void selectPrevious() {
     M prev = prev();
@@ -175,16 +183,16 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
 
   protected void onKeyLeft(NativeEvent ce) {
     ce.preventDefault();
-    if (!tree.isLeaf(lastSelected) && tree.isExpanded(lastSelected)) {
+    if (lastSelected != null && !tree.isLeaf(lastSelected) && tree.isExpanded(lastSelected)) {
       tree.setExpanded(lastSelected, false);
-    } else if (treeStore.getParent(lastSelected) != null) {
+    } else if (lastSelected != null && treeStore.getParent(lastSelected) != null) {
       doSingleSelect(treeStore.getParent(lastSelected), false);
     }
   }
 
   protected void onKeyRight(NativeEvent ce) {
     ce.preventDefault();
-    if (!tree.isLeaf(lastSelected) && !tree.isExpanded(lastSelected)) {
+    if (lastSelected != null && !tree.isLeaf(lastSelected) && !tree.isExpanded(lastSelected)) {
       tree.setExpanded(lastSelected, true);
     }
   }
@@ -198,101 +206,153 @@ public class TreeSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     }
   }
 
-  protected void onMouseClick(NativeEvent e) {
+  protected void onMouseClick(ClickEvent ce) {
+    XEvent e = ce.getNativeEvent().cast();
+
     if (isLocked()) {
       return;
     }
-    
+
     if (fireSelectionChangeOnClick) {
       fireSelectionChange();
       fireSelectionChangeOnClick = false;
     }
 
-    XEvent xe = e.<XEvent> cast();
-
     if (selectionMode == SelectionMode.MULTI) {
       TreeNode<M> node = tree.findNode((Element) e.getEventTarget().cast());
-      if (node != null && isSelected(node.getModel()) && getSelectedItems().size() > 1) {
-        if (!xe.getCtrlOrMetaKey() && !e.getShiftKey()) {
-          select(Collections.singletonList(node.getModel()), false);
+      // on dnd prevent drag the node will be null
+      if (node != null) {
+        M sel = node.getModel();
+        if (e.getCtrlOrMetaKey() && isSelected(sel)) {
+          doDeselect(Collections.singletonList(sel), false);
+          tree.focus();
+
+          // reset the starting location of the click when meta is used during a multiselect
+          lastSelected = sel;
+        } else if (e.getCtrlOrMetaKey()) {
+          doSelect(Collections.singletonList(sel), true, false);
+          tree.focus();
+
+          // reset the starting location of the click when meta is used during a multiselect
+          lastSelected = sel;
+        } else if (isSelected(sel) && !e.getShiftKey() && !e.getCtrlOrMetaKey() && selected.size() > 0) {
+          doSelect(Collections.singletonList(sel), false, false);
+          tree.focus();
         }
       }
     }
   }
 
-  protected void onMouseDown(NativeEvent e) {
-    XEvent xe = e.<XEvent> cast();
-    Element target = e.getEventTarget().cast();
-    TreeNode<M> node = tree.findNode(target);
-    if (node == null) {
+  protected void onMouseDown(MouseDownEvent mde) {
+    XEvent e = mde.getNativeEvent().cast();
+    XElement target = e.getEventTargetEl();
+    TreeNode<M> selNode = tree.findNode(target);
+
+    if (selNode == null || tree == null || isLocked()) {
       return;
     }
-    M item = (M) node.getModel();
-    if (item == null) return;
-    if (!tree.getView().isSelectableTarget(item, target)) {
+
+    M sel = selNode.getModel();
+    if (!tree.getView().isSelectableTarget(sel, target)) {
       return;
     }
-    if (e.<XEvent> cast().isRightClick() && isSelected((M) item)) {
-      return;
-    }
-    
+
     mouseDown = true;
     
-    M sel = item;
-    switch (selectionMode) {
-      case SIMPLE:
-        if (isSelected(sel)) {
-          deselect(sel);
-        } else {
-          doSelect(Collections.singletonList(sel), true, false);
-        }
-        break;
-      case SINGLE:
-        tree.focus();
-        doSingleSelect(sel, false);
-        break;
-      case MULTI:
-        if (isSelected(sel) && !xe.getCtrlOrMetaKey() && !e.getShiftKey()) {
-          return;
-        }
-        if (e.getShiftKey() && lastSelected != null) {
-          List<M> items = new ArrayList<M>();
-          if (lastSelected == sel) {
-            return;
+    boolean isSelected = isSelected(sel);
+    boolean isMeta = e.getCtrlOrMetaKey();
+    boolean isShift = e.getShiftKey();
+
+    if (e.isRightClick() && isSelected) {
+      return;
+    } else {
+      switch (selectionMode) {
+        case SIMPLE:
+          tree.focus();
+          if (isSelected(sel)) {
+            deselect(sel);
+          } else {
+            doSelect(Collections.singletonList(sel), true, false);
           }
-          TreeNode<M> selNode = tree.findNode(lastSelected);
-          TreeNode<M> itemNode = tree.findNode(sel);
-          if (selNode.getElement() != null && itemNode.getElement() != null) {
-            if (selNode.getElement().getAbsoluteTop() < itemNode.getElement().getAbsoluteTop()) {
-              M next = next();
-              while (next != null) {
-                items.add(next);
-                lastSelected = next;
-                if (next == sel) break;
-                next = next();
+          break;
+          
+        case SINGLE:
+          tree.focus();
+          if (isMeta && isSelected) {
+            deselect(sel);
+          } else if (!isSelected) {
+            select(sel, false);
+          }
+          break;
+          
+        case MULTI:
+          if (isMeta) {
+            break;
+          }
+          
+          if (isShift && lastSelected != null) {
+            List<M> selectedItems = new ArrayList<M>();
+
+            // from last selected or firstly selected
+            TreeNode<M> lastSelTreeNode = tree.findNode(lastSelected);
+            XElement lastSelTreeEl = tree.getView().getElement(lastSelTreeNode);
+
+            // to selected or secondly selected
+            TreeNode<M> selTreeNode = tree.findNode(sel);
+            XElement selTreeNodeEl = tree.getView().getElement(selTreeNode);
+
+            // holding shift down, selecting the same item again, selecting itself
+            if (sel == lastSelected) {
+              tree.focus();
+              doSelect(Collections.singletonList(sel), false, false);
+
+            } else if (lastSelTreeEl != null && selTreeNodeEl != null) {
+              // add the last selected, as its not added during the walk
+              selectedItems.add(lastSelected);
+
+              // After walking reset back to previously selected
+              final M previouslyLastSelected = lastSelected;
+
+              // This deals with flipping directions
+              if (lastSelTreeEl.getAbsoluteTop() < selTreeNodeEl.getAbsoluteTop()) {
+                // down selection
+                M next = next();
+                while (next != null) {
+                  selectedItems.add(next);
+                  lastSelected = next;
+                  if (next == sel) break;
+                  next = next();
+                }
+
+              } else {
+                // up selection
+                M prev = prev();
+                while (prev != null) {
+                  selectedItems.add(prev);
+                  lastSelected = prev;
+                  if (prev == sel) break;
+                  prev = prev();
+                }
               }
-            } else {
-              M prev = prev();
-              while (prev != null) {
-                items.add(prev);
-                lastSelected = prev;
-                if (prev == sel) break;
-                prev = prev();
-              }
+
+              tree.focus();
+              doSelect(selectedItems, false, false);
+
+              // change back to last selected, the walking causes this need
+              lastSelected = previouslyLastSelected;
             }
+
+          } else if (!isSelected(sel)) {
             tree.focus();
-            doSelect(items, true, false);
+            doSelect(Collections.singletonList(sel), false, false);
+
+            // reset the starting location of multi select
+            lastSelected = sel;
           }
-        } else if (xe.getCtrlOrMetaKey() && isSelected(sel)) {
-          tree.focus();
-          doDeselect(Collections.singletonList(sel), false);
-        } else {
-          tree.focus();
-          doSelect(Collections.singletonList(sel), xe.getCtrlOrMetaKey(), false);
-        }
-        break;
+          break;
+      }
     }
-    
+
     mouseDown = false;
   }
 

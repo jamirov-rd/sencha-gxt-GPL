@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,21 +12,20 @@ import com.sencha.gxt.cell.core.client.SliderCell;
 import com.sencha.gxt.cell.core.client.SliderCell.HorizontalSliderAppearance;
 import com.sencha.gxt.cell.core.client.SliderCell.VerticalSliderAppearance;
 import com.sencha.gxt.widget.core.client.form.Field;
+import com.sencha.gxt.widget.core.client.tips.ToolTipConfig;
 
 /**
  * Lets the user select a value by sliding an indicator within a bounded range.
  */
 public class Slider extends Field<Integer> {
 
-  protected final SliderCell cell;
-
   /**
    * Creates a slider with the default slider cell.
    */
   public Slider() {
     super(new SliderCell());
-    cell = (SliderCell) getCell();
     setAllowTextSelection(false);
+    setValue(50);
     redraw();
   }
 
@@ -38,7 +37,7 @@ public class Slider extends Field<Integer> {
   public Slider(boolean vertical) {
     super(new SliderCell(vertical ? GWT.<VerticalSliderAppearance> create(VerticalSliderAppearance.class)
         : GWT.<HorizontalSliderAppearance> create(HorizontalSliderAppearance.class)));
-    cell = (SliderCell) getCell();
+    setValue(50);
     redraw();
   }
 
@@ -49,8 +48,13 @@ public class Slider extends Field<Integer> {
    */
   public Slider(SliderCell cell) {
     super(cell);
-    this.cell = cell;
+    setValue(50);
     redraw();
+  }
+
+  @Override
+  public SliderCell getCell() {
+    return (SliderCell) super.getCell();
   }
 
   /**
@@ -59,7 +63,7 @@ public class Slider extends Field<Integer> {
    * @return the increment
    */
   public int getIncrement() {
-    return cell.getIncrement();
+    return getCell().getIncrement();
   }
 
   /**
@@ -68,7 +72,7 @@ public class Slider extends Field<Integer> {
    * @return the max value
    */
   public int getMaxValue() {
-    return cell.getMaxValue();
+    return getCell().getMaxValue();
   }
 
   /**
@@ -77,7 +81,7 @@ public class Slider extends Field<Integer> {
    * @return the tool tip message
    */
   public String getMessage() {
-    return cell.getMessage();
+    return getCell().getMessage();
   }
 
   /**
@@ -86,7 +90,16 @@ public class Slider extends Field<Integer> {
    * @return the minimum value
    */
   public int getMinValue() {
-    return cell.getMinValue();
+    return getCell().getMinValue();
+  }
+  
+  /**
+   * Returns true if the tool tip message is shown 
+   * 
+   * @return the showMessage state
+   */
+  public boolean isShowMessage() {
+    return getCell().isShowMessage();
   }
 
   /**
@@ -96,7 +109,7 @@ public class Slider extends Field<Integer> {
    * @param increment the increment
    */
   public void setIncrement(int increment) {
-    cell.setIncrement(increment);
+    getCell().setIncrement(increment);
   }
 
   /**
@@ -105,7 +118,7 @@ public class Slider extends Field<Integer> {
    * @param maxValue the max value
    */
   public void setMaxValue(int maxValue) {
-    cell.setMaxValue(maxValue);
+    getCell().setMaxValue(maxValue);
   }
 
   /**
@@ -115,7 +128,7 @@ public class Slider extends Field<Integer> {
    * @param message the tool tip message
    */
   public void setMessage(String message) {
-    cell.setMessage(message);
+    getCell().setMessage(message);
   }
 
   /**
@@ -124,7 +137,27 @@ public class Slider extends Field<Integer> {
    * @param minValue the minimum value
    */
   public void setMinValue(int minValue) {
-    cell.setMinValue(minValue);
+    getCell().setMinValue(minValue);
+  }
+  
+  /**
+   * Sets if the tool tip message should be displayed (defaults to true,
+   * pre-render).
+   * 
+   * @param showMessage true to show tool tip message
+   */
+  public void setShowMessage(boolean showMessage) {
+    getCell().setShowMessage(showMessage);
+  }
+
+  /**
+   * Set the tooltip config. This is the tooltip for the message configuration.
+   * {@link SliderCell#setShowMessage(boolean)} has to be on to use this.
+   *
+   * @param toolTipConfig is the tooltip configuration.
+   */
+  public void setToolTipConfig(ToolTipConfig toolTipConfig) {
+    getCell().setToolTipConfig(toolTipConfig);
   }
 
 }

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.button;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
@@ -48,7 +49,7 @@ public class ButtonGroup extends SimpleContainer {
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
 
 //    addStyleName("x-toolbar-mark");
   }
@@ -56,6 +57,10 @@ public class ButtonGroup extends SimpleContainer {
   public void setHeadingText(String text) {
     this.heading = text;
     appearance.updateText(getElement(), text);
+  }
+
+  public ButtonGroupAppearance getAppearance() {
+    return appearance;
   }
 
   public String getHeadingText() {

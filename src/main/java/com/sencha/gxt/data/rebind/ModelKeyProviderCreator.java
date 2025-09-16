@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,8 +13,8 @@ import com.google.gwt.core.ext.UnableToCompleteException;
 import com.google.gwt.core.ext.typeinfo.JClassType;
 import com.google.gwt.core.ext.typeinfo.JMethod;
 import com.google.gwt.dev.util.Name;
-import com.google.gwt.dev.util.Strings;
 import com.google.gwt.editor.rebind.model.ModelUtils;
+import com.google.gwt.thirdparty.guava.common.base.Joiner;
 import com.google.gwt.user.rebind.SourceWriter;
 import com.sencha.gxt.data.shared.ModelKeyProvider;
 
@@ -31,6 +31,7 @@ public class ModelKeyProviderCreator extends ValueProviderCreator {
 
   public ModelKeyProviderCreator(GeneratorContext ctx, TreeLogger l, JMethod method) {
     super(ctx, l, method);
+    setReadability(RequiredReadability.GET);
   }
 
   @Override
@@ -47,17 +48,18 @@ public class ModelKeyProviderCreator extends ValueProviderCreator {
     // @Override
     sw.println("public String getKey(%1$s item) {", getObjectTypeName());
 
-    // if the value is string, just return a getter for the value
-    sw.indentln("return \"\" + %1$s;", getGetterExpression("item"));
-
-    // else toString() it, or String.valueOf() if it is a primitive
+    appendGetterBody(sw, "item");
 
     sw.println("}");
   }
 
   @Override
+  protected String getGetterExpression(String objectName) throws UnableToCompleteException {
+    return "\"\" + " + super.getGetterExpression(objectName);
+  }
+
+  @Override
   protected String getSimpleName() {
-    return getObjectType().getName().replace('.', '_') + "_" + Strings.join(path.toArray(new String[path.size()]), "_")
-        + "_ModelKeyProviderImpl";
+    return getObjectType().getName().replace('.', '_') + "_" + Joiner.on("_").join(path) + "_ModelKeyProviderImpl";
   }
 }

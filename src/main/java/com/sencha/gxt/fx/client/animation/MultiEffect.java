@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -15,6 +15,10 @@ import com.sencha.gxt.core.client.dom.XElement;
 public class MultiEffect extends BaseEffect {
 
   protected List<Effect> effects;
+
+  public MultiEffect() {
+    this(null);
+  }
 
   public MultiEffect(XElement el) {
     super(el);

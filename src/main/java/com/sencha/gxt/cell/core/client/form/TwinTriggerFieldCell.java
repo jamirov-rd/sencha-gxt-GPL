@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -25,46 +25,56 @@ public class TwinTriggerFieldCell<T> extends TriggerFieldCell<T> {
 
   }
 
-  private final TwinTriggerFieldAppearance appearance;
-
   public TwinTriggerFieldCell() {
     this(GWT.<TwinTriggerFieldAppearance> create(TwinTriggerFieldAppearance.class));
   }
 
   public TwinTriggerFieldCell(TwinTriggerFieldAppearance appearance) {
     super(appearance);
-    this.appearance = appearance;
   }
 
   @Override
   public TwinTriggerFieldAppearance getAppearance() {
-    return appearance;
+    return (TwinTriggerFieldAppearance) super.getAppearance();
   }
 
   protected void onClick(Context context, XElement parent, NativeEvent event, T value, ValueUpdater<T> updater) {
     Element target = event.getEventTarget().cast();
 
-    if (!isReadOnly() && appearance.twinTriggerIsOrHasChild(parent, target)) {
+    if (!isReadOnly() && getAppearance().twinTriggerIsOrHasChild(parent, target)) {
       onTwinTriggerClick(context, parent, event, value, updater);
     }
 
-    if (!isReadOnly() && appearance.triggerIsOrHasChild(parent, target)) {
+    if (!isReadOnly() && getAppearance().triggerIsOrHasChild(parent, target)) {
       onTriggerClick(context, parent, event, value, updater);
     }
 
-  };
+  }
+
+  @Override
+  protected void onMouseDown(XElement parent, NativeEvent event) {
+    super.onMouseDown(parent, event);
+
+    Element target = event.getEventTarget().cast();
+    if (!isReadOnly() && (!isEditable() && getInputElement(parent).isOrHasChild(target))
+            || getAppearance().twinTriggerIsOrHasChild(parent,target)) {
+      getAppearance().onTwinTriggerClick(parent, true);
+      event.preventDefault();
+    }
+  }
 
   protected void onTwinTriggerClick(Context context, XElement parent, NativeEvent event, T value,
       ValueUpdater<T> updater) {
     fireEvent(context, new TwinTriggerClickEvent());
+    getAppearance().onTwinTriggerClick(parent, false);
   }
 
   @Override
   protected void onMouseOver(XElement parent, NativeEvent event) {
     super.onMouseOver(parent, event);
     XElement target = event.getEventTarget().cast();
-    if (!isReadOnly() && appearance.twinTriggerIsOrHasChild(parent, target)) {
-      appearance.onTwinTriggerOver(parent, true);
+    if (!isReadOnly() && getAppearance().twinTriggerIsOrHasChild(parent, target)) {
+      getAppearance().onTwinTriggerOver(parent, true);
     }
   }
 
@@ -72,8 +82,8 @@ public class TwinTriggerFieldCell<T> extends TriggerFieldCell<T> {
   protected void onMouseOut(XElement parent, NativeEvent event) {
     super.onMouseOut(parent, event);
     XElement target = event.getEventTarget().cast();
-    if (!isReadOnly() && appearance.twinTriggerIsOrHasChild(parent, target)) {
-      appearance.onTwinTriggerOver(parent, false);
+    if (!isReadOnly() && getAppearance().twinTriggerIsOrHasChild(parent, target)) {
+      getAppearance().onTwinTriggerOver(parent, false);
     }
   }
   

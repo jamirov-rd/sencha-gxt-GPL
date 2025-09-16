@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.slider;
 
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safecss.shared.SafeStylesUtils;
@@ -17,11 +16,13 @@ import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
+import com.sencha.gxt.core.client.util.Point;
 
 public abstract class SliderHorizontalBaseAppearance extends SliderBaseAppearance {
 
   public interface SliderHorizontalResources extends SliderResources {
 
+    @Override
     SliderHorizontalStyle style();
 
   }
@@ -50,9 +51,9 @@ public abstract class SliderHorizontalBaseAppearance extends SliderBaseAppearanc
   }
 
   @Override
-  public int getClickedValue(Context context, Element parent, NativeEvent event) {
+  public int getClickedValue(Context context, Element parent, Point location) {
     Element innerEl = getInnerEl(parent);
-    return event.getClientX() - XElement.as(innerEl).getLeft(false);
+    return location.getX() - XElement.as(innerEl).getLeft(false);
   }
 
   @Override
@@ -63,23 +64,17 @@ public abstract class SliderHorizontalBaseAppearance extends SliderBaseAppearanc
     }
     
     // padding
-    width -= 7;
-    
-    int offset = (int) (fractionalValue * (width - 21)) - 7;
-    
-    offset = Math.max(-7, offset);
-    
-    SafeStyles offsetStyles = SafeStylesUtils.fromTrustedString("left:" + offset + "px;");
-    SafeStyles widthStyle = SafeStylesUtils.fromTrustedString("");
+    width -= getTrackPadding();
 
-    widthStyle = SafeStylesUtils.fromTrustedString("width: " + width + "px;");
+    SafeStyles offsetStyles = createThumbStyles(fractionalValue, width);
+    SafeStyles widthStyle = SafeStylesUtils.fromTrustedString("width: " + width + "px;");
     sb.append(template.template(resources.style(), widthStyle, offsetStyles));
   }
 
   @Override
   public void setThumbPosition(Element parent, int pos) {
     XElement thumbElement = XElement.as(getThumb(parent));
-    pos = Math.max(-7, pos);
+    pos = Math.max(-(getHalfThumbWidth()), pos);
     thumbElement.getStyle().setLeft(pos, Unit.PX);
   }
 
@@ -98,4 +93,20 @@ public abstract class SliderHorizontalBaseAppearance extends SliderBaseAppearanc
     return false;
   }
 
+  protected SafeStyles createThumbStyles(double fractionalValue, int width) {
+    int offset = (int) (fractionalValue * (width - 21)) - getHalfThumbWidth();
+
+    offset = Math.max(-(getHalfThumbWidth()), offset);
+
+    SafeStyles offsetStyles = SafeStylesUtils.fromTrustedString("left:" + offset + "px;");
+    return offsetStyles;
+  }
+
+  protected int getHalfThumbWidth() {
+    return 7;
+  }
+
+  protected int getTrackPadding() {
+    return 7;
+  }
 }

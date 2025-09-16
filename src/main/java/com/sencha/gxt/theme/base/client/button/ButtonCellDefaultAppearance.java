@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.button;
 
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
@@ -21,7 +20,6 @@ import com.google.gwt.safecss.shared.SafeStylesUtils;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
-import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.AbstractImagePrototype;
 import com.sencha.gxt.cell.core.client.ButtonCell;
 import com.sencha.gxt.cell.core.client.ButtonCell.ButtonCellAppearance;
@@ -134,20 +132,19 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
   public ButtonCellDefaultAppearance() {
     this(GWT.<ButtonCellResources> create(ButtonCellResources.class));
   }
-  
+
   /**
-   * Creates a button cell base appearance using the specified resources and
-   * templates.
+   * Creates a button cell base appearance using the specified resources and templates.
    * 
    * @param resources the button cell resources
    */
   public ButtonCellDefaultAppearance(ButtonCellResources resources) {
-    this(resources, GWT.<ButtonCellTemplates>create(ButtonCellTemplates.class), new TableFrame(GWT.<ButtonTableFrameResources> create(ButtonTableFrameResources.class)));
+    this(resources, GWT.<ButtonCellTemplates> create(ButtonCellTemplates.class), new TableFrame(
+        GWT.<ButtonTableFrameResources> create(ButtonTableFrameResources.class)));
   }
 
   /**
-   * Creates a button cell base appearance using the specified resources and
-   * templates.
+   * Creates a button cell base appearance using the specified resources and templates.
    * 
    * @param resources the button cell resources
    * @param templates the templates
@@ -157,12 +154,12 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
     this.resources = resources;
     this.templates = templates;
     this.frame = frame;
-    
+
     this.style = resources.style();
 
     StyleInjectorHelper.ensureInjected(this.style, true);
 
-    heightOffset = frame.getFrameSize().getHeight();
+    heightOffset = frame.getFrameSize(null).getHeight();
   }
 
   @Override
@@ -172,30 +169,30 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
 
   @Override
   public XElement getFocusElement(XElement parent) {
-    return parent.getFirstChildElement().cast();
+    return parent.getFirstChildElement().getFirstChildElement().cast();
   }
 
   @Override
-  public void onFocus(XElement parent, boolean focused, NativeEvent event) {
-    frame.onFocus(parent, focused, event);
+  public void onFocus(XElement parent, boolean focused) {
+    frame.onFocus(parent, focused);
   }
 
   @Override
-  public void onOver(XElement parent, boolean over, NativeEvent event) {
-    frame.onOver(parent, over, (Event) event.cast());
+  public void onOver(XElement parent, boolean over) {
+    frame.onOver(parent, over);
     parent.setClassName(style.over(), over);
   }
 
   @Override
-  public void onPress(XElement parent, boolean pressed, NativeEvent event) {
-    frame.onPress(parent, pressed, event);
+  public void onPress(XElement parent, boolean pressed) {
+    frame.onPress(parent, pressed);
   }
 
   @Override
   public void onToggle(XElement parent, boolean pressed) {
     // we pass child of parent so toggle state is not lost when real press state
     // is modified
-    frame.onPress(parent.getFirstChildElement().<XElement> cast(), pressed, null);
+    frame.onPress(parent.getFirstChildElement().<XElement> cast(), pressed);
   }
 
   @Override
@@ -222,6 +219,8 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
           case BOTTOM:
             arrowCls = style.splitBottom();
             break;
+          default:
+            // empty
         }
 
       } else {
@@ -243,14 +242,14 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
       case SMALL:
         cls += " " + style.small();
         break;
-
       case MEDIUM:
         cls += " " + style.medium();
         break;
-
       case LARGE:
         cls += " " + style.large();
         break;
+      default:
+        // empty
     }
 
     SafeStylesBuilder stylesBuilder = new SafeStylesBuilder();
@@ -278,6 +277,8 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
             case RIGHT:
               length += icon.getWidth();
               break;
+            default:
+              // empty
           }
         }
 
@@ -331,12 +332,14 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
     inside.appendHtmlConstant("<div class='" + innerWrap + "'>");
     inside.appendHtmlConstant("<table cellpadding=0 cellspacing=0 class='" + style.mainTable() + "'>");
 
+    boolean hasText = text != null && !text.equals("");
+
     if (icon != null) {
       switch (iconAlign) {
         case LEFT:
           inside.appendHtmlConstant("<tr>");
           writeIcon(inside, icon, height);
-          if (text != null) {
+          if (hasText) {
             int w = width - (icon != null ? icon.getWidth() : 0) - 4;
             writeText(inside, text, w, height);
           }
@@ -344,7 +347,7 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
           break;
         case RIGHT:
           inside.appendHtmlConstant("<tr>");
-          if (text != null) {
+          if (hasText) {
             int w = width - (icon != null ? icon.getWidth() : 0) - 4;
             writeText(inside, text, w, height);
           }
@@ -355,14 +358,14 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
           inside.appendHtmlConstant("<tr>");
           writeIcon(inside, icon, height);
           inside.appendHtmlConstant("</tr>");
-          if (text != null) {
+          if (hasText) {
             inside.appendHtmlConstant("<tr>");
             writeText(inside, text, width, height);
             inside.appendHtmlConstant("</tr>");
           }
           break;
         case BOTTOM:
-          if (text != null) {
+          if (hasText) {
             inside.appendHtmlConstant("<tr>");
             writeText(inside, text, width, height);
             inside.appendHtmlConstant("</tr>");
@@ -390,7 +393,7 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
 
   }
 
-  private void writeIcon(SafeHtmlBuilder builder, ImageResource icon, int height) {
+  protected void writeIcon(SafeHtmlBuilder builder, ImageResource icon, int height) {
     SafeHtml iconHtml = AbstractImagePrototype.create(icon).getSafeHtml();
     if (height == -1) {
       builder.append(templates.icon(style.iconWrap(), iconHtml));
@@ -401,7 +404,7 @@ public class ButtonCellDefaultAppearance<C> implements ButtonCellAppearance<C> {
     }
   }
 
-  private void writeText(SafeHtmlBuilder builder, String text, int width, int height) {
+  protected void writeText(SafeHtmlBuilder builder, String text, int width, int height) {
     SafeStylesBuilder sb = new SafeStylesBuilder();
     if (height > 0) {
       int adjustedHeight = height - heightOffset;

@@ -1,13 +1,12 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.menu;
 
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.logical.shared.BeforeSelectionEvent;
@@ -55,10 +54,6 @@ public abstract class Item extends Component implements HasSelectionHandlers<Ite
 
   }
 
-  public Item() {
-    this(GWT.<ItemAppearance> create(ItemAppearance.class));
-  }
-
   public Item(ItemAppearance appearance) {
     this.appearance = appearance;
   }
@@ -81,6 +76,10 @@ public abstract class Item extends Component implements HasSelectionHandlers<Ite
   @Override
   public HandlerRegistration addBeforeSelectionHandler(BeforeSelectionHandler<Item> handler) {
     return addHandler(handler, BeforeSelectionEvent.getType());
+  }
+
+  public ItemAppearance getAppearance() {
+    return appearance;
   }
 
   /**

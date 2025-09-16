@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.container;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.Window;
 import com.sencha.gxt.core.client.dom.XDOM;
@@ -59,7 +60,7 @@ public class Viewport extends SimpleContainer {
     super(true);
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb);
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
     monitorWindowResize = true;
     getFocusSupport().setIgnore(false);
     setPixelSize(Window.getClientWidth(), Window.getClientHeight());
@@ -88,6 +89,7 @@ public class Viewport extends SimpleContainer {
   protected void onAttach() {
     setEnableScroll(enableScroll);
     super.onAttach();
+    setPixelSize(Window.getClientWidth(), Window.getClientHeight());
   }
 
   @Override

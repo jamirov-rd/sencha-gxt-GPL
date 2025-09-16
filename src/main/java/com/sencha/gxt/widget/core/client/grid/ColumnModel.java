@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,6 +18,7 @@ import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.user.client.ui.HasHorizontalAlignment.HorizontalAlignmentConstant;
+import com.google.gwt.user.client.ui.HasVerticalAlignment.VerticalAlignmentConstant;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
@@ -37,6 +38,7 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
   protected final List<HeaderGroupConfig> groups = new ArrayList<HeaderGroupConfig>();
   protected final List<AggregationRowConfig<M>> rows = new ArrayList<AggregationRowConfig<M>>();
   private HandlerManager handlerManager;
+  private boolean userResized;
 
   /**
    * Creates a new column model.
@@ -44,7 +46,7 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
    * @param list the columns
    */
   public ColumnModel(List<ColumnConfig<M, ?>> list) {
-    this.configs = Collections.unmodifiableList(list);
+    this.configs = new ArrayList<ColumnConfig<M, ?>>(list);
   }
 
   /**
@@ -87,7 +89,8 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
   }
 
   /**
-   * Adds a group to the column model.
+   * Adds a group to the column model. For any header row, a hidden group config will be created if no provided configs
+   * start at column 1.
    * 
    * @param row the row
    * @param column the column
@@ -163,14 +166,14 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
   }
 
   /**
-   * Returns the column's alignment.
+   * Returns the column's horizontal alignment.
    * 
    * @param colIndex the column index
    * @return the alignment
    */
-  public HorizontalAlignmentConstant getColumnAlignment(int colIndex) {
+  public HorizontalAlignmentConstant getColumnHorizontalAlignment(int colIndex) {
     ColumnConfig<M, ?> c = getColumn(colIndex);
-    return c != null ? c.getAlignment() : null;
+    return c != null ? c.getHorizontalAlignment() : null;
   }
 
   /**
@@ -217,7 +220,7 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
    * @return the column configs
    */
   public List<ColumnConfig<M, ?>> getColumns() {
-    return configs;
+    return  Collections.unmodifiableList(configs);
   }
 
   /**
@@ -300,6 +303,17 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
   }
 
   /**
+   * Returns the column's vertical alignment.
+   *
+   * @param colIndex the column index
+   * @return the alignment
+   */
+  public VerticalAlignmentConstant getColumnVerticalAlignment(int colIndex) {
+    ColumnConfig<M, ?> c = getColumn(colIndex);
+    return c != null ? c.getVerticalAlignment() : null;
+  }
+
+  /**
    * Returns the index of the column.
    * 
    * @param column the column
@@ -321,8 +335,7 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
   }
 
   /**
-   * Returns true if the column is groupable. Applies when using a
-   * {@link GroupingView}.
+   * Returns true if the column is groupable. Applies when using a {@link GroupingView}.
    * 
    * @param colIndex the column index
    * @return true if the column is groupable.
@@ -377,6 +390,14 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
   }
 
   /**
+   * Returns true if the user has resized manually. Should be used to avoid resize calculations that may
+   * undo changes made manually.
+   */
+  public boolean isUserResized() {
+    return userResized;
+  }
+
+  /**
    * Moves a column.
    * 
    * @param oldIndex the column index
@@ -390,7 +411,7 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
     ColumnConfig<M, ?> c = temp.remove(oldIndex);
     if (c != null) {
       temp.add(newIndex, c);
-      configs = Collections.unmodifiableList(temp);
+      configs = temp;
       fireEvent(new ColumnMoveEvent(newIndex, c));
     }
   }
@@ -449,6 +470,16 @@ public class ColumnModel<M> implements HasColumnModelHandlers {
       c.setHidden(hidden);
       fireEvent(new ColumnHiddenChangeEvent(colIndex, c));
     }
+  }
+
+  /**
+   * Set to true to indicate that the user has manually set column sizes. This stops some automatic
+   * column sizing from taking place, such as autoexpand columns.
+   *
+   * @param userResized true if the user has manually resized
+   */
+  public void setUserResized(boolean userResized) {
+    this.userResized = userResized;
   }
 
   protected HandlerManager ensureHandlers() {

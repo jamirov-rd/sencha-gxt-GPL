@@ -1,12 +1,14 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.core.client.dom;
 
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safecss.shared.SafeStylesUtils;
@@ -18,15 +20,24 @@ import com.sencha.gxt.core.client.util.Size;
 /**
  * Provides additional static methods that allow you to manipulate the browser's
  * Document Object Model (DOM).
- * 
+ *
+ * <p/>
+ *
+ * Several features in this class can have their behavior customized, such as what next ID to create, what is the
+ * highest z-index in the application, and how wide to assume that browser scrollbars will be. You can replace the
+ * default implementation of this class with your own type that extends it through a replace-with directive in your
+ * module file, something like this:
+ * <code><pre>
+ * &lt;replace-with class="path.to.my.CustomXDOMImpl">
+ *   &lt;when-type-is class="com.sencha.gxt.core.client.dom.XDOM.XDOMImpl" />
+ * &lt;/replace-with>
+ * </pre></code>
+ *
  * @see DOM
  */
 public class XDOM {
 
-  private static int zIndexId = 1000;
-  private static int scrollBarWidth = Style.DEFAULT;
-  private static int autoId = 0;
-  private static String autoIdPrefix = "x-auto";
+  private static final XDOMImpl instance = GWT.create(XDOMImpl.class);
 
   /**
    * An empty safe styles instance.
@@ -42,7 +53,7 @@ public class XDOM {
   public static XElement create(SafeHtml html) {
     return create(html.asString());
   }
-  
+
   /**
    * Creates an element form the given markup.
    * 
@@ -50,7 +61,7 @@ public class XDOM {
    * @return the new element
    */
   public static XElement create(String html) {
-    Element div = DOM.createDiv();
+    Element div = Document.get().createDivElement();
     div.setInnerHTML(html);
     Element firstChild = div.getFirstChildElement();
     // support text node creation
@@ -82,12 +93,22 @@ public class XDOM {
   }-*/;
 
   /**
+   * Returns the last focused element. This will be null or the body element if no element currently has focus,
+   * depending on the browser. See https://developer.mozilla.org/en-US/docs/Web/API/document.activeElement for more
+   * details.
+   *
+   * @return the last focused element
+   */
+  public static native Element getActiveElement() /*-{
+    return $doc.activeElement;
+  }-*/;
+  /**
    * Returns the auto id prefix.
    * 
    * @return the auto id prefix
    */
   public static String getAutoIdPrefix() {
-    return autoIdPrefix;
+    return instance.getAutoIdPrefix();
   }
 
   /**
@@ -147,10 +168,7 @@ public class XDOM {
    * @return the scroll bar width
    */
   public static int getScrollBarWidth() {
-    if (scrollBarWidth == Style.DEFAULT) {
-      scrollBarWidth = getScrollBarWidthInternal();
-    }
-    return scrollBarWidth;
+    return instance.getScrollBarWidth();
   }
 
   /**
@@ -160,7 +178,7 @@ public class XDOM {
    * @return the z-index
    */
   public static int getTopZIndex() {
-    return ++zIndexId;
+    return instance.getTopZIndex();
   }
 
   /**
@@ -171,8 +189,7 @@ public class XDOM {
    * @return the z-index
    */
   public static int getTopZIndex(int i) {
-    zIndexId += i + 1;
-    return zIndexId;
+    return instance.getTopZIndex(i);
   }
 
   /**
@@ -181,7 +198,7 @@ public class XDOM {
    * @return the id
    */
   public static String getUniqueId() {
-    return autoIdPrefix + "-" + autoId++;
+    return instance.getUniqueId();
   }
 
   /**
@@ -246,35 +263,83 @@ public class XDOM {
    * @param autoIdPrefix the auto id prefix
    */
   public static void setAutoIdPrefix(String autoIdPrefix) {
-    XDOM.autoIdPrefix = autoIdPrefix;
+    instance.setAutoIdPrefix(autoIdPrefix);
   }
 
-  private native static int getScrollBarWidthInternal() /*-{
-		var scr = null;
-		var inn = null;
-		var wNoScroll = 0;
-		var wScroll = 0;
-		scr = $doc.createElement('div');
-		scr.style.position = 'absolute';
-		scr.style.top = '-1000px';
-		scr.style.left = '-1000px';
-		scr.style.width = '100px';
-		scr.style.height = '50px';
-		scr.style.overflow = 'hidden';
-		inn = $doc.createElement('div');
-		inn.style.height = '200px';
-		scr.appendChild(inn);
-		$doc.body.appendChild(scr);
-		wNoScroll = inn.offsetWidth;
-		scr.style.overflow = 'auto';
-		if (inn.clientWidth != 'undefined') {
-			wScroll = inn.clientWidth;
-		} else {
-			wScroll = inn.offsetWidth;
-		}
 
-		$doc.body.removeChild($doc.body.lastChild);
+  /**
+   * Actual implementation of any XDOM methods that require the use of fields to track state. By keeping this state
+   * in an instance like this, behavior can be shared between one or more libraries, such as GXT 2 and 3.
+   */
+  public static class XDOMImpl {
+    private int zIndexId = 1000;
+    private int scrollBarWidth = Style.DEFAULT;
+    private int autoId = 0;
+    private String autoIdPrefix = "x-auto";
 
-		return (wNoScroll - wScroll);
-  }-*/;
+    public String getAutoIdPrefix() {
+      return autoIdPrefix;
+    }
+
+    public int getScrollBarWidth() {
+      if (scrollBarWidth == Style.DEFAULT) {
+        int width = getScrollBarWidthInternal();
+        // testing shows the method is 1px off
+        // 5 is a number picked out of the sky, so that 0 is passed on. 
+        if (width > 5) {
+          scrollBarWidth = width + 1;
+        }
+
+        // mac osx lion+ scroll may not give a measurement
+        if (scrollBarWidth < 0) {
+          scrollBarWidth = 0;
+        }
+      }
+      return scrollBarWidth;
+    }
+    public int getTopZIndex() {
+      return ++zIndexId;
+    }
+    public int getTopZIndex(int i) {
+      zIndexId += i + 1;
+      return zIndexId;
+    }
+
+    public String getUniqueId() {
+      return autoIdPrefix + "-" + autoId++;
+    }
+
+    public void setAutoIdPrefix(String autoIdPrefix) {
+      this.autoIdPrefix = autoIdPrefix;
+    }
+
+    protected native int getScrollBarWidthInternal() /*-{
+      var scr = null;
+      var inn = null;
+      var wNoScroll = 0;
+      var wScroll = 0;
+      scr = $doc.createElement('div');
+      scr.style.position = 'absolute';
+      scr.style.top = '-1000px';
+      scr.style.left = '-1000px';
+      scr.style.width = '100px';
+      scr.style.height = '50px';
+      scr.style.overflow = 'hidden';
+      inn = $doc.createElement('div');
+      inn.style.height = '200px';
+      scr.appendChild(inn);
+      $doc.body.appendChild(scr);
+      wNoScroll = inn.offsetWidth;
+      scr.style.overflow = 'auto';
+      if (inn.clientWidth != 'undefined') {
+          wScroll = inn.clientWidth;
+      } else {
+          wScroll = inn.offsetWidth;
+      }
+
+      $doc.body.removeChild($doc.body.lastChild);
+
+      return (wNoScroll - wScroll);
+    }-*/;
+  }
 }

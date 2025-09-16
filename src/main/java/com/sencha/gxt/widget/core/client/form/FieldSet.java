@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,12 +8,15 @@
 package com.sencha.gxt.widget.core.client.form;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.Style.Side;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Size;
+import com.sencha.gxt.core.client.util.TextMetrics;
 import com.sencha.gxt.widget.core.client.Collapsible;
 import com.sencha.gxt.widget.core.client.ComponentHelper;
 import com.sencha.gxt.widget.core.client.button.ToolButton;
@@ -34,8 +37,7 @@ import com.sencha.gxt.widget.core.client.event.SelectEvent;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
 
 /**
- * A simple container that wraps its content in a HTML fieldset. FieldSet
- * support collapsing which can be enabled using
+ * A simple container that wraps its content in a HTML fieldset. FieldSet support collapsing which can be enabled using
  * {@link #setCollapsible(boolean)}.
  */
 public class FieldSet extends SimpleContainer implements HasBeforeExpandHandlers, HasExpandHandlers,
@@ -77,7 +79,7 @@ public class FieldSet extends SimpleContainer implements HasBeforeExpandHandlers
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
   }
 
   @Override
@@ -117,13 +119,17 @@ public class FieldSet extends SimpleContainer implements HasBeforeExpandHandlers
   public void expand() {
     assert collapsible : "Calling expand on non-collapsible field set";
     if (collapsible) {
-      if (fireCancellableEvent(new BeforeCollapseEvent())) {
+      if (fireCancellableEvent(new BeforeExpandEvent())) {
         this.collapsed = false;
         appearance.onCollapse(getElement(), false);
         getCollapseButton().changeStyle(ToolButton.UP);
         fireEvent(new ExpandEvent());
       }
     }
+  }
+
+  public FieldSetAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -181,11 +187,9 @@ public class FieldSet extends SimpleContainer implements HasBeforeExpandHandlers
   }
 
   /**
-   * Sets whether the fieldset is collapsible (defaults to false, pre-render). This method
-   * only configures the field set to be collapsible and does not change the
-   * expand / collapse state. Use {@link #setExpanded(boolean)},
-   * {@link #expand()}, and {@link #collapse()} to expand and collapse the field
-   * set.
+   * Sets whether the fieldset is collapsible (defaults to false, pre-render). This method only configures the field set
+   * to be collapsible and does not change the expand / collapse state. Use {@link #setExpanded(boolean)},
+   * {@link #expand()}, and {@link #collapse()} to expand and collapse the field set.
    * 
    * @param collapsible true to enable collapsing
    */
@@ -195,8 +199,7 @@ public class FieldSet extends SimpleContainer implements HasBeforeExpandHandlers
   }
 
   /**
-   * Convenience method to expand / collapse the field set by invoking
-   * {@link #expand()} or {@link #collapse()}.
+   * Convenience method to expand / collapse the field set by invoking {@link #expand()} or {@link #collapse()}.
    * 
    * @param expand true to expand the field set, otherwise collapse
    */
@@ -279,8 +282,34 @@ public class FieldSet extends SimpleContainer implements HasBeforeExpandHandlers
 
   @Override
   protected void onResize(int width, int height) {
+    int tw = width - getElement().getFrameWidth(Side.LEFT, Side.RIGHT);
+    getContainerTarget().setWidth(tw, true);
+
+    // the following legend overflow code works in all browsers except ie6 and ie7
+    // the bug (extended text) still exists for ie6 and ie7
+    if (!(GXT.isIE7() || GXT.isIE6())) {
+      // measure legend width
+      XElement legend = getElement().selectNode("legend");
+
+      TextMetrics.get().bind(legend);
+
+      int legendWidth = TextMetrics.get().getWidth(getHeadingText());
+
+      if (legendWidth > tw) {
+        legend.setWidth(tw - 5);
+      } else {
+        legend.getStyle().clearWidth();
+      }
+    }
+
+    if (isAutoHeight()) {
+      getContainerTarget().getStyle().clearHeight();
+    } else {
+      int adj = getElement().getFrameWidth(Side.TOP, Side.BOTTOM);
+      adj += appearance.getTextElement(getElement()).getOffsetHeight();
+      getContainerTarget().setHeight(height - adj, true);
+    }
     super.onResize(width, height);
-    getContainerTarget().setWidth(width - getElement().getFrameWidth(Side.LEFT, Side.RIGHT), true);
   }
 
 }

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.menu;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.resources.client.ImageResource;
@@ -23,6 +24,7 @@ import com.sencha.gxt.core.client.Style.AnchorAlignment;
 import com.sencha.gxt.core.client.dom.Layer;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
+import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.Point;
 import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.widget.core.client.Component;
@@ -36,9 +38,10 @@ import com.sencha.gxt.widget.core.client.event.XEvent;
  * functionality of {@link Item} by adding menu-specific activation and click
  * handling.
  */
+@SuppressWarnings("deprecation")
 public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
 
-  public interface MenuItemAppearance {
+  public interface MenuItemAppearance extends ItemAppearance {
 
     void onAddSubMenu(XElement parent);
 
@@ -59,8 +62,6 @@ public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
   protected String text;
   protected Widget widget;
 
-  private final MenuItemAppearance appearance;
-
   /**
    * Creates a new item.
    */
@@ -69,30 +70,20 @@ public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
   }
 
   /**
-   * Creates a menu item with the given appearance.
-   * 
-   * @param appearance the menu item appearance
-   */
-  public MenuItem(MenuItemAppearance appearance) {
-    this(appearance, GWT.<ItemAppearance> create(ItemAppearance.class));
-  }
-
-  /**
    * Creates a menu item with the given appearances.
    * 
    * @param menuItemAppearance the menu item appearance
-   * @param itemAppearance the underlying base item appearance
    */
-  public MenuItem(MenuItemAppearance menuItemAppearance, ItemAppearance itemAppearance) {
-    super(itemAppearance);
-    this.appearance = menuItemAppearance;
+  public MenuItem(MenuItemAppearance menuItemAppearance) {
+    super(menuItemAppearance);
 
     canActivate = true;
 
     SafeHtmlBuilder markupBuilder = new SafeHtmlBuilder();
-    appearance.render(markupBuilder);
+    getAppearance().render(markupBuilder);
 
-    setElement(XDOM.create(markupBuilder.toSafeHtml()));
+    setElement((Element) XDOM.create(markupBuilder.toSafeHtml()));
+    getElement().addClassName(CommonStyles.get().unselectable());
   }
 
   /**
@@ -138,6 +129,10 @@ public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
     }
   }
 
+  public MenuItemAppearance getAppearance() {
+    return (MenuItemAppearance) super.getAppearance();
+  }
+
   @Override
   public String getHTML() {
     return text;
@@ -178,12 +173,12 @@ public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
   @Override
   public void setHTML(String html) {
     this.text = html;
-    appearance.setText(getElement(), html, true);
+    getAppearance().setText(getElement(), html, true);
   }
 
   @Override
   public void setIcon(ImageResource icon) {
-    appearance.setIcon(getElement(), icon);
+    getAppearance().setIcon(getElement(), icon);
     this.icon = icon;
   }
 
@@ -197,11 +192,11 @@ public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
     this.subMenu = menu;
 
     if (menu == null) {
-      appearance.onRemoveSubMenu(getElement());
+      getAppearance().onRemoveSubMenu(getElement());
       Accessibility.setState(getElement(), "aria-haspopup", "false");
     } else {
       menu.parentItem = this;
-      appearance.onAddSubMenu(getElement());
+      getAppearance().onAddSubMenu(getElement());
       Accessibility.setState(getElement(), "aria-haspopup", "true");
     }
   }
@@ -213,12 +208,12 @@ public class MenuItem extends Item implements HasSafeHtml, HasHTML, HasIcon {
    */
   public void setText(String text) {
     this.text = text;
-    appearance.setText(getElement(), text, false);
+    getAppearance().setText(getElement(), text, false);
   }
 
   public void setWidget(Widget widget) {
     this.widget = widget;
-    appearance.setWidget(getElement(), widget);
+    getAppearance().setWidget(getElement(), widget);
     if (isAttached()) {
       ComponentHelper.doAttach(widget);
     }

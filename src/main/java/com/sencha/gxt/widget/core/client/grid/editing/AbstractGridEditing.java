@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,6 +10,8 @@ package com.sencha.gxt.widget.core.client.grid.editing;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.ClickEvent;
@@ -26,7 +28,10 @@ import com.google.gwt.event.logical.shared.AttachEvent;
 import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
-import com.sencha.gxt.core.client.GXT;
+import com.google.gwt.safehtml.shared.SafeHtml;
+import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
+import com.google.gwt.user.client.Timer;
 import com.sencha.gxt.core.client.util.KeyNav;
 import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
 import com.sencha.gxt.data.shared.Converter;
@@ -52,12 +57,14 @@ import com.sencha.gxt.widget.core.client.event.ReconfigureEvent;
 import com.sencha.gxt.widget.core.client.event.ReconfigureEvent.ReconfigureHandler;
 import com.sencha.gxt.widget.core.client.event.StartEditEvent;
 import com.sencha.gxt.widget.core.client.event.StartEditEvent.StartEditHandler;
-import com.sencha.gxt.widget.core.client.form.Field;
+import com.sencha.gxt.widget.core.client.form.IsField;
+import com.sencha.gxt.widget.core.client.form.ValueBaseField;
 import com.sencha.gxt.widget.core.client.grid.ColumnConfig;
 import com.sencha.gxt.widget.core.client.grid.ColumnModel;
 import com.sencha.gxt.widget.core.client.grid.Grid;
 import com.sencha.gxt.widget.core.client.grid.Grid.Callback;
 import com.sencha.gxt.widget.core.client.grid.Grid.GridCell;
+import com.sencha.gxt.widget.core.client.tips.ToolTip;
 
 public abstract class AbstractGridEditing<M> implements GridEditing<M> {
 
@@ -112,7 +119,7 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
 
     @Override
     public void onHeaderMouseDown(HeaderMouseDownEvent event) {
-      completeEditing();
+      handleHeaderMouseDown(event);
     }
 
     @Override
@@ -152,16 +159,25 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
   };
 
   protected ColumnModel<M> columnModel;
+
   protected Map<ColumnConfig<M, ?>, Converter<?, ?>> converterMap = new HashMap<ColumnConfig<M, ?>, Converter<?, ?>>();
+
   protected Grid<M> editableGrid;
-  protected Map<ColumnConfig<M, ?>, Field<?>> editorMap = new HashMap<ColumnConfig<M, ?>, Field<?>>();
+  protected Map<ColumnConfig<M, ?>, IsField<?>> editorMap = new HashMap<ColumnConfig<M, ?>, IsField<?>>();
   protected GroupingHandlerRegistration groupRegistration;
   protected Handler handler;
   protected KeyNav keyNav;
+  protected boolean bound;
+  protected boolean lastValid;
 
+  protected Timer monitorTimer;
+  protected ToolTip tooltip;
   private ClicksToEdit clicksToEdit = ClicksToEdit.ONE;
   private HandlerManager handlerManager;
 
+  private boolean errorSummary = true;
+  private int monitorPoll = 200;
+  private boolean monitorValid = true;
   @Override
   public HandlerRegistration addBeforeStartEditHandler(BeforeStartEditHandler<M> handler) {
     return ensureHandlers().addHandler(BeforeStartEditEvent.getType(), handler);
@@ -178,8 +194,8 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
   }
 
   @Override
-  public <N, O> void addEditor(ColumnConfig<M, N> columnConfig, Converter<N, O> converter, Field<O> field) {
-    assert columnConfig != null && field != null : "You have to defind a columnConfig and a field";
+  public <N, O> void addEditor(ColumnConfig<M, N> columnConfig, Converter<N, O> converter, IsField<O> field) {
+    assert columnConfig != null && field != null : "You have to define a columnConfig and a field.";
     if (converter != null) {
       converterMap.put(columnConfig, converter);
     } else {
@@ -188,7 +204,8 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
     editorMap.put(columnConfig, field);
   }
 
-  public <N> void addEditor(ColumnConfig<M, N> columnConfig, Field<N> field) {
+  @Override
+  public <N> void addEditor(ColumnConfig<M, N> columnConfig, IsField<N> field) {
     addEditor(columnConfig, null, field);
   }
 
@@ -247,14 +264,42 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
     return editableGrid;
   }
 
+  @Override
   @SuppressWarnings("unchecked")
-  public <O> Field<O> getEditor(ColumnConfig<M, ?> columnConfig) {
-    return (Field<O>) editorMap.get(columnConfig);
+  public <O> IsField<O> getEditor(ColumnConfig<M, ?> columnConfig) {
+    return (IsField<O>) editorMap.get(columnConfig);
+  }
+
+  /**
+   * Returns the interval that the editor is validated.
+   * 
+   * @return the interval in ms
+   */
+  public int getMonitorPoll() {
+    return monitorPoll;
   }
 
   @Override
   public boolean isEditing() {
     return activeCell != null;
+  }
+
+  /**
+   * Returns true if a tooltip with an error summary is shown.
+   * 
+   * @return true if a tooltip with an error summary is shown
+   */
+  public boolean isErrorSummary() {
+    return errorSummary;
+  }
+
+  /**
+   * Returns true if valid monitoring is enabled.
+   * 
+   * @return the monitor valid state
+   */
+  public boolean isMonitorValid() {
+    return monitorValid;
   }
 
   @Override
@@ -313,8 +358,48 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
     }
   }
 
+  /**
+   * True to show a tooltip with an error summary (defaults to true)
+   * 
+   * @param errorSummary true to show an error summary.
+   */
+  public void setErrorSummary(boolean errorSummary) {
+    this.errorSummary = errorSummary;
+  }
+
+  /**
+   * Sets the polling interval that the row editor validation is run (defaults to 200).
+   * 
+   * @param monitorPoll the polling interval in ms in that validation is done
+   */
+  public void setMonitorPoll(int monitorPoll) {
+    this.monitorPoll = monitorPoll;
+  }
+
+  /**
+   * True to monitor the valid status of this editor (defaults to true).
+   * 
+   * @param monitorValid true to monitor this row editor
+   */
+  public void setMonitorValid(boolean monitorValid) {
+    this.monitorValid = monitorValid;
+  }
+
   @Override
   public abstract void startEditing(GridCell cell);
+
+  protected void bindHandler() {
+    boolean valid = isValid();
+    if (!valid) {
+      lastValid = false;
+      if (isErrorSummary()) {
+        showTooltip(getErrorHtml());
+      }
+    } else if (valid && !lastValid) {
+      hideTooltip();
+      lastValid = true;
+    }
+  }
 
   protected HandlerManager ensureHandlers() {
     if (handlerManager == null) {
@@ -335,7 +420,19 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
       handler = new Handler();
     }
     return handler;
+  }
 
+  protected GridCell findCell(Element target) {
+    if (editableGrid != null) {
+      if (editableGrid.getView().isSelectableTarget(target) && editableGrid.getView().getBody().isOrHasChild(target)) {
+        int row = editableGrid.getView().findRowIndex(target);
+        int col = editableGrid.getView().findCellIndex(target, null);
+        if (row != -1 && col != -1) {
+          return new GridCell(row, col);
+        }
+      }
+    }
+    return null;
   }
 
   protected void focusCell(int row, int col) {
@@ -353,27 +450,72 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
     getEditableGrid().focus();
   }
 
+  protected abstract SafeHtml getErrorHtml();
+
+  protected void getErrorMessage(IsField<?> field, SafeHtmlBuilder sb, SafeHtml title) {
+    boolean result = true;
+
+    if (field instanceof ValueBaseField) {
+      ValueBaseField<?> vfield = (ValueBaseField<?>) field;
+
+      result = vfield.isCurrentValid(true);
+    }
+
+    if (!result || !field.isValid(true)) {
+      sb.appendHtmlConstant("<li><b>");
+      sb.append(title);
+      sb.appendHtmlConstant("</b>: ");
+      sb.appendEscaped(field.getErrors().get(0).getMessage());
+      sb.appendHtmlConstant("</li>");
+    }
+  }
+
+  @Deprecated
+  protected void getErrorMessage(IsField<?> field, SafeHtmlBuilder sb, String title) {
+    getErrorMessage(field, sb, SafeHtmlUtils.fromString(title));
+  }
+
+  protected <N, O>void handleHeaderMouseDown(HeaderMouseDownEvent event) {
+    completeEditing();
+  }
+
+  protected void hideTooltip() {
+    if (tooltip != null) {
+      tooltip.hide();
+      tooltip.disable();
+    }
+  }
+
+  protected abstract boolean isValid();
+
   protected void onAttachOrDetach(AttachEvent event) {
     if (!event.isAttached()) {
       cancelEditing();
     }
   }
 
-  protected void onClick(ClickEvent event) {
+  protected void onClick(final ClickEvent event) {
     if (clicksToEdit == ClicksToEdit.ONE) {
-      if (GXT.isSafari()) {
-        // EXTGWT-2019 when starting an edit on the same row of an active edit
-        // the active edit value
-        // is lost as the active cell does not complete the edit
-        // this only happens with TreeGrid, not Grid which could be looked into
-        final GridCell cell = findCell(event.getNativeEvent().getEventTarget().<Element> cast());
-        if (cell != null && activeCell != null && activeCell.getRow() == cell.getRow()) {
-          completeEditing();
-        }
-        startEditing(cell);
-      } else {
-        startEditing(event.getNativeEvent());
+      final GridCell cell = findCell(event.getNativeEvent().getEventTarget().<Element> cast());
+      if (cell == null) {
+        return;
       }
+
+      // EXTGWT-2019 when starting an edit on the same row of an active edit
+      // the active edit value
+      // is lost as the active cell does not complete the edit
+      // this only happens with TreeGrid, not Grid which could be looked into
+      if (activeCell != null && activeCell.getRow() == cell.getRow()) {
+        completeEditing();
+      }
+
+      // EXTGWT-3334 Edit is starting and stopping immediately when leaving another active edit that completes
+      Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+        @Override
+        public void execute() {
+          startEditing(cell);
+        }
+      });
     }
   }
 
@@ -418,18 +560,7 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
     cancelEditing();
   }
 
-  protected GridCell findCell(Element target) {
-    if (editableGrid != null) {
-      if (editableGrid.getView().isSelectableTarget(target) && editableGrid.getView().getBody().isOrHasChild(target)) {
-        int row = editableGrid.getView().findRowIndex(target);
-        int col = editableGrid.getView().findCellIndex(target, null);
-        if (row != -1 && col != -1) {
-          return new GridCell(row, col);
-        }
-      }
-    }
-    return null;
-  }
+  protected abstract void showTooltip(SafeHtml content);
 
   protected void startEditing(Element target) {
     GridCell cell = findCell(target);
@@ -439,6 +570,28 @@ public abstract class AbstractGridEditing<M> implements GridEditing<M> {
       if (row != -1 && col != -1) {
         startEditing(new GridCell(row, col));
       }
+    }
+  }
+
+  protected void startMonitoring() {
+    if (!bound && monitorValid) {
+      bound = true;
+      if (monitorTimer == null) {
+        monitorTimer = new Timer() {
+          @Override
+          public void run() {
+            bindHandler();
+          }
+        };
+      }
+      monitorTimer.scheduleRepeating(monitorPoll);
+    }
+  }
+
+  protected void stopMonitoring() {
+    bound = false;
+    if (monitorTimer != null) {
+      monitorTimer.cancel();
     }
   }
 

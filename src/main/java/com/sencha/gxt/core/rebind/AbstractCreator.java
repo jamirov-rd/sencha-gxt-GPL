@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -98,6 +98,10 @@ public abstract class AbstractCreator {
    */
   protected abstract void create(SourceWriter sw) throws UnableToCompleteException;
 
+  /**
+   * Gets the name of the package to create. Subclasses are responsible for ensuring
+   * that the package they use is allowed to be written to.
+   */
   protected abstract String getPackageName();
 
   protected abstract String getSimpleName();

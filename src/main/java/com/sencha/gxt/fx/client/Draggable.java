@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -492,8 +492,7 @@ public class Draggable implements HasDragStartHandlers, HasDragEndHandlers, HasD
       return;
     }
     Element target = e.getNativeEvent().getEventTarget().cast();
-    String s = target.getClassName();
-    if (s != null && s.indexOf(CommonStyles.get().nodrag()) != -1) {
+    if (hasClassName(target, CommonStyles.get().nodrag())) {
       return;
     }
 
@@ -531,13 +530,9 @@ public class Draggable implements HasDragStartHandlers, HasDragEndHandlers, HasD
 
   protected void onMouseMove(Event event) {
     Element elem = event.getEventTarget().cast();
-    // elem.getClassName throwing GWT exception when dragged widget is over
-    // SVG / VML
-    if (hasAttribute(elem, "class")) {
-      String cls = ((Element) event.getEventTarget().cast()).getClassName();
-      if (cls != null && cls.contains("x-insert")) {
-        return;
-      }
+    // elem.getClassName throwing GWT exception when dragged widget is over SVG / VML
+    if (hasClassName(elem, "x-insert")) {
+      return;
     }
 
     int x = event.getClientX();
@@ -697,8 +692,8 @@ public class Draggable implements HasDragStartHandlers, HasDragEndHandlers, HasD
     return eventBus == null ? eventBus = new SimpleEventBus() : eventBus;
   }
 
-  private native boolean hasAttribute(Element elem, String name) /*-{
-		return elem.hasAttribute ? elem.hasAttribute(name) : true;
+  private native boolean hasClassName(Element elem, String className) /*-{
+    return !!elem.hasAttribute && elem.hasAttribute("class") && elem.getAttribute("class").indexOf(className) != -1;
   }-*/;
 
 }

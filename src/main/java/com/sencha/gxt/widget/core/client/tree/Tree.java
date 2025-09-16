@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,7 +18,6 @@ import com.google.gwt.cell.client.ValueUpdater;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
-import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.dom.client.Style.Unit;
@@ -39,9 +38,11 @@ import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.DelayedTask;
 import com.sencha.gxt.core.client.util.Util;
 import com.sencha.gxt.core.shared.FastMap;
+import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
 import com.sencha.gxt.data.shared.IconProvider;
 import com.sencha.gxt.data.shared.ModelKeyProvider;
 import com.sencha.gxt.data.shared.PropertyAccess;
+import com.sencha.gxt.data.shared.Store;
 import com.sencha.gxt.data.shared.TreeStore;
 import com.sencha.gxt.data.shared.event.StoreAddEvent;
 import com.sencha.gxt.data.shared.event.StoreAddEvent.StoreAddHandler;
@@ -53,6 +54,8 @@ import com.sencha.gxt.data.shared.event.StoreFilterEvent;
 import com.sencha.gxt.data.shared.event.StoreFilterEvent.StoreFilterHandler;
 import com.sencha.gxt.data.shared.event.StoreRemoveEvent;
 import com.sencha.gxt.data.shared.event.StoreRemoveEvent.StoreRemoveHandler;
+import com.sencha.gxt.data.shared.event.StoreSortEvent;
+import com.sencha.gxt.data.shared.event.StoreSortEvent.StoreSortHandler;
 import com.sencha.gxt.data.shared.event.StoreUpdateEvent;
 import com.sencha.gxt.data.shared.event.StoreUpdateEvent.StoreUpdateHandler;
 import com.sencha.gxt.data.shared.event.TreeStoreRemoveEvent;
@@ -83,34 +86,26 @@ import com.sencha.gxt.widget.core.client.event.XEvent;
 import com.sencha.gxt.widget.core.client.tree.TreeView.TreeViewRenderMode;
 
 /**
- * A {@link Tree} provides support for displaying hierarchical data. The tree
- * gets its data from a {@link TreeStore}. Each model in the store is rendered
- * as an item in the tree. Any updates to the store are automatically pushed to
- * the tree.
+ * A {@link Tree} provides support for displaying hierarchical data. The tree gets its data from a {@link TreeStore}.
+ * Each model in the store is rendered as an item in the tree. Any updates to the store are automatically pushed to the
+ * tree.
  * <p/>
- * In GXT version 3, {@link ModelKeyProvider}s and {@link ValueProvider}s
- * provide the interface between your data model, the tree store and the tree.
- * This enables a tree to work with data of any object type. The tree uses a
- * value provider, passed to the constructor, to get the value to display for
- * each model in the tree.
+ * In GXT version 3, {@link ModelKeyProvider}s and {@link ValueProvider}s provide the interface between your data model,
+ * the tree store and the tree. This enables a tree to work with data of any object type. The tree uses a value
+ * provider, passed to the constructor, to get the value to display for each model in the tree.
  * <p/>
- * You can provide your own implementation of these interfaces, or you can use a
- * Sencha supplied generator to create them for you automatically. A generator
- * runs at compile time to create a Java class that is compiled to JavaScript.
- * The Sencha supplied generator can create classes for interfaces that extend
- * the {@link PropertyAccess} interface. The generator transparently creates the
- * class at compile time and the {@link GWT#create(Class)} method returns an
- * instance of that class at run time. The generated class is managed by GWT and
- * GXT and you generally do not need to worry about what the class is called,
- * where it is located, or other similar details.
+ * You can provide your own implementation of these interfaces, or you can use a Sencha supplied generator to create
+ * them for you automatically. A generator runs at compile time to create a Java class that is compiled to JavaScript.
+ * The Sencha supplied generator can create classes for interfaces that extend the {@link PropertyAccess} interface. The
+ * generator transparently creates the class at compile time and the {@link GWT#create(Class)} method returns an
+ * instance of that class at run time. The generated class is managed by GWT and GXT and you generally do not need to
+ * worry about what the class is called, where it is located, or other similar details.
  * <p/>
- * To customize the appearance of the item in the tree, provide a cell
- * implementation using {@link Tree#setCell(Cell)}.
+ * To customize the appearance of the item in the tree, provide a cell implementation using {@link Tree#setCell(Cell)}.
  * <p/>
- * The following code snippet illustrates the creation of a simple tree with
- * local data for test purposes. For more practical examples that show how to
- * load data from remote sources, see the Async Tree and Async Json Tree
- * examples in the online Explorer demo.
+ * The following code snippet illustrates the creation of a simple tree with local data for test purposes. For more
+ * practical examples that show how to load data from remote sources, see the Async Tree and Async Json Tree examples in
+ * the online Explorer demo.
  * </p>
  * 
  * <pre>{@code 
@@ -137,15 +132,12 @@ import com.sencha.gxt.widget.core.client.tree.TreeView.TreeViewRenderMode;
     RootPanel.get().add(t);
  * }</pre>
  * <p/>
- * To use the Sencha supplied generator to create model key providers and value
- * providers, extend the <code>PropertyAccess</code> interface, parameterized
- * with the type of data you want to access (as shown below) and invoke the
- * <code>GWT.create</code> method on its <code>class</code> member (as shown in
- * the code snippet above). This creates an instance of the class that can be
- * used to initialize the tree and tree store. In the following code snippet we
- * define a new interface called <code>DataProperties</code> that extends the
- * <code>PropertyAccess</code> interface and is parameterized with
- * <code>Data</code>, a Plain Old Java Object (POJO).
+ * To use the Sencha supplied generator to create model key providers and value providers, extend the
+ * <code>PropertyAccess</code> interface, parameterized with the type of data you want to access (as shown below) and
+ * invoke the <code>GWT.create</code> method on its <code>class</code> member (as shown in the code snippet above). This
+ * creates an instance of the class that can be used to initialize the tree and tree store. In the following code
+ * snippet we define a new interface called <code>DataProperties</code> that extends the <code>PropertyAccess</code>
+ * interface and is parameterized with <code>Data</code>, a Plain Old Java Object (POJO).
  * <p/>
  * 
  * <pre>
@@ -189,9 +181,8 @@ import com.sencha.gxt.widget.core.client.tree.TreeView.TreeViewRenderMode;
  * </pre>
  * See {@link CheckCascade} for additional check box styles.
  * <p/>
- * To save and restore the expand / collapse state of tree items, add the
- * following (must be after the tree is added to the container). This works with
- * both local and asynchronous loading of tree items.
+ * To save and restore the expand / collapse state of tree items, add the following (must be after the tree is added to
+ * the container). This works with both local and asynchronous loading of tree items.
  * <p/>
  * 
  * <pre>
@@ -229,7 +220,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     /**
      * Tri-state check behavior.
      */
-    TRI;
+    TRI
   }
 
   /**
@@ -247,11 +238,11 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     /**
      * Check boxes for only parent nodes.
      */
-    PARENT;
+    PARENT
   }
 
   public enum CheckState {
-    CHECKED, PARTIAL, UNCHECKED;
+    CHECKED, PARTIAL, UNCHECKED
   }
 
   /**
@@ -296,6 +287,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
 
     String itemSelector();
 
+    ImageResource loadingIcon();
+
     XElement onCheckChange(XElement node, XElement checkElement, boolean checkable, CheckState state);
 
     void onDropOver(XElement node, boolean over);
@@ -319,14 +312,14 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Maintains the internal state of nodes contained in the tree. Should not
-   * need to be referenced in typical usage.
+   * Maintains the internal state of nodes contained in the tree. Should not need to be referenced in typical usage.
    */
   public static class TreeNode<M> {
 
     protected CheckState checked = CheckState.UNCHECKED;
     protected Element element;
-    final protected String id;
+    protected final String modelId;
+    protected final String domId;
     protected boolean leaf = true;
 
     private Element checkElement;
@@ -344,8 +337,9 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     private M model;
     private Element textElement;
 
-    protected TreeNode(String id, M m) {
-      this.id = id;
+    protected TreeNode(String modelId, M m, String domId) {
+      this.modelId = modelId;
+      this.domId = domId;
       this.model = m;
     }
 
@@ -364,10 +358,19 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       return containerElement;
     }
 
+    public String getDomId() {
+      return domId;
+    }
+
+    /**
+     * Gets the root element of the tree node that this object represents. May return null if the tree hasn't looked up
+     * the element yet, or if the node isn't rendered yet. Typically
+     * {@link TreeView#getElement(com.sencha.gxt.widget.core.client.tree.Tree.TreeNode)} should be used instead.
+     * 
+     * @see TreeView#getElement(com.sencha.gxt.widget.core.client.tree.Tree.TreeNode)
+     * @return an element if it is rendered and cached, null otherwise
+     */
     public Element getElement() {
-      if (element == null) {
-        element = (Element) Document.get().getElementById(id);
-      }
       return element;
     }
 
@@ -379,16 +382,16 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       return iconElement;
     }
 
-    public String getId() {
-      return id;
-    }
-
     public Element getJointElement() {
       return jointElement;
     }
 
     public M getModel() {
       return model;
+    }
+
+    public String getModelId() {
+      return modelId;
     }
 
     public Element getTextElement() {
@@ -439,6 +442,15 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       this.elContainer = elContainer;
     }
 
+    /**
+     * Sets the element to be used as the root of this node.
+     * 
+     * @param element the element to cache as the root of this tree node
+     */
+    public void setElement(Element element) {
+      this.element = element;
+    }
+
     public void setExpand(boolean expand) {
       this.expand = expand;
     }
@@ -477,7 +489,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   private class Handler implements StoreAddHandler<M>, StoreClearHandler<M>, StoreDataChangeHandler<M>,
-      StoreFilterHandler<M>, StoreRemoveHandler<M>, StoreUpdateHandler<M> {
+      StoreFilterHandler<M>, StoreRemoveHandler<M>, StoreUpdateHandler<M>, StoreSortHandler<M> {
 
     @Override
     public void onAdd(StoreAddEvent<M> event) {
@@ -505,24 +517,33 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     }
 
     @Override
+    public void onSort(StoreSortEvent<M> event) {
+      Tree.this.onSort(event);
+    }
+
+    @Override
     public void onUpdate(StoreUpdateEvent<M> event) {
       Tree.this.onUpdate(event);
     }
 
   }
 
-  protected TreeAppearance appearance;
+  private final TreeAppearance appearance;
   protected boolean filtering;
 
   protected XElement focusEl;
   protected final FocusImpl focusImpl = FocusImpl.getFocusImplForPanel();
+  protected boolean focusConstrainScheduled = false;
   protected TreeLoader<M> loader;
   protected Map<String, TreeNode<M>> nodes = new FastMap<TreeNode<M>>();
+  protected Map<String, TreeNode<M>> nodesByDom = new FastMap<TreeNode<M>>();
 
   protected TreeSelectionModel<M> sm;
   protected TreeStore<M> store;
   final protected ValueProvider<? super M, C> valueProvider;
   protected TreeView<M> view = new TreeView<M>();
+  protected Element rootContainer;
+
   private boolean autoExpand;
   private boolean autoLoad;
   private boolean autoSelect;
@@ -533,14 +554,11 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   private boolean checkable;
   private CheckNodes checkNodes = CheckNodes.BOTH;
   private CheckCascade checkStyle = CheckCascade.PARENTS;
-
   private boolean expandOnFilter = true;
-  private Handler handler = new Handler();
+  private GroupingHandlerRegistration storeHandlers = new GroupingHandlerRegistration();
   private IconProvider<M> iconProvider;
   private TreeStyle style = new TreeStyle();
-
   private boolean trackMouseOver = true;
-
   private DelayedTask updateTask, cleanTask;
 
   /**
@@ -554,26 +572,24 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   public Tree(TreeStore<M> store, ValueProvider<? super M, C> valueProvider, TreeAppearance appearance) {
-    this.store = store;
     this.appearance = appearance;
     this.valueProvider = valueProvider;
-
-    store.addStoreAddHandler(handler);
-    store.addStoreUpdateHandler(handler);
-    store.addStoreRemoveHandler(handler);
-    store.addStoreDataChangeHandler(handler);
-    store.addStoreClearHandler(handler);
-    store.addStoreFilterHandler(handler);
 
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
 
     ensureFocusElement();
 
+    if ((GXT.isIE6() || GXT.isIE7())) {
+      getElement().makePositionable();
+    }
+
+    setStore(store);
+
     setSelectionModel(new TreeSelectionModel<M>());
-    view.bind(this, store);
+    view.bind(this);
   }
 
   @Override
@@ -638,7 +654,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   public TreeNode<M> findNode(Element target) {
     Element elem = target.<XElement> cast().findParentElement(appearance.itemSelector(), 10);
     if (elem != null) {
-      TreeNode<M> node = nodes.get(elem.getId());
+      TreeNode<M> node = nodesByDom.get(elem.getId());
       return node;
     }
     return null;
@@ -651,24 +667,13 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
    * @return the tree node or null if no match
    */
   public TreeNode<M> findNode(M model) {
-    if (model == null) return null;
+    if (store == null || model == null) return null;
     return nodes.get(generateModelId(model));
   }
 
   @Override
   public void focus() {
-    if (GXT.isGecko()) {
-      Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-        @Override
-        public void execute() {
-          if (Tree.this.focusEl != null) {
-            Tree.this.focusImpl.focus(Tree.this.focusEl);
-          }
-        }
-      });
-    } else if (focusEl != null) {
-      focusImpl.focus(focusEl);
-    }
+    focusImpl.focus(focusEl);
   }
 
   /**
@@ -704,9 +709,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns the current checked selection. Only items that have been rendered
-   * will be returned in this list. Set {@link #setAutoLoad(boolean)} to true to
-   * fully render the tree to receive all checked items in the tree.
+   * Returns the current checked selection. Only items that have been rendered will be returned in this list. Set
+   * {@link #setAutoLoad(boolean)} to {@code true} to fully render the tree to receive all checked items in the tree.
    * 
    * @return the checked selection
    */
@@ -722,9 +726,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns the child nodes value which determines what node types have a check
-   * box. Only applies when check boxes have been enabled (
-   * {@link #setCheckable(boolean)}.
+   * Returns the child nodes value which determines what node types have a check box. Only applies when check boxes have
+   * been enabled ( {@link #setCheckable(boolean)}.
    * 
    * @return the child nodes value
    */
@@ -733,8 +736,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * The check cascade style value which determines if check box changes cascade
-   * to parent and children.
+   * The check cascade style value which determines if check box changes cascade to parent and children.
    * 
    * @return the check cascade style
    */
@@ -788,7 +790,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if auto expand is enabled.
+   * Returns {@code true} if auto expand is enabled.
    * 
    * @return the auto expand state
    */
@@ -797,7 +799,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if auto load is enabled.
+   * Returns {@code true} if auto load is enabled.
    * 
    * @return the auto load state
    */
@@ -806,7 +808,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if select on load is enabled.
+   * Returns {@code true} if select on load is enabled.
    * 
    * @return the auto select state
    */
@@ -815,7 +817,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if buffered rendering is enabled.
+   * Returns {@code true} if buffered rendering is enabled.
    * 
    * @return true for buffered rendering
    */
@@ -824,8 +826,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true when a loader is queried for it's children each time a node is
-   * expanded. Only applies when using a loader with the tree store.
+   * Returns {@code true} when a loader is queried for it's children each time a node is expanded. Only applies when
+   * using a loader with the tree store.
    * 
    * @return true if caching
    */
@@ -834,7 +836,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if check boxes are enabled.
+   * Returns {@code true} if check boxes are enabled.
    * 
    * @return the check box state
    */
@@ -852,14 +854,14 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if the model is expanded.
+   * Returns {@code true} if the model is expanded.
    * 
    * @param model the model
    * @return true if expanded
    */
   public boolean isExpanded(M model) {
     TreeNode<M> node = findNode(model);
-    return node.expanded;
+    return node != null && node.expanded;
   }
 
   /**
@@ -872,8 +874,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if the model is a leaf node. The leaf state allows a tree item
-   * to specify if it has children before the children have been realized.
+   * Returns {@code true} if the model is a leaf node. The leaf state allows a tree item to specify if it has children
+   * before the children have been realized.
    * 
    * @param model the model
    * @return the leaf state
@@ -883,7 +885,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Returns true if nodes are highlighted on mouse over.
+   * Returns {@code true} if nodes are highlighted on mouse over.
    * 
    * @return true if enabled
    */
@@ -920,7 +922,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   public void refresh(M model) {
     if (isOrWasAttached()) {
       TreeNode<M> node = findNode(model);
-      if (node != null && node.getElement() != null) {
+      if (node != null && view.getElement(node) != null) {
         view.onIconStyleChange(node, calculateIconStyle(model));
         view.onJointChange(node, calculateJoint(model));
         view.onTextChange(node, getCellContent(model));
@@ -942,15 +944,14 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     if (node != null) {
       XElement con = (XElement) node.getElementContainer();
       if (con != null) {
-        con.scrollIntoView();
+        con.scrollIntoView(getElement(), false);
         focusEl.setXY(con.getXY());
       }
     }
   }
 
   /**
-   * If set to true, all non leaf nodes will be expanded automatically (defaults
-   * to false).
+   * If set to {@code true}, all non leaf nodes will be expanded automatically (defaults to {@code false}).
    * 
    * @param autoExpand the auto expand state to set.
    */
@@ -959,40 +960,37 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Sets whether all children should automatically be loaded recursively
-   * (defaults to false). Useful when the tree must be fully populated when
-   * initially rendered.
+   * Sets whether all children should automatically be loaded recursively (defaults to false). Useful when the tree must
+   * be fully populated when initially rendered.
    * 
-   * @param autoLoad true to auto load
+   * @param autoLoad {@code true} to auto load
    */
   public void setAutoLoad(boolean autoLoad) {
     this.autoLoad = autoLoad;
   }
 
   /**
-   * True to select the first model after the store's data changes (defaults to
-   * false).
+   * True to select the first model after the store's data changes (defaults to {@code false}).
    * 
-   * @param autoSelect true to auto select
+   * @param autoSelect {@code true} to auto select
    */
   public void setAutoSelect(boolean autoSelect) {
     this.autoSelect = autoSelect;
   }
 
   /**
-   * True to only render tree nodes that are in view (defaults to false). Set
-   * this to true when dealing with very large trees.
+   * True to only render tree nodes that are in view (defaults to {@code false}). Set this to {@code true} when dealing
+   * with very large trees.
    * 
-   * @param bufferRender true to buffer render
+   * @param bufferRender {@code true} to buffer render
    */
   public void setBufferedRender(boolean bufferRender) {
     this.bufferRender = bufferRender;
   }
 
   /**
-   * Sets whether the children should be cached after first being retrieved from
-   * the store (defaults to true). When <code>false</code>, a load request will
-   * be made each time a node is expanded.
+   * Sets whether the children should be cached after first being retrieved from the store (defaults to {@code true}).
+   * When {@code false}, a load request will be made each time a node is expanded.
    * 
    * @param caching the caching state
    */
@@ -1014,18 +1012,17 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Sets whether check boxes are used in the tree (defaults to false).
+   * Sets whether check boxes are used in the tree (defaults to {@code false}).
    * 
-   * @param checkable true for check boxes
+   * @param checkable {@code true} for check boxes
    */
   public void setCheckable(boolean checkable) {
     this.checkable = checkable;
   }
 
   /**
-   * Sets the check state of the item. The checked state will only be set for
-   * nodes that have been rendered, {@link #setAutoLoad(boolean)} can be used to
-   * render all children.
+   * Sets the check state of the item. The checked state will only be set for nodes that have been rendered,
+   * {@link #setAutoLoad(boolean)} can be used to render all children.
    * 
    * @param item the item
    * @param checked the check state
@@ -1088,10 +1085,9 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Sets the cascading behavior for check tree (defaults to PARENTS). When
-   * using CHILDREN, it is important to note that the cascade will only be
-   * applied to rendered nodes. {@link #setAutoLoad(boolean)} can be used to
-   * fully render the tree on render.
+   * Sets the cascading behavior for check tree (defaults to PARENTS). When using CHILDREN, it is important to note that
+   * the cascade will only be applied to rendered nodes. {@link #setAutoLoad(boolean)} can be used to fully render the
+   * tree on render.
    * <p>
    * Valid values are:
    * <ul>
@@ -1110,7 +1106,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
    * Sets the item's expand state.
    * 
    * @param model the model
-   * @param expand true to expand
+   * @param expand {@code true} to expand
    */
   public void setExpanded(M model, boolean expand) {
     setExpanded(model, expand, false);
@@ -1120,17 +1116,17 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
    * Sets the item's expand state.
    * 
    * @param model the model
-   * @param expand true to expand
-   * @param deep true to expand all children recursively
+   * @param expand {@code true} to expand
+   * @param deep {@code true} to expand all children recursively
    */
   public void setExpanded(M model, boolean expand, boolean deep) {
     if (expand) {
-      // make parents visible
+      // make item visible by expanding parents
       List<M> list = new ArrayList<M>();
       M p = model;
       while ((p = store.getParent(p)) != null) {
         TreeNode<M> n = findNode(p);
-        if (n != null && !n.isExpanded()) {
+        if (n == null || !n.isExpanded()) {
           list.add(p);
         }
       }
@@ -1140,34 +1136,32 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       }
     }
     TreeNode<M> node = findNode(model);
-    if (node != null) {
-      if (!isAttached()) {
-        node.setExpand(expand);
-        return;
-      }
-      if (expand) {
-        onExpand(model, node, deep);
-      } else {
-        onCollapse(model, node, deep);
-      }
+    if (node == null) {
+      assert !expand;
+      return;
     }
-
-    constrainFocusElement();
+    if (!isAttached()) {
+      node.setExpand(expand);
+      return;
+    }
+    if (expand) {
+      onExpand(model, node, deep);
+    } else {
+      onCollapse(model, node, deep);
+    }
   }
 
   /**
-   * Sets whether the tree should expand all and collapse all when filters are
-   * applied (defaults to true).
+   * Sets whether the tree should expand all and collapse all when filters are applied (defaults to {@code true}).
    * 
-   * @param expandOnFilter true to expand and collapse on filter changes
+   * @param expandOnFilter {@code true} to expand and collapse on filter changes
    */
   public void setExpandOnFilter(boolean expandOnFilter) {
     this.expandOnFilter = expandOnFilter;
   }
 
   /**
-   * Sets the tree's model icon provider which provides the icon style for each
-   * model.
+   * Sets the tree's model icon provider which provides the icon style for each model.
    * 
    * @param iconProvider the icon provider
    */
@@ -1176,8 +1170,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * Sets the item's leaf state. The leaf state allows control of the expand
-   * icon before the children have been realized.
+   * Sets the item's leaf state. The leaf state allows control of the expand icon before the children have been
+   * realized.
    * 
    * @param model the model
    * @param leaf the leaf state
@@ -1215,6 +1209,50 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
+   * Assigns a new store to the tree. May be null, in which case the tree must not be attached to the dom. All selection
+   * is lost when this takes place and items are re-rendered.
+   * 
+   * @param store the new store to bind to, or null to detach from the store
+   */
+  public void setStore(TreeStore<M> store) {
+    if (this.store != null) {
+      storeHandlers.removeHandler();
+      if (isOrWasAttached()) {
+        clear();
+      }
+    }
+
+    this.store = store;
+
+    if (this.store != null) {
+      Handler handler = new Handler();
+      storeHandlers.add(store.addStoreAddHandler(handler));
+      storeHandlers.add(store.addStoreUpdateHandler(handler));
+      storeHandlers.add(store.addStoreRemoveHandler(handler));
+      storeHandlers.add(store.addStoreDataChangeHandler(handler));
+      storeHandlers.add(store.addStoreClearHandler(handler));
+      storeHandlers.add(store.addStoreFilterHandler(handler));
+      storeHandlers.add(store.addStoreSortHandler(handler));
+
+      if (getSelectionModel() != null) {
+        getSelectionModel().bind(store);
+      }
+      if (isOrWasAttached()) {
+        renderChildren(null);
+        if (autoSelect) {
+          getSelectionModel().select(0, false);
+        }
+      }
+    } else {
+      // no store, make sure we aren't attached
+      if (isAttached()) {
+        throw new IllegalStateException(
+            "Tree must have a store when attached, either detach or pass in a non-null store");
+      }
+    }
+  }
+
+  /**
    * Sets the tree style.
    * 
    * @param style the tree style
@@ -1224,27 +1262,26 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   /**
-   * True to highlight nodes when the mouse is over (defaults to true).
+   * True to highlight nodes when the mouse is over (defaults to {@code true}).
    * 
-   * @param trackMouseOver true to highlight nodes on mouse over
+   * @param trackMouseOver {@code true} to highlight nodes on mouse over
    */
   public void setTrackMouseOver(boolean trackMouseOver) {
     this.trackMouseOver = trackMouseOver;
   }
 
   /**
-   * Sets the tree's view. Only needs to be called when customizing the tree's
-   * presentation.
+   * Sets the tree's view. Only needs to be called when customizing the tree's presentation.
    * 
    * @param view the view
    */
   public void setView(TreeView<M> view) {
     this.view = view;
-    view.bind(this, store);
+    view.bind(this);
   }
 
   /**
-   * Toggles the model's expand state.
+   * Toggles the model's expand state. If the model is not visible, does nothing.
    * 
    * @param model the model
    */
@@ -1317,14 +1354,54 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   protected void cleanNode(TreeNode<M> node) {
     if (node != null && node.element != null) {
       node.clearElements();
-      node.getElement().getFirstChildElement().<XElement> cast().removeChildren();
+      view.getElement(node).getFirstChildElement().<XElement> cast().removeChildren();
     }
   }
 
   protected void clear() {
-    getContainer(null).<XElement> cast().removeChildren();
-    ensureFocusElement();
-    nodes.clear();
+    if (isOrWasAttached()){
+      getContainer(null).<XElement> cast().removeChildren();
+      nodes.clear();
+      nodesByDom.clear();
+      if (isAttached()) {
+        moveFocus(getContainer(null));
+      }
+    }
+  }
+
+  protected void moveFocus(Element selectedElem) {
+    if (selectedElem == null) return;
+    int containerLeft = getAbsoluteLeft();
+    int containerTop = getAbsoluteTop();
+
+    int left = selectedElem.getAbsoluteLeft() - containerLeft;
+    int top = selectedElem.getAbsoluteTop() - containerTop;
+
+    int width = selectedElem.getOffsetWidth();
+    int height = selectedElem.getOffsetHeight();
+
+    if (width == 0 || height == 0) {
+      focusEl.setLeftTop(0, 0);
+      return;
+    }
+    focusEl.setLeftTop(left, top);
+  }
+
+  protected void constrainFocusElement() {
+    if (!focusConstrainScheduled) {
+      focusConstrainScheduled = true;
+      Scheduler.get().scheduleFinally(new ScheduledCommand() {
+        @Override
+        public void execute() {
+          focusConstrainScheduled = false;
+          int scrollLeft = getElement().getScrollLeft();
+          int scrollTop = getElement().getScrollTop();
+          int left = getElement().getWidth(true) / 2 + scrollLeft;
+          int top = getElement().getHeight(true) / 2 + scrollTop;
+          focusEl.setLeftTop(left, top);
+        }
+      });
+    }
   }
 
   protected void doClean() {
@@ -1364,7 +1441,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
         if (!isRowRendered(i, visible)) {
           M parent = store.getParent(visible.get(i));
           SafeHtml html = renderChild(parent, visible.get(i), store.getDepth(parent), TreeViewRenderMode.BUFFER_BODY);
-          findNode(visible.get(i)).getElement().getFirstChildElement().setInnerHTML(html.asString());
+          view.getElement(findNode(visible.get(i))).getFirstChildElement().setInnerHTML(html.asString());
         }
       }
       clean();
@@ -1394,7 +1471,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   protected String generateModelId(M m) {
-    return getId() + "_" + store.getKeyProvider().getKey(m);
+    return store.getKeyProvider().getKey(m);
   }
 
   protected SafeHtml getCellContent(M model) {
@@ -1426,13 +1503,24 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
 
   protected Element getContainer(M model) {
     if (model == null) {
-      return (Element) getElement();
+      return rootContainer;
     }
     TreeNode<M> node = findNode(model);
     if (node != null) {
       return view.getContainer(node);
     }
     return null;
+  }
+
+  protected Element getRootContainer() {
+    // TODO we should be asking appearance for the root container element rather
+    // than assuming its the last child.
+    XElement root = getElement();
+
+    if (root.getFirstChildElement() != null && root.getFirstChildElement().getTagName().equals("TABLE")) {
+      root = root.selectNode("td");
+    }
+    return root;
   }
 
   protected C getValue(M m) {
@@ -1504,12 +1592,14 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
         if (leaf) {
           check = false;
         }
+      default:
+        // empty
     }
     return check;
   }
 
   protected boolean isRowRendered(int i, List<M> visible) {
-    Element e = findNode(visible.get(i)).getElement();
+    Element e = view.getElement(findNode(visible.get(i)));
     return e != null && e.getFirstChild().hasChildNodes();
   }
 
@@ -1554,7 +1644,12 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   protected void onAfterFirstAttach() {
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.renderContainer(builder);
-    getElement().setInnerHTML(builder.toSafeHtml().asString());
+
+    // TODO we should be asking appearance for the root container element rather
+    // than assuming its the last child.
+    rootContainer = getRootContainer();
+
+    rootContainer.setInnerHTML(builder.toSafeHtml().asString());
 
     getElement().show();
     getElement().getStyle().setProperty("overflow", "auto");
@@ -1576,6 +1671,9 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   @Override
   protected void onAttach() {
     super.onAttach();
+    if (store == null) {
+      throw new IllegalStateException("Cannot attach a tree without a store");
+    }
     update();
   }
 
@@ -1603,6 +1701,10 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       case TRI:
         onTriCheckCascade(model, checked);
         break;
+      case NONE:
+        // do nothing
+        break;
+
     }
   }
 
@@ -1626,13 +1728,12 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
         toggle((M) node.getModel());
       }
       Element checkEl = view.getCheckElement(node);
-      if (checkable && checkEl != null && e.within(checkEl)) {
+      if (checkable && checkEl != null && isEnabled() && e.within(checkEl)) {
         onCheckClick(event, node);
       }
     }
-    ensureFocusElement();
-    focusEl.setXY(event.getClientX(), event.getClientY());
 
+    focusEl.setXY(event.getClientX(), event.getClientY());
     focus();
   }
 
@@ -1649,7 +1750,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       if (bufferRender) {
         cleanCollapsed(node.getModel());
       }
-
+      moveFocus(node.getElement());
       fireEvent(new CollapseItemEvent<M>(model));
     }
     if (deep) {
@@ -1658,46 +1759,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   }
 
   protected void onDataChanged(StoreDataChangeEvent<M> event) {
-    if (!isOrWasAttached()) {
-      return;
-    }
-
-    M p = event.getParent();
-    if (p == null) {
-      clear();
-      renderChildren(null);
-
-      if (autoSelect) {
-        M m = store.getChild(0);
-        if (m != null) {
-          List<M> sel = new ArrayList<M>();
-          sel.add(m);
-          getSelectionModel().setSelection(sel);
-        }
-      }
-
-    } else {
-      TreeNode<M> n = findNode(p);
-      n.setLoaded(true);
-      n.setLoading(false);
-      if (n.isChildrenRendered()) {
-        getContainer(p).setInnerHTML("");
-      }
-
-      renderChildren(p);
-
-      if (n.isExpand() && !isLeaf(n.getModel())) {
-        n.setExpand(false);
-        boolean c = caching;
-        caching = true;
-        boolean deep = n.isExpandDeep();
-        n.setExpandDeep(false);
-        setExpanded(p, true, deep);
-        caching = c;
-      } else {
-        refresh(p);
-      }
-    }
+    redraw(event.getParent());
   }
 
   protected void onDoubleClick(Event event) {
@@ -1762,7 +1824,8 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     TreeNode<M> node = findNode(se.getItem());
 
     if (node != null) {
-      if (node.getElement() != null) {
+      if (view.getElement(node) != null) {
+        // directly call node.getElement() since it won't be null
         node.getElement().removeFromParent();
       }
       unregister(se.getItem());
@@ -1779,6 +1842,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       } else if (p != null && store.getChildCount(p.getModel()) == 0) {
         refresh(itemParent);
       }
+      moveFocus(node.getElement());
     }
   }
 
@@ -1790,6 +1854,11 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
 
   protected void onScroll(Event event) {
     update();
+    constrainFocusElement();
+  }
+
+  protected void onSort(StoreSortEvent<M> se) {
+    redraw(null);
   }
 
   protected void onTriCheckCascade(M model, CheckState checked) {
@@ -1859,25 +1928,81 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
   protected void onUpdate(StoreUpdateEvent<M> event) {
     for (M item : event.getItems()) {
       TreeNode<M> node = findNode(item);
-      if (node.model != item) {
-        node.model = item;
+      if (node != null) {
+        if (node.model != item) {
+          node.model = item;
+        }
+        refresh(item);
       }
-      refresh(item);
+    }
+  }
+
+  /**
+   * Completely redraws the children of the given parent (or all items if parent is null), throwing away details like
+   * currently expanded nodes, etc. Not designed to be used to update nodes, look into {@link #refresh(Object)} or
+   * {@link Store#update(Object)}.
+   * 
+   * @param parent the parent of the items to redraw
+   */
+  protected void redraw(M parent) {
+    if (!isOrWasAttached()) {
+      return;
+    }
+
+    if (parent == null) {
+      clear();
+      renderChildren(null);
+
+      if (autoSelect) {
+        M m = store.getChild(0);
+        if (m != null) {
+          List<M> sel = new ArrayList<M>();
+          sel.add(m);
+          getSelectionModel().setSelection(sel);
+        }
+      }
+
+    } else {
+      TreeNode<M> n = findNode(parent);
+      n.setLoaded(true);
+      n.setLoading(false);
+      if (n.isChildrenRendered()) {
+        getContainer(parent).setInnerHTML("");
+      }
+
+      renderChildren(parent);
+
+      if (n.isExpand() && !isLeaf(n.getModel())) {
+        n.setExpand(false);
+        boolean c = caching;
+        caching = true;
+        boolean deep = n.isExpandDeep();
+        n.setExpandDeep(false);
+        setExpanded(parent, true, deep);
+        caching = c;
+      } else {
+        refresh(parent);
+      }
     }
   }
 
   protected String register(M m) {
     String id = generateModelId(m);
-    if (!nodes.containsKey(id)) {
-      nodes.put(id, new TreeNode<M>(id, m));
+    if (nodes.containsKey(id)) {
+      return nodes.get(id).getDomId();
+    } else {
+      String domId = XDOM.getUniqueId();
+      TreeNode<M> node = new TreeNode<M>(id, m, domId);
+      nodes.put(id, node);
+      nodesByDom.put(domId, node);
+      return domId;
     }
-    return id;
   }
 
   protected SafeHtml renderChild(M parent, M child, int depth, TreeViewRenderMode renderMode) {
-    String id = register(child);
+    String domId = register(child);
     TreeNode<M> node = findNode(child);
-    return view.getTemplate(child, id, getCellContent(child), calculateIconStyle(child), isCheckable(node),
+    return view.getTemplate(child, domId, getCellContent(child), calculateIconStyle(child), isCheckable(node),
         node.checked, calculateJoint(child), depth, renderMode);
   }
 
@@ -1937,6 +2062,9 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
           case CHILDREN:
             onCheckCascade(n.getModel(), n.checked);
             break;
+          default:
+            // empty
+
         }
 
       }
@@ -1953,6 +2081,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     if (m != null) {
       TreeNode<M> n = nodes.remove(generateModelId(m));
       if (n != null) {
+        nodesByDom.remove(n.getDomId());
         n.clearElements();
       }
     }
@@ -1974,14 +2103,6 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
     updateTask.delay(view.getScrollDelay());
   }
 
-  private void constrainFocusElement() {
-    int scrollLeft = getElement().getScrollLeft();
-    int scrollTop = getElement().getScrollTop();
-    int left = getElement().getWidth(true) / 2 + scrollLeft;
-    int top = getElement().getHeight(true) / 2 + scrollTop;
-    focusEl.setLeftTop(left, top);
-  }
-
   private void ensureFocusElement() {
     if (focusEl != null) {
       focusEl.removeFromParent();
@@ -1994,7 +2115,7 @@ public class Tree<M, C> extends Component implements HasBeforeExpandItemHandlers
       focusElStyle.setBorderWidth(0, Unit.PX);
       focusElStyle.setFontSize(1, Unit.PX);
       focusElStyle.setPropertyPx("lineHeight", 1);
-    }    
+    }
     focusEl.setLeft(0);
     focusEl.setTop(0);
     focusEl.makePositionable(true);

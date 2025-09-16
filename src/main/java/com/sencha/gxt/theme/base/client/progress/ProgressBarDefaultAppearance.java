@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -69,7 +69,7 @@ public class ProgressBarDefaultAppearance implements ProgressBarAppearance {
     String text = options.getProgressText();
 
     if (text != null) {
-      int v = (int) Math.round(Double.valueOf(value) * 100);
+      int v = (int) Math.round(value * 100);
       text = Format.substitute(text, v);
     }
 

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,8 +12,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
 
+import com.sencha.gxt.core.shared.FastSet;
 import com.sencha.gxt.data.shared.event.StoreAddEvent;
 import com.sencha.gxt.data.shared.event.StoreClearEvent;
 import com.sencha.gxt.data.shared.event.StoreDataChangeEvent;
@@ -23,8 +25,8 @@ import com.sencha.gxt.data.shared.event.StoreSortEvent;
 import com.sencha.gxt.data.shared.event.StoreUpdateEvent;
 
 /**
- * {@link List}-like client side cache for elements. All operations are
- * performed on the currently visible set of elements.
+ * {@link List}-like client side cache for elements. All operations are performed on the currently visible set of
+ * elements.
  * 
  * @param <M> the model type
  */
@@ -32,6 +34,8 @@ public class ListStore<M> extends Store<M> {
 
   private final List<M> allItems;
   private List<M> visibleItems;
+
+  private Set<String> debugKeys;
 
   /**
    * Creates a new store.
@@ -41,23 +45,26 @@ public class ListStore<M> extends Store<M> {
   public ListStore(ModelKeyProvider<? super M> keyProvider) {
     super(keyProvider);
     visibleItems = allItems = new ArrayList<M>();
+
+    if (ListStore.class.desiredAssertionStatus()) {
+      debugKeys = new FastSet();
+    }
   }
 
   /**
-   * Like add(M), except the item will be inserted at the given index in the
-   * visible items. If filters are enabled, it will be added to the un-filtered
-   * list after its previous sibling in the filtered list.
+   * Like add(M), except the item will be inserted at the given index in the visible items. If filters are enabled, it
+   * will be added to the un-filtered list after its previous sibling in the filtered list.
    * 
-   * Note that the item may not be visible, depending on the filters configured.
-   * In this case its position in the un-filtered list will still be after where
-   * it would have been in the filtered list.
+   * Note that the item may not be visible, depending on the filters configured. In this case its position in the
+   * un-filtered list will still be after where it would have been in the filtered list.
    * 
-   * @param index - the index in the visible items. Must be a valid index, in
-   *          the range [0,size()). If the store is sorted, the index will be
-   *          ignored
+   * @param index - the index in the visible items. Must be a valid index, in the range [0,size()). If the store is
+   *          sorted, the index will be ignored
    * @param item the item to be added
    */
   public void add(int index, M item) {
+    assert debugKeys.add(getKeyProvider().getKey(item)) : "The given model cannot be added to the ListStore as it (or another model with the same key) is already present. Key="
+        + getKeyProvider().getKey(item);
     // TODO before event?
 
     // if the store is already sorted, then ignore the index and insert where it
@@ -121,6 +128,15 @@ public class ListStore<M> extends Store<M> {
    * @return true if all items added
    */
   public boolean addAll(int index, Collection<? extends M> items) {
+    if (items.isEmpty()) {
+      return false;
+    }
+    if (debugKeys != null) {
+      for (M item : items) {
+        assert debugKeys.add(getKeyProvider().getKey(item)) : "The given model cannot be added to the ListStore as it (or another model with the same key) is already present. Key="
+            + getKeyProvider().getKey(item);
+      }
+    }
 
     // re-apply filters, checking only newly appended items
     if (isFiltered()) {
@@ -142,7 +158,7 @@ public class ListStore<M> extends Store<M> {
       if (inserted.size() != 0) {
 
         if (isSorted()) {
-          fireSortedAddEvents(items);
+          fireSortedAddEvents(inserted);
         } else {
           fireEvent(new StoreAddEvent<M>(visibleItems.size(), inserted));
         }
@@ -179,6 +195,11 @@ public class ListStore<M> extends Store<M> {
     super.clear();
     allItems.clear();
     visibleItems.clear();
+
+    if (debugKeys != null) {
+      debugKeys.clear();
+    }
+
     fireEvent(new StoreClearEvent<M>());
   }
 
@@ -193,8 +214,8 @@ public class ListStore<M> extends Store<M> {
   }
 
   /**
-   * Gets the given item from the list. In keeping with the 2.x api, does not
-   * throw exceptions if you request obviously unavailable items.
+   * Gets the given item from the list. In keeping with the 2.x api, does not throw exceptions if you request obviously
+   * unavailable items.
    * 
    * Index is relative to the ordered set of visible items.
    * 
@@ -225,10 +246,9 @@ public class ListStore<M> extends Store<M> {
   }
 
   /**
-   * A ListStore acts like a Java List, and stuff is arranged in a linear
-   * fashion, so it may be advantageous to remove based on index. Note that this
-   * index is relative to the visible items, so items not visible cannot be
-   * removed in this way.
+   * A ListStore acts like a Java List, and stuff is arranged in a linear fashion, so it may be advantageous to remove
+   * based on index. Note that this index is relative to the visible items, so items not visible cannot be removed in
+   * this way.
    * 
    * @param index the index of the item to remove
    */
@@ -245,6 +265,9 @@ public class ListStore<M> extends Store<M> {
         allItems.remove(index);
       }
       super.remove(model);
+      if (debugKeys != null) {
+        debugKeys.remove(getKeyProvider().getKey(model));
+      }
 
       fireEvent(new StoreRemoveEvent<M>(index, model));
     }
@@ -261,6 +284,9 @@ public class ListStore<M> extends Store<M> {
   @Override
   public boolean remove(M model) {
     if (null == remove(indexOf(model))) {
+      if (debugKeys != null) {
+        debugKeys.remove(getKeyProvider().getKey(model));
+      }
       return allItems.remove(model);
     }
     return true;
@@ -271,17 +297,30 @@ public class ListStore<M> extends Store<M> {
    * 
    * @param newItems the new contents of the store
    */
-  public void replaceAll(List<M> newItems) {
+  public void replaceAll(List<? extends M> newItems) {
     super.clear();
     allItems.clear();
     visibleItems.clear();
 
-    if (isSorted()) {
-      Collections.sort(newItems, buildFullComparator());
+    if (debugKeys != null) {
+      debugKeys.clear();
     }
+
+    if (debugKeys != null) {
+      for (int i = 0; i < newItems.size(); i++) {
+        assert debugKeys.add(getKeyProvider().getKey(newItems.get(i))) : "The given model cannot be added to the ListStore as it (or another model with the same key) is already present. Key="
+            + getKeyProvider().getKey(newItems.get(i));
+      }
+    }
+    
     allItems.addAll(newItems);
+
+    if (isSorted()) {
+      Collections.sort(allItems, buildFullComparator());
+    }
+  
     if (isFiltered()) {
-      for (M item : newItems) {
+      for (M item : allItems) {
         if (!isFilteredOut(item)) {
           visibleItems.add(item);
         }
@@ -300,8 +339,7 @@ public class ListStore<M> extends Store<M> {
   }
 
   /**
-   * Creates a new list containing references to the items in the specified
-   * range.
+   * Creates a new list containing references to the items in the specified range.
    * 
    * @param start the starting index
    * @param end the ending index
@@ -325,6 +363,7 @@ public class ListStore<M> extends Store<M> {
         oldItem = allItems.get(i);
         oldIndex = i;
         allItems.set(i, item);
+        super.remove(oldItem);
         break;
       }
     }
@@ -358,9 +397,8 @@ public class ListStore<M> extends Store<M> {
   }
 
   /**
-   * Takes a collection of newly added items and fires a {@link StoreAddEvent}
-   * for each one. The events are fired in store sequence order (i.e. the order
-   * in which the items appear in the store).
+   * Takes a collection of newly added items and fires a {@link StoreAddEvent} for each one. The events are fired in
+   * store sequence order (i.e. the order in which the items appear in the store).
    * 
    * @param items a collection of items that have been added to the store
    */

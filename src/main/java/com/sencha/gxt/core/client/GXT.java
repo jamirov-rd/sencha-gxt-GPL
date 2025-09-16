@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -27,10 +27,10 @@ public class GXT {
     @PropertyValue("safari5")
     boolean isSafari5();
 
-    @PropertyValue("ie6")
+    @PropertyValue(value="ie6", warn=false)
     boolean isIE6();
 
-    @PropertyValue("ie7")
+    @PropertyValue(value="ie7", warn=false)
     boolean isIE7();
 
     @PropertyValue("ie8")
@@ -38,6 +38,9 @@ public class GXT {
 
     @PropertyValue("ie9")
     boolean isIE9();
+
+    @PropertyValue("ie10")
+    boolean isIE10();
 
     @PropertyValue("gecko1_8")
     boolean isGecko1_8();
@@ -48,7 +51,7 @@ public class GXT {
     @PropertyValue("chrome")
     boolean isChrome();
 
-    @PropertyValue("opera")
+    @PropertyValue(value="opera", warn=false)
     boolean isOpera();
 
     @PropertyValue("air")
@@ -67,16 +70,13 @@ public class GXT {
     boolean isWindows();
   }
 
-  private static boolean isSecure;
+  private static final boolean isSecure;
   private static boolean useShims;
 
-  private static String sslSecureUrl = GWT.getModuleBaseURL() + "blank.html";
-  private static String blankImageUrl = GWT.getModuleBaseURL() + "clear.gif";
-
-  private static boolean forceTheme;
+  private static final String sslSecureUrl = GWT.getModuleBaseURL() + "blank.html";
+  private static String blankImageUrl;
 
   private static boolean isHighContrastMode = false;
-  private static boolean initialized;
 
   private static final OS platform() {
     return GWT.<OS> create(OS.class);
@@ -116,15 +116,9 @@ public class GXT {
   }
 
   /**
-   * Initializes GXT. Typically, this method need not be called directly.
+   * Initializes GXT.
    */
-  public static void init() {
-    if (initialized) {
-      return;
-    }
-
-    initialized = true;
-
+  static {
     // don't override if set to true
     if (!useShims) {
       useShims = isIE6() || (isMac() && isGecko1_8());
@@ -195,7 +189,7 @@ public class GXT {
    * @return true if IE
    */
   public static boolean isIE() {
-    return isIE6() || isIE7() || isIE8() || isIE9();
+    return isIE6() || isIE7() || isIE8() || isIE9() || isIE10();
   }
 
   /**
@@ -232,6 +226,15 @@ public class GXT {
    */
   public static boolean isIE9() {
     return userAgent().isIE9();
+  }
+
+  /**
+   * Returns true if the browser is IE 10.
+   * 
+   * @return true if IE 10
+   */
+  public static boolean isIE10() {
+    return userAgent().isIE10();
   }
 
   /**
@@ -289,9 +292,9 @@ public class GXT {
   }
 
   /**
-   * Returns true if the browser is Safari 4.
+   * Returns true if the browser is Safari 5.
    * 
-   * @return true if Safari 4
+   * @return true if Safari 5
    */
   public static boolean isSafari5() {
     return userAgent().isSafari5();

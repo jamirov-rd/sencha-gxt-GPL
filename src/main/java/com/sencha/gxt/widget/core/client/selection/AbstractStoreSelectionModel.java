@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -90,7 +90,6 @@ public abstract class AbstractStoreSelectionModel<M> implements StoreSelectionMo
           }
         }
       });
-
     }
 
   }
@@ -110,17 +109,14 @@ public abstract class AbstractStoreSelectionModel<M> implements StoreSelectionMo
   private M lastFocused;
 
   /**
-   * If true the selection change event should be fired on click. When a
-   * selection change event is fired on mouse down we don't actually fire the
-   * event until click so that any active fields will be blurred BEFORE the
-   * handler is run
+   * If true the selection change event should be fired on click. When a selection change event is fired on mouse down
+   * we don't actually fire the event until click so that any active fields will be blurred BEFORE the handler is run
    */
   protected boolean fireSelectionChangeOnClick;
-  
+
   /**
-   * Tracks if a mouse down event is currently being processed. When a selection
-   * change event is fired on mouse down we don't actually fire the event until
-   * click so that any active fields will be blurred BEFORE the handler is run.
+   * Tracks if a mouse down event is currently being processed. When a selection change event is fired on mouse down we
+   * don't actually fire the event until click so that any active fields will be blurred BEFORE the handler is run.
    */
   protected boolean mouseDown;
 
@@ -135,8 +131,7 @@ public abstract class AbstractStoreSelectionModel<M> implements StoreSelectionMo
   }
 
   /**
-   * Adds a {@link SelectionChangedHandler} handler for
-   * {@link SelectionChangedEvent} events.
+   * Adds a {@link SelectionChangedHandler} handler for {@link SelectionChangedEvent} events.
    * 
    * @since 3.0.1 This event is fired asynchronously.
    * 
@@ -324,8 +319,7 @@ public abstract class AbstractStoreSelectionModel<M> implements StoreSelectionMo
   }
 
   /**
-   * True to lock the selection model. When locked, all selection changes are
-   * disabled.
+   * True to lock the selection model. When locked, all selection changes are disabled.
    * 
    * @param locked true to lock
    */
@@ -367,23 +361,12 @@ public abstract class AbstractStoreSelectionModel<M> implements StoreSelectionMo
       doDeselect(new ArrayList<M>(selected), true);
     }
     for (M m : models) {
-      boolean isListStore = false;
-      int index = -1;
-      if (store instanceof ListStore) {
-        isListStore = true;
-        ListStore<M> ls = (ListStore<M>) store;
-        index = ls.indexOf(m);
-      }
-
-      if ((keepExisting && isSelected(m)) || (isListStore && index == -1)) {
-        if (!suppressEvent) {
-
-          BeforeSelectionEvent<M> evt = BeforeSelectionEvent.fire(this, m);
-          if (evt != null && !evt.isCanceled()) {
-            continue;
-          }
+      boolean isSelected = isSelected(m);
+      if (!suppressEvent && !isSelected) {
+        BeforeSelectionEvent<M> evt = BeforeSelectionEvent.fire(this, m);
+        if (evt != null && evt.isCanceled()) {
+          continue;
         }
-        continue;
       }
 
       change = true;
@@ -391,8 +374,13 @@ public abstract class AbstractStoreSelectionModel<M> implements StoreSelectionMo
 
       selected.add(m);
       setLastFocused(lastSelected);
-      onSelectChange(m, true);
-      SelectionEvent.fire(this, m);
+
+      if (!isSelected) {
+        onSelectChange(m, true);
+        if (!suppressEvent) {
+          SelectionEvent.fire(this, m);
+        }
+      }
     }
 
     if (change && !suppressEvent) {

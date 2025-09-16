@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,6 +10,7 @@ package com.sencha.gxt.widget.core.client.container;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Style.Position;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.HasScrollHandlers;
@@ -124,7 +125,7 @@ public class HorizontalLayoutContainer extends InsertResizeContainer implements 
    * Creates a horizontal layout container.
    */
   public HorizontalLayoutContainer() {
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
     getContainerTarget().makePositionable(true);
   }
 
@@ -250,16 +251,17 @@ public class HorizontalLayoutContainer extends InsertResizeContainer implements 
       } else if (width == -1) {
         if ((c instanceof HasWidgets || c instanceof IndexedPanel) && !secondPassRequired) {
           secondPassRequired = true;
-          Scheduler.get().scheduleEntry(layoutCommand);
+          Scheduler.get().scheduleDeferred(layoutCommand);
           return;
         }
 
         pw -= c.getOffsetWidth();
+        pw -= getLeftRightMargins(c);
       } else if (width < -1) {
         pw -= (w + width);
+        pw -= getLeftRightMargins(c);
       }
 
-      pw -= getLeftRightMargins(c);
     }
 
     secondPassRequired = false;
@@ -308,8 +310,10 @@ public class HorizontalLayoutContainer extends InsertResizeContainer implements 
           tx += m.getLeft();
           ty += m.getTop();
           if (th != -1) {
-            th -= m.getTop();
-            th -= m.getBottom();
+            th -= m.getTop() + m.getBottom();
+          }
+          if (tw != -1) {
+            tw -= m.getLeft() + m.getRight();
           }
         }
       }

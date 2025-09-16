@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.core.client.resources;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.CssResource;
-import com.google.gwt.resources.client.ImageResource;
 
 /**
  * Common theme specific styles. Themes are responsible for specifying a GWT
@@ -20,18 +19,16 @@ public class ThemeStyles {
   public interface ThemeAppearance {
     Styles style();
 
-    ImageResource moreIcon();
-  }
-
-  private static ThemeAppearance instance = GWT.create(ThemeAppearance.class);
-
-  public interface Styles extends CssResource {
-
     String borderColor();
 
     String borderColorLight();
 
     String backgroundColorLight();
+  }
+
+  private static final ThemeAppearance instance = GWT.create(ThemeAppearance.class);
+
+  public interface Styles extends CssResource {
 
     String border();
 
@@ -42,16 +39,9 @@ public class ThemeStyles {
     String borderTop();
 
     String borderBottom();
+    
+    String disabled();
 
-  }
-
-  /**
-   * Returns the theme styles.
-   * 
-   * @return the styles
-   */
-  public static Styles getStyle() {
-    return instance.style();
   }
 
   /**

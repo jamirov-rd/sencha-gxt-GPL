@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -84,26 +84,31 @@ public class Insert extends Component {
     void render(SafeHtmlBuilder sb);
   }
 
-  private InsertAppearance appearance;
-  private static Insert instance;
+  private final InsertAppearance appearance;
+  private static final Insert instance = GWT.create(Insert.class);
 
   public static Insert get() {
-    if (instance == null) {
-      instance = new Insert();
-    }
     return instance;
   }
 
-  Insert() {
-    this.appearance = GWT.create(DefaultInsertAppearance.class);
+  protected Insert() {
+    this(GWT.<InsertAppearance>create(InsertAppearance.class));
+  }
+
+  protected Insert(InsertAppearance appearance) {
+    this.appearance = appearance;
 
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb);
 
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
 
     setShadow(false);
     hide();
+  }
+
+  public InsertAppearance getAppearance() {
+    return appearance;
   }
 
   public void show(Element c) {

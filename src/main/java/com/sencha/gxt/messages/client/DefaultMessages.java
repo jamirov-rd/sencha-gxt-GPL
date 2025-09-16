@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -19,7 +19,7 @@ import com.google.gwt.i18n.client.Messages;
  */
 public class DefaultMessages {
 
-  private static XMessages instance;
+  private static final XMessages instance = GWT.create(XMessages.class);
 
   /**
    * Returns an instance of an automatically generated subclass that implements
@@ -29,9 +29,6 @@ public class DefaultMessages {
    * @return locale-sensitive messages for GXT
    */
   public static XMessages getMessages() {
-    if (instance == null) {
-      instance = GWT.create(XMessages.class);
-    }
     return instance;
   }
 

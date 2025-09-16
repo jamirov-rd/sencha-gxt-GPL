@@ -1,13 +1,12 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.theme.base.client.frame;
 
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safecss.shared.SafeStylesUtils;
 import com.google.gwt.safehtml.shared.SafeHtml;
@@ -107,17 +106,24 @@ public interface Frame {
 
   XElement getContentElem(XElement parent);
 
-  Size getFrameSize();
+  /**
+   * Returns the frame height and width. The parent element may be null in cases
+   * where the method is called before the frame is rendered.
+   * 
+   * @param parent the parent element or null
+   * @return the frame size
+   */
+  Size getFrameSize(XElement parent);
 
   XElement getHeaderElem(XElement parent);
 
-  void onFocus(XElement parent, boolean focus, NativeEvent event);
+  void onFocus(XElement parent, boolean focus);
 
   void onHideHeader(XElement parent, boolean hide);
 
-  void onOver(XElement parent, boolean over, NativeEvent event);
+  void onOver(XElement parent, boolean over);
 
-  void onPress(XElement parent, boolean pressed, NativeEvent event);
+  void onPress(XElement parent, boolean pressed);
 
   String overClass();
 

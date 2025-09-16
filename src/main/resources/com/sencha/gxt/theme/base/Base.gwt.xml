@@ -1,14 +1,19 @@
 <!--
 
-    Sencha GXT 3.0.1 - Sencha for GWT
-    Copyright(c) 2007-2012, Sencha, Inc.
+    Sencha GXT 3.1.1 - Sencha for GWT
+    Copyright(c) 2007-2014, Sencha, Inc.
     licensing@sencha.com
 
     http://www.sencha.com/products/gxt/license/
 
 -->
 <module>
+  <!-- Require the widgets in GXT that we will be theming in this and extending modules -->
   <inherits name="com.sencha.gxt.widget.core.Core" />
+  <!-- Declare a property to allow projects to support multiple themes in the same compiled app -->
+  <!-- The base name is present only to stop GWT from complaining about the lack of a value -->
+  <define-property name="gxt.theme" values="base" />
+
   <replace-with class="com.sencha.gxt.theme.base.client.info.InfoDefaultAppearance">
     <when-type-is class="com.sencha.gxt.widget.core.client.info.Info.InfoAppearance" />
   </replace-with>
@@ -120,6 +125,10 @@
     <when-type-is class="com.sencha.gxt.widget.core.client.container.BoxLayoutContainer.BoxLayoutContainerAppearance" />
   </replace-with>
 
+  <replace-with class="com.sencha.gxt.theme.base.client.container.HBoxLayoutDefaultAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.container.HBoxLayoutContainer.HBoxLayoutContainerAppearance" />
+  </replace-with>
+
   <replace-with class="com.sencha.gxt.theme.base.client.container.CssFloatLayoutDefaultAppearance">
     <when-type-is class="com.sencha.gxt.widget.core.client.container.CssFloatLayoutContainer.CssFloatLayoutAppearance" />
   </replace-with>
@@ -130,30 +139,55 @@
   
   <!-- Grid & TreeGrid -->
   <replace-with class="com.sencha.gxt.theme.base.client.grid.ColumnHeaderDefaultAppearance">
-    <when-type-assignable class="com.sencha.gxt.widget.core.client.grid.ColumnHeader.ColumnHeaderAppearance" />
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.ColumnHeader.ColumnHeaderAppearance" />
   </replace-with>
   
+  <replace-with class="com.sencha.gxt.theme.base.client.listview.ListViewDefaultAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.ListView.ListViewAppearance" />
+  </replace-with>
 
-  
   <replace-with class="com.sencha.gxt.theme.base.client.grid.RowExpanderDefaultAppearance">
-    <when-type-assignable class="com.sencha.gxt.widget.core.client.grid.RowExpander.RowExpanderAppearance" />
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.RowExpander.RowExpanderAppearance" />
+  </replace-with>
+
+  <replace-with class="com.sencha.gxt.theme.base.client.grid.RowNumbererDefaultAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.RowNumberer.RowNumbererAppearance" />
   </replace-with>
   
   <replace-with class="com.sencha.gxt.theme.base.client.grid.CheckBoxColumnDefaultAppearance">
-    <when-type-assignable class="com.sencha.gxt.widget.core.client.grid.CheckBoxSelectionModel.CheckBoxColumnAppearance" />
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.CheckBoxSelectionModel.CheckBoxColumnAppearance" />
   </replace-with>
   
   <replace-with class="com.sencha.gxt.theme.base.client.grid.GroupingViewDefaultAppearance">
-    <when-type-assignable class="com.sencha.gxt.widget.core.client.grid.GroupingView.GroupingViewAppearance" />
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.GroupingView.GroupingViewAppearance" />
   </replace-with>
   
   <replace-with class="com.sencha.gxt.theme.base.client.grid.RowEditorDefaultAppearance">
     <when-type-is class="com.sencha.gxt.widget.core.client.grid.editing.GridRowEditing.RowEditorAppearance" />
   </replace-with>
 
+  <replace-with class="com.sencha.gxt.theme.base.client.grid.GridFiltersDefaultAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.filters.AbstractGridFilters.GridFiltersAppearance" />
+  </replace-with>
+
+  <replace-with class="com.sencha.gxt.theme.base.client.grid.GroupSummaryViewDefaultAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.grid.GroupSummaryView.GroupSummaryViewAppearance" />
+  </replace-with>
+
+
   <!-- Draggable -->
   <replace-with class="com.sencha.gxt.theme.base.client.draggable.DraggableDefaultAppearance">
     <when-type-is class="com.sencha.gxt.fx.client.Draggable.DraggableAppearance" />
-  </replace-with>"
+  </replace-with>
+
+  <!-- Status -->
+  <replace-with class="com.sencha.gxt.theme.base.client.status.StatusDefaultAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.Status.StatusAppearance" />
+  </replace-with>
+
+  <replace-with class="com.sencha.gxt.theme.base.client.resizable.ResizableBaseAppearance">
+    <when-type-is class="com.sencha.gxt.widget.core.client.Resizable.ResizableAppearance" />
+  </replace-with>
+
 
 </module>

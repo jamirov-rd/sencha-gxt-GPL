@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -68,14 +68,14 @@ public abstract class ButtonGroupBaseAppearance implements ButtonGroupAppearance
 
   @Override
   public int getFrameHeight(XElement parent) {
-    int h = frame.getFrameSize().getHeight();
+    int h = frame.getFrameSize(parent).getHeight();
     h += frame.getContentElem(parent).getFrameSize().getHeight();
     return h;
   }
 
   @Override
   public int getFrameWidth(XElement parent) {
-    int w = frame.getFrameSize().getWidth();
+    int w = frame.getFrameSize(parent).getWidth();
     w += frame.getContentElem(parent).getFrameSize().getWidth();
     return w;
   }

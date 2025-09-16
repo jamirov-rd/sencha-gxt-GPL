@@ -1,24 +1,26 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.theme.base.client.resizable;
 
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.dom.client.Document;
+import com.google.gwt.dom.client.Element;
+import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
-import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Element;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
 import com.sencha.gxt.widget.core.client.Resizable.Dir;
 import com.sencha.gxt.widget.core.client.Resizable.ResizableAppearance;
 
-public abstract class ResizableBaseAppearance implements ResizableAppearance {
+public class ResizableBaseAppearance implements ResizableAppearance {
 
-  public interface ResizableResources {
-
+  public interface ResizableResources extends ClientBundle {
+    @Source("Resizable.css")
     ResizableStyle style();
 
   }
@@ -56,6 +58,10 @@ public abstract class ResizableBaseAppearance implements ResizableAppearance {
   private final ResizableResources resources;
   private final ResizableStyle style;
 
+  public ResizableBaseAppearance() {
+    this(GWT.<ResizableResources>create(ResizableResources.class));
+  }
+
   public ResizableBaseAppearance(ResizableResources resources) {
     this.resources = resources;
     this.style = resources.style();
@@ -64,7 +70,7 @@ public abstract class ResizableBaseAppearance implements ResizableAppearance {
 
   @Override
   public Element createProxy() {
-    XElement elem = DOM.createDiv().<XElement> cast();
+    XElement elem = Document.get().createDivElement().cast();
     elem.addClassName(resources.style().proxy());
     elem.disableTextSelection(true);
     return elem;

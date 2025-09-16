@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -19,6 +19,7 @@ import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.sencha.gxt.cell.core.client.form.FieldCell.FieldAppearanceOptions;
 import com.sencha.gxt.cell.core.client.form.TriggerFieldCell.TriggerFieldAppearance;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.theme.base.client.field.TextFieldDefaultAppearance.TextFieldStyle;
 
@@ -40,10 +41,6 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
     ImageResource triggerArrowClick();
 
     ImageResource triggerArrowFocus();
-
-    ImageResource triggerArrowFocusClick();
-
-    ImageResource triggerArrowFocusOver();
 
     ImageResource triggerArrowOver();
   }
@@ -78,20 +75,28 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
     return parent.<XElement> cast().selectNode("input");
   }
 
+  protected TriggerFieldResources getResources() {
+    return resources;
+  }
+
+  protected TriggerFieldStyle getStyle() {
+    return style;
+  }
+
   @Override
   public void onFocus(Element parent, boolean focus) {
-    parent.<XElement> cast().setClassName(resources.css().focus(), focus);
-    getInputElement(parent).setClassName(resources.css().focus(), focus);
+    parent.<XElement> cast().setClassName(getResources().css().focus(), focus);
+    getInputElement(parent).setClassName(getResources().css().focus(), focus);
   }
 
   @Override
   public void onTriggerClick(XElement parent, boolean click) {
-    getTrigger(parent).setClassName(resources.css().click(), click);
+    parent.setClassName(getResources().css().click(), click);
   }
 
   @Override
   public void onTriggerOver(XElement parent, boolean over) {
-    parent.setClassName(resources.css().over(), over);
+    parent.setClassName(getResources().css().over(), over);
   }
 
   @Override
@@ -103,28 +108,24 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
       width = 150;
     }
 
-    SafeStyles inputStyles = null;
-    String wrapStyles = "";
+    String wrapStyles = "width:" + width + "px;";
 
-    if (width != -1) {
-      wrapStyles += "width:" + width + "px;";
+    // 6px margin, 2px border
+    width -= 8;
 
-      // 6px margin, 2px border
-      width -= 8;
-
-      if (!hideTrigger) {
-        width -= resources.triggerArrow().getWidth();
-      }
-      inputStyles = SafeStylesUtils.fromTrustedString("width:" + width + "px;");
+    if (!hideTrigger) {
+      width -= getResources().triggerArrow().getWidth();
     }
+    width = Math.max(0, width);
+    SafeStyles inputStyles = SafeStylesUtils.fromTrustedString("width:" + width + "px;");
 
-    sb.appendHtmlConstant("<div style='" + wrapStyles + "' class='" + style.wrap() + "'>");
+    sb.appendHtmlConstant("<div style='" + wrapStyles + "' class='" + getStyle().wrap() + "'>");
 
     if (!hideTrigger) {
       sb.appendHtmlConstant("<table cellpadding=0 cellspacing=0><tr><td>");
       renderInput(sb, value, inputStyles, options);
       sb.appendHtmlConstant("</td>");
-      sb.appendHtmlConstant("<td><div class='" + style.trigger() + "' /></td>");
+      sb.appendHtmlConstant("<td><div class='" + getStyle().trigger() + "' /></td>");
       sb.appendHtmlConstant("</table>");
     } else {
       renderInput(sb, value, inputStyles, options);
@@ -134,15 +135,15 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
   }
 
   /**
-   * Helper method to render the input in the trigger field. 
+   * Helper method to render the input in the trigger field.
    */
-  private void renderInput(SafeHtmlBuilder shb, String value, SafeStyles inputStyles,
+  protected void renderInput(SafeHtmlBuilder shb, String value, SafeStyles inputStyles,
       FieldAppearanceOptions options) {
     // Deliberately using a StringBuilder, not SafeHtmlBuilder, as each append isn't adding
     // complete elements, but building up this single element, one attribute at a time.
     StringBuilder sb = new StringBuilder();
     sb.append("<input ");
-    
+
     if (options.isDisabled()) {
       sb.append("disabled=true ");
     }
@@ -155,23 +156,28 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
     if (options.isReadonly() || !options.isEditable()) {
       sb.append("readonly ");
     }
-    
+
     if (inputStyles != null) {
       sb.append("style='").append(inputStyles.asString()).append("' ");
     }
-    
 
-    sb.append("class='").append(style.field()).append(" ").append(style.text());
+
+    sb.append("class='").append(getStyle().field()).append(" ").append(getStyle().text());
+
+    String placeholder = options.getEmptyText() != null ? " placeholder='" + SafeHtmlUtils.htmlEscape(options.getEmptyText()) + "' " : "";
 
     if (value.equals("") && options.getEmptyText() != null) {
-      sb.append(" ").append(style.empty());
-      value = options.getEmptyText();
+      sb.append(" ").append(getStyle().empty());
+      if (GXT.isIE8() || GXT.isIE9()) {
+        value = options.getEmptyText();
+      }
     }
 
     if (!options.isEditable()) {
-      sb.append(" ").append(style.noedit());
+      sb.append(" ").append(getStyle().noedit());
     }
     sb.append("' ");
+    sb.append(placeholder);
 
     //escaping the value string so it is a valid attribute
     sb.append("type='text' value='").append(SafeHtmlUtils.htmlEscape(value)).append("'/>");
@@ -183,21 +189,12 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
 
   @Override
   public void setEditable(XElement parent, boolean editable) {
-    getInputElement(parent).setClassName(style.noedit(), !editable);
-  }
-
-  @Override
-  public void setTriggerVisible(XElement parent, boolean visible) {
-    getTrigger(parent).setVisible(visible);
+    getInputElement(parent).setClassName(getStyle().noedit(), !editable);
   }
 
   @Override
   public boolean triggerIsOrHasChild(XElement parent, Element target) {
-    return parent.isOrHasChild(target) && target.<XElement> cast().is("." + resources.css().trigger());
-  }
-
-  protected XElement getTrigger(Element parent) {
-    return parent.<XElement> cast().selectNode("." + resources.css().trigger());
+    return parent.isOrHasChild(target) && target.<XElement> cast().is("." + getStyle().trigger());
   }
 
   @Override
@@ -210,8 +207,9 @@ public class TriggerFieldDefaultAppearance extends ValueBaseFieldDefaultAppearan
       width -= 8;
 
       if (!hideTrigger) {
-        width -= resources.triggerArrow().getWidth();
+        width -= getResources().triggerArrow().getWidth();
       }
+      width = Math.max(0, width);
       parent.selectNode("input").getStyle().setPropertyPx("width", width);
     }
   }

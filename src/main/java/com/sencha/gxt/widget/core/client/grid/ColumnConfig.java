@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,7 +13,8 @@ import com.google.gwt.cell.client.Cell;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
-import com.google.gwt.user.client.ui.HasHorizontalAlignment.HorizontalAlignmentConstant;
+import com.google.gwt.user.client.ui.HasHorizontalAlignment;
+import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
@@ -26,14 +27,16 @@ import com.sencha.gxt.core.client.dom.XDOM;
  * creating a column model. After the column model is created, any changes
  * should be made to the column model, not the column config.
  */
-public class ColumnConfig<M, N> {
+public class ColumnConfig<M, N> implements HasHorizontalAlignment, HasVerticalAlignment {
 
   /**
    * True to disable keyboard column navigation of this column.
    */
   protected boolean ariaIgnore;
 
-  private HorizontalAlignmentConstant alignment;
+  private HorizontalAlignmentConstant horizontalAlignment;
+  private VerticalAlignmentConstant verticalAlignment;
+
   private Cell<N> cell;
 
   private boolean fixed;
@@ -45,6 +48,7 @@ public class ColumnConfig<M, N> {
   private boolean hideable = true;
   private boolean rowHeader;
   private boolean sortable = true;
+  private boolean cellPadding = true;
 
   private SafeHtml toolTip;
   private final ValueProvider<? super M, N> valueProvider;
@@ -52,8 +56,8 @@ public class ColumnConfig<M, N> {
   private Widget widget;
   private int width = 100;
 
+  private String cellClassName;
   private String columnHeaderClassName;
-  private String columnClassSuffix;
   private String columnTextClassName;
   private SafeStyles columnStyle = XDOM.EMPTY_SAFE_STYLE;
   private SafeStyles columnTextStyle = XDOM.EMPTY_SAFE_STYLE;
@@ -102,10 +106,19 @@ public class ColumnConfig<M, N> {
   /**
    * Returns the column's horizontal alignment.
    * 
-   * @return the horizontal alignment
+   * @return the horizontalAlignment
    */
-  public HorizontalAlignmentConstant getAlignment() {
-    return alignment;
+  public HorizontalAlignmentConstant getHorizontalAlignment() {
+    return horizontalAlignment;
+  }
+
+  /**
+   * Returns the column's vertical alignment.
+   *
+   * @return the verticalAlignment
+   */
+  public VerticalAlignmentConstant getVerticalAlignment() {
+    return verticalAlignment;
   }
 
   /**
@@ -118,12 +131,12 @@ public class ColumnConfig<M, N> {
   }
 
   /**
-   * Returns the columns class name.
+   * Returns the cell's class name(s).
    * 
-   * @return the column class name
+   * @return the cell's class name(s)
    */
-  public String getColumnClassSuffix() {
-    return columnClassSuffix;
+  public String getCellClassName() {
+    return cellClassName;
   }
 
   /**
@@ -227,6 +240,9 @@ public class ColumnConfig<M, N> {
     return width;
   }
 
+  public boolean isCellPadding() {
+    return cellPadding;
+  }
   /**
    * Returns true if the column width cannot be changed. Applies to both column
    * width calculations (auto fill, force fit, auto expand column) and user
@@ -303,11 +319,12 @@ public class ColumnConfig<M, N> {
 
   /**
    * Sets the column's horizontal alignment.
+   * This will affect cells with a rendering width less than 100%.
    * 
-   * @param alignment the alignment
+   * @param horizontalAlignment the horizontalAlignment
    */
-  public void setAlignment(HorizontalAlignmentConstant alignment) {
-    this.alignment = alignment;
+  public void setHorizontalAlignment(HorizontalAlignmentConstant horizontalAlignment) {
+    this.horizontalAlignment = horizontalAlignment;
   }
 
   /**
@@ -320,13 +337,21 @@ public class ColumnConfig<M, N> {
   }
 
   /**
-   * If provided, this value will be appended to 'x-grid3-td-' and be added to
-   * all table cells for the column.
-   * 
-   * @param columnClassSuffix the column class name
+   * Configures whether or not the column's cells should have the default padding around their contents. Defaults
+   * to true
+   *
+   * @param cellPadding false to disable padding around the contents of a cell
    */
-  public void setColumnClassSuffix(String columnClassSuffix) {
-    this.columnClassSuffix = columnClassSuffix;
+  public void setCellPadding(boolean cellPadding) {
+    this.cellPadding = cellPadding;
+  }
+  /**
+   * If provided, this value will be added to all table cells for the column.
+   * 
+   * @param cellClassName the cell class name(s)
+   */
+  public void setCellClassName(String cellClassName) {
+    this.cellClassName = cellClassName;
   }
 
   /**
@@ -384,7 +409,7 @@ public class ColumnConfig<M, N> {
   /**
    * True if the column width cannot be changed either by column model or user
    * resizing (defaults to false, pre-render).
-   * 
+   *
    * @param fixed true for fixed column width
    */
   public void setFixed(boolean fixed) {
@@ -491,6 +516,16 @@ public class ColumnConfig<M, N> {
    */
   public void setToolTip(SafeHtml toolTip) {
     this.toolTip = toolTip;
+  }
+
+  /**
+   * Sets the column's vertical alignment.
+   * This will affect cells with a rendering height less than 100%.
+   *
+   * @param verticalAlignment the verticalAlignment
+   */
+  public void setVerticalAlignment(VerticalAlignmentConstant verticalAlignment) {
+    this.verticalAlignment = verticalAlignment;
   }
 
   /**

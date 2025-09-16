@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -33,7 +33,6 @@ import com.sencha.gxt.data.shared.writer.DataWriter;
  */
 public class ScriptTagProxy<C> implements DataProxy<C, JavaScriptObject> {
 
-  private static int ID = 0;
   private String url;
 
   private DataWriter<C, String> writer;
@@ -59,12 +58,10 @@ public class ScriptTagProxy<C> implements DataProxy<C, JavaScriptObject> {
   }
 
   public void load(C loadConfig, final Callback<JavaScriptObject, Throwable> callback) {
-    String transId = "transId" + ID++;
     String prepend = url.indexOf("?") != -1 ? "&" : "?";
     String u = url + prepend + generateUrl(loadConfig);
 
     JsonpRequestBuilder b = new JsonpRequestBuilder();
-    b.setPredeterminedId(transId);// needed?
     b.requestObject(u, new AsyncCallback<JavaScriptObject>() {
       @Override
       public void onFailure(Throwable caught) {

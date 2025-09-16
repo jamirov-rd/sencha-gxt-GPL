@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,6 +22,7 @@ import com.google.gwt.core.ext.GeneratorContext;
 import com.google.gwt.core.ext.TreeLogger;
 import com.google.gwt.core.ext.UnableToCompleteException;
 import com.google.gwt.core.ext.typeinfo.JClassType;
+import com.google.gwt.core.ext.typeinfo.JField;
 import com.google.gwt.core.ext.typeinfo.JMethod;
 import com.google.gwt.core.ext.typeinfo.JType;
 import com.sencha.gxt.core.client.XTemplates.FormatterFactories;
@@ -65,11 +66,34 @@ public class Context {
     scopedVarDeref = childDeref;
     scopedVarType = childType;
     if (childType.isClassOrInterface() != null) {
-      // TODO field?
       for (JMethod m : childType.isClassOrInterface().getInheritableMethods()) {
-        if (m.getName().startsWith("get") && m.getName().length() > 3) {
-          String prop = m.getName().substring(3, 4).toLowerCase() + m.getName().substring(4);
-          knownValues.put(prop, m.getReturnType());
+        if (m.getParameters().length != 0) {
+          continue;
+        }
+        knownValues.put(m.getName(), m.getReturnType());
+        final String prop;
+        if (m.getName().startsWith("get") && m.getName().length() > "get".length()) {
+          prop = m.getName().substring(3, 4).toLowerCase() + m.getName().substring(4);
+        } else if (m.getName().startsWith("is") && m.getName().length() > "is".length()) {
+          prop = m.getName().substring(2, 3).toLowerCase() + m.getName().substring(3);
+        } else if (m.getName().startsWith("has") && m.getName().length() > "has".length()) {
+          prop = m.getName().substring(3, 4).toLowerCase() + m.getName().substring(4);
+        } else {
+          continue;
+        }
+        knownValues.put(prop, m.getReturnType());
+      }
+      for (JClassType superType : childType.isClassOrInterface().getFlattenedSupertypeHierarchy()) {
+        for (JField field : superType.isClassOrInterface().getFields()) {
+          // only public fields
+          if (!field.isPublic()) {
+            continue;
+          }
+          // let existing getters/setters declared above (and earlier fields) override (later) fields
+          if (knownValues.containsKey(field.getName())) {
+            continue;
+          }
+          knownValues.put(field.getName(), field.getType());
         }
       }
     }
@@ -259,16 +283,29 @@ public class Context {
       // if we have the key, then run with it -
       JType type = knownValues.get(localPath[0]);
       for (int i = 1; i < localPath.length; i++) {
-        // TODO field
-
+        JType nextType = null;
         JMethod[] possibleGetters = type.isClassOrInterface().getInheritableMethods();
         for (JMethod possible : possibleGetters) {
           // TODO this is wrong, if we intend to support getProperty() and
           // property(), and evaluate to the most specific method
           if (isMatchingGetter(possible, localPath[i])) {
-            type = possible.getReturnType();
+            nextType = possible.getReturnType();
             break;
           }
+        }
+
+        if (nextType == null) {
+          for (JClassType superType : type.isClassOrInterface().getFlattenedSupertypeHierarchy()) {
+            JField field = superType.isClassOrInterface().findField(localPath[i]);
+            if (field != null && field.isPublic()) {
+              nextType = field.getType();
+              break;
+            }
+          }
+        }
+        type = nextType;
+        if (type == null) {
+          return null;
         }
       }
       return type;
@@ -334,7 +371,6 @@ public class Context {
    * {@link FormatterFactory} and {@link FormatterFactories} annotations
    * @param formatterParams parameters to pass to the formatter factory method
    * @param expressionToFormat the java expression to be formatted
-   * @return
    * @throws UnableToCompleteException
    */
   private String getFormatterExpression(String formatterName, String formatterParams, String expressionToFormat, boolean canBeNull)

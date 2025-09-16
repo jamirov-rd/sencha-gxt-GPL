@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -32,8 +32,9 @@ import com.sencha.gxt.fx.client.DragHandler;
 import com.sencha.gxt.fx.client.DragMoveEvent;
 import com.sencha.gxt.fx.client.DragStartEvent;
 import com.sencha.gxt.fx.client.Draggable;
+import com.sencha.gxt.widget.core.client.Composite;
 import com.sencha.gxt.widget.core.client.Portlet;
-import com.sencha.gxt.widget.core.client.container.VerticalLayoutContainer.VerticalLayoutData;
+import com.sencha.gxt.widget.core.client.container.CssFloatLayoutContainer.CssFloatData;
 import com.sencha.gxt.widget.core.client.event.PortalDropEvent;
 import com.sencha.gxt.widget.core.client.event.PortalDropEvent.HasPortalDropHandlers;
 import com.sencha.gxt.widget.core.client.event.PortalDropEvent.PortalDropHandler;
@@ -48,8 +49,12 @@ import com.sencha.gxt.widget.core.client.event.PortalValidateDropEvent.PortalVal
  * columns.
  * 
  * <p />
+ * PortalLayoutContainer is not a container itself, but a Composite that wraps
+ * an internal container.
+ * 
+ * <p />
  * PortalLayoutContainer internally creates a
- * <code>VerticalLayoutContainer</code> for each column. The add, insert, remove
+ * <code>CssFloatLayoutContainer</code> for each column. The add, insert, remove
  * methods work against these internal containers, {@link #getWidget(int)}
  * returns the internal containers. The portlets are children of the internal
  * containers, not the portlet container itself.
@@ -77,8 +82,7 @@ import com.sencha.gxt.widget.core.client.event.PortalValidateDropEvent.PortalVal
   }
  * </pre>
  */
-public class PortalLayoutContainer extends CssFloatLayoutContainer implements HasPortalValidateDropHandlers,
-    HasPortalDropHandlers {
+public class PortalLayoutContainer extends Composite implements HasPortalValidateDropHandlers, HasPortalDropHandlers {
 
   @SuppressWarnings("javadoc")
   public interface PortalLayoutAppearance {
@@ -98,6 +102,8 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
   private Map<String, HandlerRegistration> handlerRegistrations = new HashMap<String, HandlerRegistration>();
   private DragHandler handler;
   private final PortalLayoutAppearance appearance;
+
+  private CssFloatLayoutContainer container;
 
   /**
    * Creates a portal layout container with the default appearance and the
@@ -123,21 +129,20 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
 
     handler = createHandler();
 
-    setAdjustForScroll(true);
+    container = new CssFloatLayoutContainer();
+    container.setAdjustForScroll(true);
+
+    initWidget(container);
+
     getElement().getStyle().setOverflow(Overflow.AUTO);
 
     for (int i = 0; i < numColumns; i++) {
-      VerticalLayoutContainer con = new VerticalLayoutContainer();
+      CssFloatLayoutContainer con = new CssFloatLayoutContainer();
       con.getElement().getStyle().setProperty("padding", spacing + "px 0 0 " + spacing + "px");
-      insert(con, getWidgetCount());
+      container.insert(con, container.getWidgetCount());
     }
   }
 
-  @Override
-  public void add(IsWidget child) {
-    throw new UnsupportedOperationException("method not supported with portals");
-  }
-  
   /**
    * Adds a portlet to the portal.
    * 
@@ -147,7 +152,7 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
   public void add(IsWidget w, int column) {
     insert((Portlet) asWidgetOrNull(w), getWidget(column).getWidgetCount(), column);
   }
-  
+
   /**
    * Adds a portlet to the portal.
    * 
@@ -158,11 +163,6 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
   public void add(Portlet portlet, int column) {
     insert(portlet, getWidget(column).getWidgetCount(), column);
   }
-  
-  @Override
-  public void add(Widget child) {
-    throw new UnsupportedOperationException("method not supported with portals");
-  }
 
   @Override
   public HandlerRegistration addDropHandler(PortalDropHandler handler) {
@@ -172,6 +172,19 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
   @Override
   public HandlerRegistration addValidateDropHandler(PortalValidateDropHandler handler) {
     return addHandler(handler, PortalValidateDropEvent.getType());
+  }
+
+  /**
+   * Removes all portlets from all columns.
+   */
+  public void clear() {
+    for (int i = 0; i < container.getWidgetCount(); i++) {
+      getWidget(i).clear();
+    }
+  }
+
+  public PortalLayoutAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -196,6 +209,16 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
   }
 
   /**
+   * Returns the internal container managed by this class that contains the
+   * child CssFloatLayoutContainer's for each column.
+   * 
+   * @return the container
+   */
+  public Container getContainer() {
+    return container;
+  }
+
+  /**
    * Returns the column of the given porlet.
    * 
    * @param portlet the portlet
@@ -203,8 +226,8 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
    */
   public int getPortletColumn(Portlet portlet) {
     Widget c = portlet.getParent();
-    if (c != null && c instanceof VerticalLayoutContainer) {
-      return getWidgetIndex(c);
+    if (c != null && c instanceof CssFloatLayoutContainer) {
+      return container.getWidgetIndex(c);
     }
     return -1;
   }
@@ -217,8 +240,8 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
    */
   public int getPortletIndex(Portlet portlet) {
     Widget c = portlet.getParent();
-    if (c != null && c instanceof VerticalLayoutContainer) {
-      return ((VerticalLayoutContainer) c).getWidgetIndex(portlet);
+    if (c != null && c instanceof CssFloatLayoutContainer) {
+      return ((CssFloatLayoutContainer) c).getWidgetIndex(portlet);
     }
     return -1;
   }
@@ -232,21 +255,6 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
     return spacing;
   }
 
-  @Override
-  public VerticalLayoutContainer getWidget(int index) {
-    return (VerticalLayoutContainer) super.getWidget(index);
-  }
-
-  @Override
-  public void insert(IsWidget w, int beforeIndex) {
-    throw new UnsupportedOperationException("method not supported with portals");
-  }
-
-  @Override
-  public void insert(IsWidget w, int beforeIndex, CssFloatData layoutData) {
-    throw new UnsupportedOperationException("method not supported with portals");
-  }
-
   /**
    * Inserts a portlet.
    * 
@@ -257,7 +265,7 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
   public void insert(IsWidget w, int index, int column) {
     insert((Portlet) asWidgetOrNull(w), index, column);
   }
-  
+
   /**
    * Inserts a portlet.
    * 
@@ -284,7 +292,8 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
     d.setSizeProxyToSource(true);
     d.setEnabled(!portlet.isPinned());
 
-    getWidget(column).insert(portlet, index, new VerticalLayoutData(1, -1, new Margins(0, 0, 10, 0)));
+
+    getWidget(column).insert(portlet, index, new CssFloatData(1, new Margins(0, 0, 10, 0)));
     getWidget(column).forceLayout();
   }
 
@@ -295,16 +304,6 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
    */
   public boolean isAutoScroll() {
     return autoScroll;
-  }
-
-  @Override
-  public boolean remove(int index) {
-    throw new UnsupportedOperationException("method not supported with portals");
-  }
-  
-  @Override
-  public boolean remove(IsWidget child) {
-    throw new UnsupportedOperationException("method not supported with portals");
   }
 
   /**
@@ -367,8 +366,8 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
    */
   public void setSpacing(int spacing) {
     this.spacing = spacing;
-    for (int i = 0; i < getWidgetCount(); i++) {
-      VerticalLayoutContainer con = getWidget(i);
+    for (int i = 0; i < container.getWidgetCount(); i++) {
+      CssFloatLayoutContainer con = getWidget(i);
       con.getElement().getStyle().setProperty("padding", spacing + "px 0 0 " + spacing + "px");
     }
   }
@@ -397,6 +396,16 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
       }
     };
 
+  }
+
+  /**
+   * Returns the column container for the given column.
+   *
+   * @param index the column index
+   * @return the column container
+   */
+  protected CssFloatLayoutContainer getWidget(int index) {
+    return (CssFloatLayoutContainer) container.getWidget(index);
   }
 
   protected void onPortletDragCancel(DragCancelEvent event) {
@@ -473,7 +482,7 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
 
     startColumns = new ArrayList<Integer>();
     for (int i = 0; i < numColumns; i++) {
-      VerticalLayoutContainer con = getWidget(i);
+      CssFloatLayoutContainer con = getWidget(i);
       int x = con.getAbsoluteLeft();
       startColumns.add(x);
     }
@@ -487,19 +496,15 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
     }
   }
 
-  @Override
-  protected void onResize(int width, int height) {
-    super.onResize(width, height);
-  }
-
   private void addInsert(int col, int row) {
     insertCol = col;
     insertRow = row;
 
-    VerticalLayoutContainer lc = getWidget(insertCol);
+    CssFloatLayoutContainer lc = getWidget(insertCol);
+    dummy.getStyle().setFloat(lc.getStyleFloat()); // use float style of column
 
     dummy.removeFromParent();
-    lc.getElement().insertChild(dummy, row);
+    lc.getElement().getFirstChildElement().<XElement>cast().insertChild(dummy, row);
   }
 
   private int getColumn(int x) {
@@ -514,7 +519,7 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
 
   private int getRow(int col, int y) {
     y += XDOM.getBodyScrollTop();
-    VerticalLayoutContainer con = getWidget(col);
+    CssFloatLayoutContainer con = getWidget(col);
     int count = con.getWidgetCount();
 
     for (int i = 0; i < count; i++) {
@@ -532,7 +537,7 @@ public class PortalLayoutContainer extends CssFloatLayoutContainer implements Ha
 
   private int getRowPosition(int col, int y) {
     y += XDOM.getBodyScrollTop();
-    VerticalLayoutContainer con = getWidget(col);
+    CssFloatLayoutContainer con = getWidget(col);
     List<Widget> list = new ArrayList<Widget>();
     for (int i = 0; i < con.getWidgetCount(); i++) {
       list.add(con.getWidget(i));

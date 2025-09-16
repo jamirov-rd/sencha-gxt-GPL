@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,13 +9,12 @@ package com.sencha.gxt.widget.core.client.container;
 
 import java.util.logging.Logger;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.uibinder.client.UiChild;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IndexedPanel;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Widget;
-import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.util.Size;
 
@@ -51,7 +50,7 @@ public class CardLayoutContainer extends InsertResizeContainer implements HasAct
    * Creates a card layout container.
    */
   public CardLayoutContainer() {
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
   }
 
   /**
@@ -116,14 +115,12 @@ public class CardLayoutContainer extends InsertResizeContainer implements HasAct
         // selected. when returning to tab with collapsed panel
         // the layout executes as it was forced
 
-        // layoutRequiredThisEventLoop = true;
-        // forceLayout();
-
-        if (GXT.isIE6() || GXT.isIE7()) {
-          layoutRequiredThisEventLoop = true;
-          forceLayout();
-        } else {
+        if (isAttached()) {
           doLayout();
+
+          if(this.activeWidget instanceof HasLayout) {
+            ((HasLayout)this.activeWidget ).forceLayout();
+          }
         }
 
       } else {
@@ -131,8 +128,13 @@ public class CardLayoutContainer extends InsertResizeContainer implements HasAct
         activeWidget.setVisible(true);
         add(widget);
         if (widget.asWidget().getParent() == this) {
-          layoutRequiredThisEventLoop = true;
-          forceLayout();
+          if (isAttached()) {
+            doLayout();
+
+            if(this.activeWidget instanceof HasLayout) {
+              ((HasLayout)this.activeWidget ).forceLayout();
+            }
+          }
         } else {
           activeWidget = null;
         }

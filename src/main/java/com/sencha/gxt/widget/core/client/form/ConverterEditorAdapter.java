@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,11 +14,10 @@ import com.google.gwt.editor.client.LeafValueEditor;
 import com.sencha.gxt.data.shared.Converter;
 
 /**
- * Adapter to allow an Editor to have a subeditor that acts on a {@link Converter}-modified instance
- * of the data.
+ * Adapter to allow an Editor to have a subeditor that acts on a {@link Converter}-modified instance of the data.
  * <p>
  * As an example, consider an {@code Order} object that has a property {@code vendorId}, which holds
- * the {@Vendor id} property of a {@code Vendor} object. But to draw the field, the full 
+ * the {@code id} property of a {@code Vendor} object. But to draw the field, the full
  * {@code Vendor} must be used in a {@code ComboBox&lt;Vendor>}:
  * </p>
  * <pre><code>

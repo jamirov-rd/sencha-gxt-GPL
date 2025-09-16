@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -17,7 +17,7 @@ public class DND {
    * target.
    */
   public enum Operation {
-    COPY, MOVE;
+    COPY, MOVE
   }
 
   /**
@@ -25,7 +25,7 @@ public class DND {
    * target will display.
    */
   public enum Feedback {
-    APPEND, INSERT, BOTH;
+    APPEND, INSERT, BOTH
   }
 
   /**
@@ -33,7 +33,7 @@ public class DND {
    * allowed with a tree drop target.
    */
   public enum TreeSource {
-    LEAF, NODE, BOTH;
+    LEAF, NODE, BOTH
   }
 
 }

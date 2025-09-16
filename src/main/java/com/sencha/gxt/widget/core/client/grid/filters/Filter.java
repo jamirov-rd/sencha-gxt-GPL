@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -28,21 +28,17 @@ import com.sencha.gxt.widget.core.client.grid.Grid;
 import com.sencha.gxt.widget.core.client.menu.Menu;
 
 /**
- * Provides an abstract base class for filters. A filter is applied to an object
- * such as a {@link Grid} to reduce the amount of information that is displayed,
- * thus highlighting the information of interest to the user. A filter is
+ * Provides an abstract base class for filters. A filter is applied to an object such as a {@link Grid} to reduce the
+ * amount of information that is displayed, thus highlighting the information of interest to the user. A filter is
  * generally invoked from a header menu.
  * <p/>
- * Derived classes provide type-specific filter support (e.g. string, number,
- * date, boolean, etc.) and must implement {@link #getFilterConfig()},
- * {@link #getValue()} and {@link #getType()}.
+ * Derived classes provide type-specific filter support (e.g. string, number, date, boolean, etc.) and must implement
+ * {@link #getFilterConfig()}, {@link #getValue()} and {@link #getType()}.
  * <p/>
- * To add a filter to a {@link Grid} column, create an instance of a concrete
- * subclass of {@link Filter}, passing to the constructor the
- * {@link ValueProvider} for the column, then add the filter to a
- * {@link GridFilters} using {@link GridFilters#addFilter(Filter)} and invoke
- * {@link GridFilters#initPlugin(Grid)}. The filter then appears in the grid
- * header menu item for any column that uses the supplied value provider.
+ * To add a filter to a {@link Grid} column, create an instance of a concrete subclass of {@link Filter}, passing to the
+ * constructor the {@link ValueProvider} for the column, then add the filter to a {@link GridFilters} using
+ * {@link GridFilters#addFilter(Filter)} and invoke {@link GridFilters#initPlugin(Grid)}. The filter then appears in the
+ * grid header menu item for any column that uses the supplied value provider.
  * 
  * @param <M> the model type
  * @param <V> the filter type
@@ -59,12 +55,11 @@ public abstract class Filter<M, V> implements HasUpdateHandlers, HasActivateHand
   private final ValueProvider<? super M, V> valueProvider;
 
   /**
-   * Creates a filter for the specified value provider. When used with
-   * {@link GridFilters}, the filter appears in the grid header menu item for
-   * any column that uses the supplied value provider.
+   * Creates a filter for the specified value provider. When used with {@link GridFilters}, the filter appears in the
+   * grid header menu item for any column that uses the supplied value provider.
    * 
-   * @param valueProvider the value provider that implements the interface to
-   *          the data model associated with this filter.
+   * @param valueProvider the value provider that implements the interface to the data model associated with this
+   *          filter.
    */
   public Filter(ValueProvider<? super M, V> valueProvider) {
     this.valueProvider = valueProvider;
@@ -88,13 +83,22 @@ public abstract class Filter<M, V> implements HasUpdateHandlers, HasActivateHand
   }
 
   /**
-   * Returns a list of filter configurations. Note that a filter may consist of
-   * multiple criteria (e.g. "date after" and "date before"). There is a filter
-   * configuration for each of these criteria.
+   * Returns a list of filter configurations. Note that a filter may consist of multiple criteria (e.g. "date after" and
+   * "date before"). There is a filter configuration for each of these criteria.
    * 
    * @return a list of filter configurations
    */
   public abstract List<FilterConfig> getFilterConfig();
+
+  /**
+   * Sets the filters values using the given filter configs. The values of the filter can be changed programatically
+   * using this method.
+   * 
+   * @param configs the list of filter configurations
+   */
+  public void setFilterConfig(List<FilterConfig> configs) {
+    assert false : "Filter subclass " + getClass() + " must override setFilterConfig to specify correct behavior";
+  }
 
   public FilterHandler<V> getHandler() {
     return handler;
@@ -119,17 +123,14 @@ public abstract class Filter<M, V> implements HasUpdateHandlers, HasActivateHand
   }
 
   /**
-   * Template method to be implemented by all subclasses that is to get and
-   * return the value of the filter.
+   * Template method to be implemented by all subclasses that is to get and return the value of the filter.
    */
   public abstract Object getValue();
 
   /**
-   * Returns the value provider that implements the interface to the data model
-   * associated with this filter.
+   * Returns the value provider that implements the interface to the data model associated with this filter.
    * 
-   * @return value provider that implements the data model interface for this
-   *         filter
+   * @return value provider that implements the data model interface for this filter
    */
   public ValueProvider<? super M, V> getValueProvider() {
     return valueProvider;
@@ -145,8 +146,8 @@ public abstract class Filter<M, V> implements HasUpdateHandlers, HasActivateHand
   }
 
   /**
-   * Sets the status of the filter and fires the appropriate events. You can
-   * only set it to active if the filter is activatable.
+   * Sets the status of the filter and fires the appropriate events. You can only set it to active if the filter is
+   * activatable.
    * 
    * @param active the new filter state
    * @param suppressEvent true to prevent events from being fired
@@ -166,20 +167,17 @@ public abstract class Filter<M, V> implements HasUpdateHandlers, HasActivateHand
   }
 
   /**
-   * Sets the filter handler for this filter. A filter handler is responsible
-   * for converting between a <code>String</code> representation of the filter
-   * and its native representation.
+   * Sets the filter handler for this filter. A filter handler is responsible for converting between a
+   * <code>String</code> representation of the filter and its native representation.
    * 
-   * @param handler for converting between <code>String</code> and native
-   *          representation of {@code <V>}.
+   * @param handler for converting between <code>String</code> and native representation of {@code <V>}.
    */
   public void setHandler(FilterHandler<V> handler) {
     this.handler = handler;
   }
 
   /**
-   * Number of milliseconds to wait after user interaction to fire an update
-   * (defaults to 500).
+   * Number of milliseconds to wait after user interaction to fire an update (defaults to 500).
    * 
    * @param updateBuffer the update buffer in milliseconds
    */
@@ -203,21 +201,18 @@ public abstract class Filter<M, V> implements HasUpdateHandlers, HasActivateHand
   protected abstract Class<V> getType();
 
   /**
-   * Template method to be implemented by all subclasses that is to return
-   * <code>true</code> if the filter has enough configuration information to be
-   * activated.
+   * Template method to be implemented by all subclasses that is to return <code>true</code> if the filter has enough
+   * configuration information to be activated.
    * 
-   * @return true if if the filter has enough configuration information to be
-   *         activated
+   * @return true if if the filter has enough configuration information to be activated
    */
   protected boolean isActivatable() {
     return true;
   }
 
   /**
-   * Template method to be implemented by all subclasses that is to validates
-   * the provided Model against the filters configuration. Defaults to
-   * <tt>return true</tt>.
+   * Template method to be implemented by all subclasses that is to validates the provided Model against the filters
+   * configuration. Defaults to <tt>return true</tt>.
    * 
    * @param model the model
    * @return true if valid

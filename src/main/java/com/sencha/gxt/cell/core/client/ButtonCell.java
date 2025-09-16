@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -34,6 +34,8 @@ import com.sencha.gxt.widget.core.client.event.ArrowSelectEvent.HasArrowSelectHa
 import com.sencha.gxt.widget.core.client.event.BeforeSelectEvent;
 import com.sencha.gxt.widget.core.client.event.BeforeSelectEvent.BeforeSelectHandler;
 import com.sencha.gxt.widget.core.client.event.BeforeSelectEvent.HasBeforeSelectHandlers;
+import com.sencha.gxt.widget.core.client.event.HideEvent;
+import com.sencha.gxt.widget.core.client.event.HideEvent.HideHandler;
 import com.sencha.gxt.widget.core.client.event.SelectEvent;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.HasSelectHandlers;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
@@ -53,20 +55,20 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
     /**
      * Arrow is aligned to the <b>bottom</b>
      */
-    BOTTOM;
+    BOTTOM
   }
 
   public interface ButtonCellAppearance<C> {
 
     XElement getButtonElement(XElement parent);
-    
+
     XElement getFocusElement(XElement parent);
 
-    void onFocus(XElement parent, boolean focused, NativeEvent event);
+    void onFocus(XElement parent, boolean focused);
 
-    void onOver(XElement parent, boolean over, NativeEvent event);
+    void onOver(XElement parent, boolean over);
 
-    void onPress(XElement parent, boolean pressed, NativeEvent event);
+    void onPress(XElement parent, boolean pressed);
 
     void onToggle(XElement parent, boolean pressed);
 
@@ -78,7 +80,7 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
    * ButtonScale enum.
    */
   public enum ButtonScale {
-    NONE, SMALL, MEDIUM, LARGE;
+    NONE, SMALL, MEDIUM, LARGE
   }
 
   /**
@@ -100,7 +102,7 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
     /**
      * Icons are aligned to the <b>left</b>.
      */
-    LEFT;
+    LEFT
   }
 
   private class UnpushHandler implements NativePreviewHandler {
@@ -119,8 +121,8 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
         reg.removeHandler();
 
         // Unpush the element.
-        appearance.onOver(parent, false, event.getNativeEvent());
-        appearance.onPress(parent, false, event.getNativeEvent());
+        appearance.onOver(parent, false);
+        appearance.onPress(parent, false);
       }
     }
   }
@@ -128,7 +130,7 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
   protected ImageResource icon;
   protected Menu menu;
   protected SafeHtml text = SafeHtmlUtils.EMPTY_SAFE_HTML;
-  protected final ButtonCellAppearance<C> appearance;
+  private final ButtonCellAppearance<C> appearance;
 
   private IconAlign iconAlign = IconAlign.LEFT;
   private ButtonArrowAlign arrowAlign = ButtonArrowAlign.RIGHT;
@@ -136,6 +138,9 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
   private AnchorAlignment menuAlign = new AnchorAlignment(Anchor.TOP_LEFT, Anchor.BOTTOM_LEFT, true);
   private boolean handleMouseEvents = true;
   private int minWidth = -1;
+  private XElement menuParent;
+  private HideHandler hideHandler;
+  private HandlerRegistration hideHandlerRegistration;
 
   public ButtonCell() {
     this(GWT.<ButtonCellAppearance<C>> create(ButtonCellAppearance.class));
@@ -163,19 +168,19 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
 
   @Override
   public void disable(com.google.gwt.cell.client.Cell.Context context, Element parent) {
-    appearance.onOver(parent.<XElement>cast(), false, null);
-    appearance.onFocus(parent.<XElement>cast(), false, null);
+    appearance.onOver(parent.<XElement> cast(), false);
+    appearance.onFocus(parent.<XElement> cast(), false);
   }
 
   @Override
   public void enable(com.google.gwt.cell.client.Cell.Context context, Element parent) {
-    appearance.onOver(parent.<XElement>cast(), false, null);
+    appearance.onOver(parent.<XElement> cast(), false);
   }
 
   /**
    * Returns the button's appearance.
    * 
-   * @return the apperance
+   * @return the appearance
    */
   public ButtonCellAppearance<C> getAppearance() {
     return appearance;
@@ -271,6 +276,9 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
     if (menu != null) {
       menu.hide();
     }
+    if (menuParent != null) {
+      menuParent = null;
+    }
   }
 
   @Override
@@ -359,7 +367,24 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
    * @param menu the menu
    */
   public void setMenu(Menu menu) {
+    if (this.menu != null && hideHandlerRegistration != null) {
+      hideHandlerRegistration.removeHandler();
+    }
     this.menu = menu;
+
+    if (menu != null) {
+      if (hideHandler == null) {
+        hideHandler = new HideHandler() {
+
+          @Override
+          public void onHide(HideEvent event) {
+            hideMenu();
+          }
+        };
+      }
+
+      hideHandlerRegistration = this.menu.addHideHandler(hideHandler);
+    }
   }
 
   /**
@@ -412,25 +437,27 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
    * @param target the element to align to
    */
   public void showMenu(Element target) {
+    menu.setOnHideFocusElement(getFocusElement(XElement.as(target)));
     menu.show(target, menuAlign);
   }
 
   protected void onBlur(XElement p, NativeEvent event) {
-    appearance.onFocus(p, false, event);
+    appearance.onFocus(p, false);
   }
 
   protected void onClick(Context context, XElement p, C value, NativeEvent event, ValueUpdater<C> valueUpdater) {
     if (!isDisableEvents() && fireCancellableEvent(context, new BeforeSelectEvent(context))) {
       if (menu != null) {
+        menuParent = p;
         showMenu(p);
       }
-      appearance.onOver(p, false, null);
+      appearance.onOver(p, false);
       fireEvent(context, new SelectEvent(context));
     }
   }
 
   protected void onFocus(XElement p, NativeEvent event) {
-    appearance.onFocus(p, true, event);
+    appearance.onFocus(p, true);
   }
 
   protected void onMouseDown(XElement parent, NativeEvent event) {
@@ -439,31 +466,37 @@ public class ButtonCell<C> extends ResizeCell<C> implements HasBeforeSelectHandl
       // stop images from being dragged in firefox
       if ("IMG".equals(target.getTagName())) {
         event.preventDefault();
+        // we need to explicitly focus, since we are preventing the event
+        getFocusElement(parent).focus();
       }
-      appearance.onPress(parent, true, event);
+      appearance.onPress(parent, true);
 
       new UnpushHandler(parent);
     }
   }
 
   protected void onMouseOut(XElement p, NativeEvent event) {
-    appearance.onOver(p, false, event);
+    appearance.onOver(p, false);
   }
 
   protected void onMouseOver(XElement p, NativeEvent event) {
-    appearance.onOver(p, true, event);
+    appearance.onOver(p, true);
   }
 
   protected void onMouseUp(XElement p, NativeEvent event) {
-    appearance.onPress(p, false, event);
+    appearance.onPress(p, false);
   }
 
   protected void onNavigationKey(com.google.gwt.cell.client.Cell.Context context, Element parent, C value,
       NativeEvent event, ValueUpdater<C> valueUpdater) {
     int key = event.getKeyCode();
-    
+
+    if (key == KeyCodes.KEY_DOWN && menu != null) {
+      onClick(context, parent.<XElement> cast(), value, event, valueUpdater);
+    }
+
     if (key == KeyCodes.KEY_ENTER || key == 32) {
-      onClick(context, parent.<XElement>cast(), value, event, valueUpdater);
+      onClick(context, parent.<XElement> cast(), value, event, valueUpdater);
     }
   }
 }

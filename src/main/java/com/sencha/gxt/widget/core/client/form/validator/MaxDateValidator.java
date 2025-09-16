@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,8 +14,12 @@ import com.google.gwt.editor.client.Editor;
 import com.google.gwt.editor.client.EditorError;
 import com.google.gwt.i18n.shared.DateTimeFormat;
 import com.google.gwt.i18n.shared.DateTimeFormat.PredefinedFormat;
+import com.sencha.gxt.core.client.util.DateWrapper;
 import com.sencha.gxt.messages.client.DefaultMessages;
 
+/**
+ * Tests if the value is on the same day or earlier than the specified max date.
+ */
 public class MaxDateValidator extends AbstractValidator<Date> {
 
   public interface MaxDateMessages {
@@ -36,7 +40,7 @@ public class MaxDateValidator extends AbstractValidator<Date> {
   private DateTimeFormat format = DateTimeFormat.getFormat(PredefinedFormat.DATE_SHORT);
 
   public MaxDateValidator(Date maxDate) {
-    this.maxDate = maxDate;
+    setMaxDate(maxDate);
   }
 
   public MaxDateValidator(Date maxDate, DateTimeFormat format) {
@@ -55,8 +59,13 @@ public class MaxDateValidator extends AbstractValidator<Date> {
     return messages;
   }
 
+  /**
+   * Sets the max date. Hours, minutes, seconds, and milliseconds are cleared.
+   * 
+   * @param maxDate the max date
+   */
   public void setMaxDate(Date maxDate) {
-    this.maxDate = maxDate;
+    this.maxDate = new DateWrapper(maxDate).clearTime().asDate();
   }
 
   public void setMessages(MaxDateMessages messages) {

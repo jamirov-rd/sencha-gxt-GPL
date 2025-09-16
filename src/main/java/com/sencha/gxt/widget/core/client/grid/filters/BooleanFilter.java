@@ -1,17 +1,17 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.grid.filters;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
-import com.sencha.gxt.core.client.util.Util;
 import com.sencha.gxt.data.shared.loader.BooleanFilterHandler;
 import com.sencha.gxt.data.shared.loader.FilterConfig;
 import com.sencha.gxt.data.shared.loader.FilterConfigBean;
@@ -93,7 +93,7 @@ public class BooleanFilter<M> extends Filter<M, Boolean> {
     FilterConfigBean config = new FilterConfigBean();
     config.setType("boolean");
     config.setValue(getHandler().convertToString((Boolean) getValue()));
-    return Util.<FilterConfig> createList(config);
+    return Collections.<FilterConfig>singletonList(config);
   }
 
   /**
@@ -115,6 +115,17 @@ public class BooleanFilter<M> extends Filter<M, Boolean> {
     return super.isActive();
   }
 
+  @Override
+  public void setFilterConfig(List<FilterConfig> configs) {
+    if (configs.size() == 0) {
+      setActive(false, false);
+    } else {
+      FilterConfig config = configs.get(0);
+      setValue(Boolean.parseBoolean(config.getValue()));
+      setActive(true, false);
+    }
+  }
+
   /**
    * Sets the local-sensitive messages used by this class.
    * 
@@ -126,6 +137,17 @@ public class BooleanFilter<M> extends Filter<M, Boolean> {
     noItem.setText(getMessages().noText());
   }
 
+  /**
+   * Sets the value of this filter. In order for the filter to be applied, {@link #setActive(boolean, boolean)} must be
+   * called when setting filter value programmatically.
+   * 
+   * @param value the value
+   */
+  public void setValue(boolean value) {
+    noItem.setChecked(!value);
+    yesItem.setChecked(value);
+  }
+
   @Override
   protected Class<Boolean> getType() {
     return Boolean.class;
@@ -134,7 +156,7 @@ public class BooleanFilter<M> extends Filter<M, Boolean> {
   @Override
   protected boolean isActivatable() {
     return super.isActivatable();
-  };
+  }
 
   @Override
   protected boolean validateModel(M model) {

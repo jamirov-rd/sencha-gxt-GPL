@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -79,7 +79,7 @@ public abstract class StoreFilterField<T> extends TriggerField<T> {
    */
   public void bind(Store<T> store) {
     stores.add(store);
-  };
+  }
 
   /**
    * Removes the specified store from the list of stores filtered by this store
@@ -92,7 +92,12 @@ public abstract class StoreFilterField<T> extends TriggerField<T> {
   }
 
   protected void applyFilters(Store<T> store) {
-    if (getText().length() > 0) {
+    String text = getText();
+    if (text.equals(getEmptyText())) {
+        text = "";
+    }
+    
+    if (text.length() > 0) {
       store.addFilter(filter);
       store.setEnableFilters(true);
     } else {

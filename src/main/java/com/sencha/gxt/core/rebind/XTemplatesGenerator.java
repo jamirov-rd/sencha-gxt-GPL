@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -93,7 +93,7 @@ public class XTemplatesGenerator extends Generator {
 
     SourceWriter sw = factory.createSourceWriter(context, pw);
 
-    for (JMethod method : toGenerate.getMethods()) {
+    for (JMethod method : toGenerate.getOverridableMethods()) {
       TreeLogger l = logger.branch(Type.DEBUG, "Creating XTemplate method " + method.getName());
       final String template;
       XTemplate marker = method.getAnnotation(XTemplate.class);
@@ -107,7 +107,7 @@ public class XTemplatesGenerator extends Generator {
             l.log(Type.WARN, "Found both source file and inline template, using source file");
           }
 
-          InputStream stream = getTemplateResource(context, toGenerate, l, marker.source());
+          InputStream stream = getTemplateResource(context, method.getEnclosingType(), l, marker.source());
           if (stream == null) {
             l.log(Type.ERROR, "No data could be loaded - no data at path " + marker.source());
             throw new UnableToCompleteException();
@@ -234,28 +234,24 @@ public class XTemplatesGenerator extends Generator {
 
           // parse out the quoted string literals first
           Matcher str = Pattern.compile("\"[^\"]+\"").matcher(contentChunk.content);
+          TreeLogger code = logger.branch(Type.DEBUG, "Parsing code segment: \"" + contentChunk.content + "\"");
           int lastMatchEnd = 0;
           while (str.find()) {
             int begin = str.start(), end = str.end();
             String escapedString = str.group();
             String unmatched = contentChunk.content.substring(lastMatchEnd, begin);
 
-            // replace all
-            // [a-zA-Z_]+[a-zA-Z0-9_]*(:?\\.[a-zA-Z_]+[a-zA-Z0-9_]*)*
-            // with scopeContext.deref
-            Matcher m = Pattern.compile("[a-zA-Z_]+[a-zA-Z0-9_]*(:?\\.[a-zA-Z_]+[a-zA-Z0-9_]*)*").matcher(unmatched);
-            while (m.find()) {
-              String ref = m.group();
-              m.appendReplacement(expr, scopeContext.deref(ref));
-            }
-            m.appendTail(expr);
+            appendCodeBlockOperatorOrIdentifier(scopeContext, expr, code, unmatched);
 
             expr.append(escapedString);
             lastMatchEnd = end;
           }
-          expr.append(contentChunk.content.substring(lastMatchEnd));
+          
+          //finish rest of non-string-lit expression
+          appendCodeBlockOperatorOrIdentifier(scopeContext, expr, code, contentChunk.content.substring(lastMatchEnd));
 
           params.add(expr.append(")").toString());
+          code.log(Type.DEBUG, "Final compiled expression: " + expr);
         } else if (contentChunk.type == ContentType.REFERENCE) {
           sb.append("{").append(argCount++).append("}");
 
@@ -335,6 +331,10 @@ public class XTemplatesGenerator extends Generator {
           String loopRef = controlChunk.controls.get("for");
 
           JType collectionType = scopeContext.getType(loopRef);
+          if (collectionType == null) {
+            logger.log(Type.ERROR, "Reference in 'for' attribute could not be found: '" + loopRef + "'. Please fix the expression in your template.");
+            throw new UnableToCompleteException();
+          }
           final JType localType;// type accessed within the loop
           final String localAccessor;// expr to access looped instance, where
                                      // %1$s is the loop obj, and %2$s is the
@@ -400,11 +400,42 @@ public class XTemplatesGenerator extends Generator {
   }
 
   /**
+   * Walks the code block string given and replaces all possible variables  (identified by 
+   * {@code [a-zA-Z_]+[a-zA-Z0-9_]*(:?\.[a-zA-Z_]+[a-zA-Z0-9_]*)*}) with the deref'd java expression.
+   * Any other content (operators, and possibly numeric literals) are appended as is.
+   * 
+   * This potentially will have an issue with {@code null}, {@code true}, {@code false} etc values.
+   * However, no earlier version correctly handled those cases, so not going to worry about it for
+   * now. The real fix is to stop using just regular expressions and switch to something a little
+   * more powerful.
+   * 
+   * @param context the current scope context
+   * @param expr the expression being built up, that java content should be appended to
+   * @param logger 
+   * @param nonStringLit the current expression from the xtemplate
+   * @throws UnableToCompleteException if something looking like a variable appears that can't be deref'd
+   */
+  private static void appendCodeBlockOperatorOrIdentifier(Context context, StringBuffer expr, TreeLogger logger, String nonStringLit)
+      throws UnableToCompleteException {
+    Matcher m = Pattern.compile("(:?[a-zA-Z_]+[a-zA-Z0-9_]*(:?\\.[a-zA-Z_]+[a-zA-Z0-9_]*)*|#)").matcher(nonStringLit);
+    while (m.find()) {
+      String ref = m.group();
+      String deref = context.deref(ref);
+      if (deref == null) {
+        logger.log(Type.ERROR, "Reference could not be found: '" + ref + "'.");
+        throw new UnableToCompleteException();
+      }
+      logger.log(Type.DEBUG, "Replaced " + ref + " with " + deref);
+      m.appendReplacement(expr, deref);
+    }
+    m.appendTail(expr);
+  }
+
+  /**
    * Builds an arg list ready to be passed into a method invocation. Effectively
    * is params.join(', ')
    * 
    * @param params
-   * @return
    */
   private String args(List<String> params) {
     StringBuilder sb = new StringBuilder();

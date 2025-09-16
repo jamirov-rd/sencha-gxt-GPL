@@ -1,15 +1,15 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.container;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.uibinder.client.UiChild;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.GXT;
@@ -69,7 +69,7 @@ public abstract class AbstractHtmlLayoutContainer extends Container {
   private SafeHtml html;
 
   protected AbstractHtmlLayoutContainer() {
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
   }
 
   /**
@@ -92,6 +92,12 @@ public abstract class AbstractHtmlLayoutContainer extends Container {
     Object layoutData = child.getLayoutData();
     if (layoutData instanceof HtmlData) {
       String selector = ((HtmlData) layoutData).getSelector();
+
+      //Workaround for EXTGWT-2454
+      if (selector.startsWith("#") && getElement().getOffsetParent() == null) {
+        selector = "//" + selector;
+      }
+
       XElement c = getContainerTarget().child(selector);
       if (c != null) {
         c.appendChild(child.getElement());
@@ -104,7 +110,7 @@ public abstract class AbstractHtmlLayoutContainer extends Container {
   protected SafeHtml getHTML() {
     return html;
   }
-  
+
   @Override
   protected void onAfterFirstAttach() {
     super.onAfterFirstAttach();

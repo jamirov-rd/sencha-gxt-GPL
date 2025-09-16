@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -48,7 +48,7 @@ public abstract class AbstractStateHandler<S, O> implements HasBeforeRestoreStat
 
   public HandlerRegistration addBeforeRestoreStateHandler(BeforeRestoreStateHandler<S, O> handler) {
     return ensureHandlers().addHandler(BeforeRestoreStateEvent.getType(), handler);
-  };
+  }
 
   public HandlerRegistration addBeforeSaveStateHandler(BeforeSaveStateEvent.BeforeSaveStateHandler<S, O> handler) {
     return ensureHandlers().addHandler(BeforeSaveStateEvent.getType(), handler);
@@ -57,7 +57,7 @@ public abstract class AbstractStateHandler<S, O> implements HasBeforeRestoreStat
   @Override
   public HandlerRegistration addRestoreStateHandler(RestoreStateHandler<S, O> handler) {
     return ensureHandlers().addHandler(RestoreStateEvent.getType(), handler);
-  };
+  }
 
   @Override
   public HandlerRegistration addSaveStateHandler(SaveStateHandler<S, O> handler) {

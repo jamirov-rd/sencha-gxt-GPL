@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,14 +13,14 @@ import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.theme.blue.client.tabs.BluePlainTabPanelAppearance.BluePlainTabPanelResources;
 import com.sencha.gxt.theme.blue.client.tabs.BluePlainTabPanelAppearance.BluePlainTabPanelStyle;
 import com.sencha.gxt.widget.core.client.PlainTabPanel;
-import com.sencha.gxt.widget.core.client.PlainTabPanel.PlainTabPanelAppearance;
+import com.sencha.gxt.widget.core.client.PlainTabPanel.PlainTabPanelBottomAppearance;
 
 /**
  * A blue-coloured appearance for {@link PlainTabPanel} with tabs below the
  * content area. This appearance differs from
  * {@link BlueTabPanelBottomAppearance} in that it has a simplified tab strip.
  */
-public class BluePlainTabPanelBottomAppearance extends BlueTabPanelBottomAppearance implements PlainTabPanelAppearance {
+public class BluePlainTabPanelBottomAppearance extends BlueTabPanelBottomAppearance implements PlainTabPanelBottomAppearance {
 
   public interface PlainTabPanelBottomTemplates extends BottomTemplate {
 

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -15,7 +15,6 @@ import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.InputElement;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
-import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.dom.XElement;
 
@@ -26,8 +25,6 @@ public class TextInputCell extends ValueBaseInputCell<String> {
 
     void render(SafeHtmlBuilder sb, String type, String value, FieldAppearanceOptions options);
   }
-
-  protected TextFieldAppearance appearance;
 
   private static Logger logger = Logger.getLogger(TextInputCell.class.getName());
 
@@ -40,7 +37,6 @@ public class TextInputCell extends ValueBaseInputCell<String> {
 
   public TextInputCell(TextFieldAppearance appearance) {
     super(appearance, "change", "keyup");
-    this.appearance = appearance;
 
     setWidth(150);
   }
@@ -61,25 +57,26 @@ public class TextInputCell extends ValueBaseInputCell<String> {
     }
     vd.setCurrentValue(newValue);
 
+    boolean change = valueUpdater != null && !vd.getCurrentValue().equals(vd.getLastValue());
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("finishEditing value " + (change ? "changed" : "not changed"));
+    }
+
     // Fire the value updater if the value has changed.
-    if (valueUpdater != null && !vd.getCurrentValue().equals(vd.getLastValue())) {
+    if (change) {
       vd.setLastValue(newValue);
       valueUpdater.update(newValue);
     }
 
-    // Blur the element.
-    if (!GXT.isIE9()) {
-      super.finishEditing(parent, newValue, key, valueUpdater);
-    } else {
-      //EXTGWT-1967
-      clearViewData(key);
-      clearFocusKey();
-    }
+    clearViewData(key);
+    clearFocusKey();
 
+    // calling super.finishEditing not needed as programmatic blurs causes issues
   }
 
+  @Override
   public TextFieldAppearance getAppearance() {
-    return appearance;
+    return (TextFieldAppearance) super.getAppearance();
   }
 
   @Override
@@ -117,10 +114,12 @@ public class TextInputCell extends ValueBaseInputCell<String> {
     ViewData viewData = checkViewData(context, value);
     String s = (viewData != null) ? viewData.getCurrentValue() : value;
 
+    s = getPropertyEditor().render(s);
+
     FieldAppearanceOptions options = new FieldAppearanceOptions(getWidth(), getHeight(), isReadOnly(), getEmptyText());
     options.setName(name);
     options.setDisabled(isDisabled());
-    appearance.render(sb, "text", s == null ? "" : s, options);
+    getAppearance().render(sb, "text", s == null ? "" : s, options);
   }
 
   @Override
@@ -130,7 +129,7 @@ public class TextInputCell extends ValueBaseInputCell<String> {
   }
 
   private native void clearFocusKey() /*-{
-		this.@com.google.gwt.cell.client.AbstractInputCell::focusedKey = null;
+        this.@com.google.gwt.cell.client.AbstractInputCell::focusedKey = null;
   }-*/;
 
 }

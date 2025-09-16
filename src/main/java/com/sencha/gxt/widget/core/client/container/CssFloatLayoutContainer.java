@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,6 +10,7 @@ package com.sencha.gxt.widget.core.client.container;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.event.dom.client.HasScrollHandlers;
 import com.google.gwt.event.dom.client.ScrollEvent;
@@ -30,6 +31,7 @@ import com.sencha.gxt.core.client.dom.ScrollSupport;
 import com.sencha.gxt.core.client.dom.ScrollSupport.ScrollMode;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
+import com.sencha.gxt.core.client.util.Margins;
 import com.sencha.gxt.core.client.util.Size;
 
 /**
@@ -58,9 +60,10 @@ public class CssFloatLayoutContainer extends InsertResizeContainer implements Ha
   /**
    * Specifies widget layout parameters that control the size of the widget.
    */
-  public static class CssFloatData implements HasSize, LayoutData {
+  public static class CssFloatData implements HasSize, HasMargins, LayoutData {
 
     private double width = -1;
+    private Margins margins;
 
     /**
      * Creates layout data for the CSS float layout container with the default
@@ -80,6 +83,11 @@ public class CssFloatLayoutContainer extends InsertResizeContainer implements Ha
       this.width = width;
     }
 
+    public CssFloatData(double width, Margins margins) {
+      this(width);
+      this.margins = margins;
+    }
+
     @Override
     public double getSize() {
       return width;
@@ -95,6 +103,15 @@ public class CssFloatLayoutContainer extends InsertResizeContainer implements Ha
       this.width = size;
     }
 
+    @Override
+    public Margins getMargins() {
+      return margins;
+    }
+
+    @Override
+    public void setMargins(Margins margins) {
+      this.margins = margins;
+    }
   }
 
   public interface CssFloatLayoutAppearance {
@@ -110,7 +127,7 @@ public class CssFloatLayoutContainer extends InsertResizeContainer implements Ha
   }
 
   protected boolean adjustForScroll = false;
-  protected final CssFloatLayoutAppearance appearance;
+  private final CssFloatLayoutAppearance appearance;
 
   private Style.Float styleFloat = LocaleInfo.getCurrentLocale().isRTL() ? Style.Float.RIGHT : Style.Float.LEFT;
   private ScrollSupport scrollSupport;
@@ -133,7 +150,7 @@ public class CssFloatLayoutContainer extends InsertResizeContainer implements Ha
     this.appearance = appearance;
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb);
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
   }
 
   /**

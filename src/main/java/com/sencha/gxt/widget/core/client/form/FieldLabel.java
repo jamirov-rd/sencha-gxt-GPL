@@ -1,25 +1,32 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.form;
 
+import java.util.logging.Logger;
+
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.safehtml.client.HasSafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.user.client.ui.HasHTML;
 import com.google.gwt.user.client.ui.HasText;
+import com.google.gwt.user.client.ui.HasWordWrap;
+import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.GXT;
+import com.sencha.gxt.core.client.Style.Side;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Size;
 import com.sencha.gxt.widget.core.client.ComponentHelper;
+import com.sencha.gxt.widget.core.client.container.MarginData;
 import com.sencha.gxt.widget.core.client.container.SimpleContainer;
 import com.sencha.gxt.widget.core.client.form.FormPanel.LabelAlign;
 
@@ -55,7 +62,7 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
   /**
    * A set of configuration parameters for a FieldLabel.
    */
-  public class FieldLabelOptions implements HasHTML, HasSafeHtml {
+  public class FieldLabelOptions implements HasHTML, HasSafeHtml, HasWordWrap {
 
     /** The justification of a field label inside its available space */
     private LabelAlign labelAlign = LabelAlign.LEFT;
@@ -88,6 +95,11 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
      * {@link #setHTML(String)} was last called.
      */
     private boolean htmlContent;
+
+    /**
+     * Whether the {@link #content} should word wrap as needed.
+     */
+    private boolean wordWrap = true;
 
     /**
      * Returns the content of the label. This string represents the text content
@@ -160,6 +172,15 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
     }
 
     /**
+     * Returns true if the {@link #content} should word wrap.
+     * 
+     * @return true if content should word wrap.
+     */
+    public boolean getWordWrap() {
+      return wordWrap;
+    }
+
+    /**
      * Returns true if the {@link #content} should be treated as HTML markup.
      * This is set depending on whether {@link #setText(String)} or
      * {@link #setHTML(String)} was last called.
@@ -226,6 +247,14 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
       htmlContent = false;
     }
 
+    /**
+     * Sets whether {@link #content} should word wrap.
+     * 
+     * @param wordWrap
+     */
+    public void setWordWrap(boolean wordWrap) {
+      this.wordWrap = wordWrap;
+    }
   }
 
   private final FieldLabelAppearance appearance;
@@ -246,8 +275,19 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
    * 
    * @param widget the widget to label
    */
-  public FieldLabel(Widget widget) {
+  public FieldLabel(IsWidget widget) {
     this(widget, GWT.<FieldLabelAppearance> create(FieldLabelAppearance.class));
+  }
+
+  /**
+   * Creates a field label with the specified the specified widget and
+   * appearance.
+   * 
+   * @param widget the widget to label
+   * @param appearance the appearance of the field label
+   */
+  public FieldLabel(IsWidget widget, FieldLabelAppearance appearance) {
+    this(asWidgetOrNull(widget), appearance);
   }
 
   /**
@@ -273,7 +313,7 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
 
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb, id, options);
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
 
     if (widget != null) {
       setWidget(widget);
@@ -287,7 +327,7 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
    * @param widget the widget to label
    * @param label the text to use for the label
    */
-  public FieldLabel(Widget widget, String label) {
+  public FieldLabel(IsWidget widget, String label) {
     this(widget);
     setText(label);
   }
@@ -299,9 +339,13 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
    * @param label the text to use for the label
    * @param appearance the appearance of the field label
    */
-  public FieldLabel(Widget widget, String label, FieldLabelAppearance appearance) {
+  public FieldLabel(IsWidget widget, String label, FieldLabelAppearance appearance) {
     this(widget, appearance);
     setText(label);
+  }
+
+  public FieldLabelAppearance getAppearance() {
+    return appearance;
   }
 
   @Override
@@ -345,6 +389,15 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
    */
   public int getLabelWidth() {
     return options.getLabelWidth();
+  }
+
+  /**
+   * Returns true if the label should be allowed to word wrap.
+   * 
+   * @return true if label should be allowed to word wrap.
+   */
+  public boolean isLabelWordWrap() {
+    return options.getWordWrap();
   }
 
   @Override
@@ -408,6 +461,16 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
     appearance.onUpdateOptions(getElement(), options);
   }
 
+  /**
+   * Sets whether the label should be allowed to word wrap.
+   * 
+   * @param wordWrap whether label should be allowed to word wrap.
+   */
+  public void setLabelWordWrap(boolean wordWrap) {
+    options.setWordWrap(wordWrap);
+    appearance.onUpdateOptions(getElement(), options);
+  }
+
   @Override
   public void setText(String text) {
     options.setText(text);
@@ -453,9 +516,22 @@ public class FieldLabel extends SimpleContainer implements HasText, HasHTML, Has
       int height = -1;
 
       if (!isAutoHeight()) {
-        height = size.getHeight() - getTopBottomMargins(widget);
+        if (options.getLabelAlign() == LabelAlign.TOP) {
+          height = size.getHeight() - getTopBottomMargins(widget)
+                  - getElement().getFrameWidth(Side.TOP, Side.BOTTOM)
+                  - appearance.getLabelElement(getElement()).getOffsetHeight()
+                  - appearance.getChildElementWrapper(getElement()).getFrameWidth(Side.TOP, Side.BOTTOM);
+        } else {
+          height = size.getHeight() - getTopBottomMargins(widget);
+        }
       }
 
+      if (widget.getLayoutData() instanceof MarginData) {
+        widget.getElement().getStyle().clearMargin();
+        MarginData data = (MarginData) widget.getLayoutData();
+        ((XElement) widget.getElement()).makePositionable();
+        ((XElement) widget.getElement()).setLeftTop(data.getMargins().getLeft(), data.getMargins().getTop());
+      }
       applyLayout(widget, width, height);
     }
   }

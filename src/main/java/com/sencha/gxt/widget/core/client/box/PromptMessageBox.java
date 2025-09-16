@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -17,11 +17,12 @@ import com.sencha.gxt.widget.core.client.form.TextField;
  * 
  * <pre>
     final PromptMessageBox mb = new PromptMessageBox("Description", "Please enter a brief description");
-    mb.addHideHandler(new HideHandler() {
-      public void onHide(HideEvent event) {
-        if (mb.getHideButton() == mb.getButtonById(PredefinedButton.OK.name())) {
+    mb.addDialogHideHandler(new DialogHideHandler() {
+      {@literal @}Override
+      public void onDialogHide(DialogHideEvent event) {
+        if (event.getHideButton() == PredefinedButton.OK) {
           // perform OK action
-        } else if (mb.getHideButton() == mb.getButtonById(PredefinedButton.CANCEL.name())) {
+        } else if (event.getHideButton() == PredefinedButton.CANCEL) {
           // perform CANCEL action
         }
       }

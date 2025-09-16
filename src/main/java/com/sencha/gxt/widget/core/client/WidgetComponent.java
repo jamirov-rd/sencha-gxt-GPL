@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -28,6 +28,21 @@ public class WidgetComponent extends Composite {
   public Widget getWidget() {
     // make public
     return super.getWidget();
-  };
-  
+  }
+
+  @Override
+  public void setStyleName(String style, boolean add) {
+    getWidget().setStyleName(style, add);
+  }
+
+  @Override
+  public void setStyleName(String style) {
+    getWidget().setStyleName(style);
+  }
+
+  @Override
+  public void removeStyleName(String style) {
+    getWidget().removeStyleName(style);
+  }
+
 }

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,6 +22,7 @@ import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.widget.core.client.cell.HandlerManagerContext;
 import com.sencha.gxt.widget.core.client.event.CellBeforeSelectionEvent;
@@ -40,8 +41,10 @@ public class SpinnerFieldCell<N extends Number> extends NumberInputCell<N> imple
 
   }
 
-  private Number minValue = Double.MIN_VALUE;
+  // Double.MIN_VALUE is the smallest positive nonzero value, so using negative MAX_VALUE instead
+  private Number minValue = Double.MAX_VALUE  * -1d;
   private Number maxValue = Double.MAX_VALUE;
+  private int cursorPosition;
 
   public SpinnerFieldCell(NumberPropertyEditor<N> propertyEditor) {
     this(propertyEditor, GWT.<SpinnerFieldAppearance> create(SpinnerFieldAppearance.class));
@@ -52,8 +55,8 @@ public class SpinnerFieldCell<N extends Number> extends NumberInputCell<N> imple
   }
 
   /**
-   * Adds a {@link BeforeSelectionEvent} handler. The handler will be passed an
-   * instance of {@link CellBeforeSelectionEvent} which can be cast to.
+   * Adds a {@link BeforeSelectionEvent} handler. The handler will be passed an instance of
+   * {@link BeforeSelectionEvent} which can in this case be cast to {@link CellBeforeSelectionEvent}.
    * 
    * @param handler the handler
    * @return the registration for the event
@@ -64,8 +67,8 @@ public class SpinnerFieldCell<N extends Number> extends NumberInputCell<N> imple
   }
 
   /**
-   * Adds a {@link SelectionEvent} handler. The handler will be passed an
-   * instance of {@link CellSelectionEvent} which can be cast to.
+   * Adds a {@link SelectionEvent} handler. The handler will be passed an instance of {@link SelectionEvent} which
+   * can in this case be cast to {@link CellSelectionEvent}.
    * 
    * @param handler the handler
    * @return the registration for the event
@@ -175,6 +178,7 @@ public class SpinnerFieldCell<N extends Number> extends NumberInputCell<N> imple
           }
           input.setValue(getPropertyEditor().render(newVal));
         }
+
         if (context instanceof HandlerManagerContext) {
           HandlerManager manager = ((HandlerManagerContext) context).getHandlerManager();
           CellSelectionEvent.fire(manager, context, newVal);
@@ -183,6 +187,12 @@ public class SpinnerFieldCell<N extends Number> extends NumberInputCell<N> imple
         }
       }
     }
+  }
+
+  @Override
+  protected void onMouseDown(XElement parent, NativeEvent event) {
+    super.onMouseDown(parent, event);
+    cursorPosition = Math.max(0, getCursorPos(parent));
   }
 
   @Override
@@ -206,20 +216,66 @@ public class SpinnerFieldCell<N extends Number> extends NumberInputCell<N> imple
   @Override
   protected void onTriggerClick(Context context, XElement parent, NativeEvent event, N value, ValueUpdater<N> updater) {
     super.onTriggerClick(context, parent, event, value, updater);
+
+    // EXTGWT-2402
+    if (GXT.isIE9() || GXT.isGecko()) {
+      getInputElement(parent).focus();
+    }
+
+    boolean positive = !getText(parent).startsWith("-");
+
     if (!isReadOnly() && !isDisabled()) {
       doSpin(context, parent, value, updater, true);
     }
-    getInputElement(parent).focus();
+    if (!GXT.isIE9() && !GXT.isGecko()) {
+      getInputElement(parent).focus();
+    }
+
+    boolean afterSpinPositive = !getText(parent).startsWith("-");
+
+    if (positive && !afterSpinPositive) {
+      ++cursorPosition;
+    } else if (!positive && afterSpinPositive && cursorPosition > 1) {
+      --cursorPosition;
+    }
+
+    int length = getText(parent).length();
+    if (cursorPosition <= length) {
+      select(parent, cursorPosition, 0);
+    }
   }
 
   @Override
   protected void onTwinTriggerClick(Context context, XElement parent, NativeEvent event, N value,
       ValueUpdater<N> updater) {
     super.onTwinTriggerClick(context, parent, event, value, updater);
+
+    boolean positive = !getText(parent).startsWith("-");
+
+    // EXTGWT-2402
+    if (GXT.isIE9() || GXT.isGecko()) {
+      getInputElement(parent).focus();
+    }
     if (!isReadOnly() && !isDisabled()) {
       doSpin(context, parent, value, updater, false);
     }
-    getInputElement(parent).focus();
+    if (!GXT.isIE9() && !GXT.isGecko()) {
+      getInputElement(parent).focus();
+    }
+
+    boolean afterSpinPositive = !getText(parent).startsWith("-");
+
+    if (positive && !afterSpinPositive) {
+      ++cursorPosition;
+    } else if (!positive && afterSpinPositive && cursorPosition > 1) {
+      --cursorPosition;
+    }
+
+    int length = getText(parent).length();
+    if (cursorPosition <= length) {
+      select(parent, cursorPosition, 0);
+    }
+
   }
 
 }

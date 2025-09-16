@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.slider;
 
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.resources.client.CssResource;
 import com.sencha.gxt.cell.core.client.SliderCell.SliderAppearance;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
@@ -60,22 +59,22 @@ public abstract class SliderBaseAppearance implements SliderAppearance {
   }
 
   @Override
-  public void onMouseDown(Context context, Element parent, NativeEvent event) {
+  public void onMouseDown(Context context, Element parent) {
     getThumb(parent).addClassName(style.drag());
   }
 
   @Override
-  public void onMouseOut(Context context, Element parent, NativeEvent event) {
+  public void onMouseOut(Context context, Element parent) {
     getThumb(parent).removeClassName(style.over());
   }
 
   @Override
-  public void onMouseOver(Context context, Element parent, NativeEvent event) {
+  public void onMouseOver(Context context, Element parent) {
     getThumb(parent).addClassName(style.over());
   }
 
   @Override
-  public void onMouseUp(Context context, Element parent, NativeEvent event) {
+  public void onMouseUp(Context context, Element parent) {
     getThumb(parent).removeClassName(style.drag());
   }
 

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -269,6 +269,8 @@ public abstract class Container extends Component implements HasWidgets.ForIsWid
 
       // Logical detach.
       getChildren().remove(child);
+      
+      widgetMap.remove(child).removeHandler();
 
       onRemove(child);
     }
@@ -276,7 +278,7 @@ public abstract class Container extends Component implements HasWidgets.ForIsWid
     fireEvent(new RemoveEvent(child));
     return true;
   }
-
+  
   protected int adjustIndex(Widget child, int beforeIndex) {
     checkIndexBoundsForInsertion(beforeIndex);
 

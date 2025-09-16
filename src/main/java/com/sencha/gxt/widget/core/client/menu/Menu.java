@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,9 @@
 package com.sencha.gxt.widget.core.client.menu;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.dom.client.NativeEvent;
@@ -26,6 +29,7 @@ import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.impl.FocusImpl;
 import com.sencha.gxt.core.client.Style;
 import com.sencha.gxt.core.client.Style.Anchor;
 import com.sencha.gxt.core.client.Style.AnchorAlignment;
@@ -47,7 +51,9 @@ import com.sencha.gxt.widget.core.client.event.BeforeHideEvent;
 import com.sencha.gxt.widget.core.client.event.BeforeShowEvent;
 import com.sencha.gxt.widget.core.client.event.HideEvent;
 import com.sencha.gxt.widget.core.client.event.MaximizeEvent;
+import com.sencha.gxt.widget.core.client.event.MaximizeEvent.MaximizeHandler;
 import com.sencha.gxt.widget.core.client.event.MinimizeEvent;
+import com.sencha.gxt.widget.core.client.event.MinimizeEvent.MinimizeHandler;
 import com.sencha.gxt.widget.core.client.event.ShowEvent;
 import com.sencha.gxt.widget.core.client.form.Field;
 
@@ -86,7 +92,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
 
   }
 
-  protected MenuAppearance appearance;
+  private final MenuAppearance appearance;
   protected BaseEventPreview eventPreview;
   protected KeyNav keyNav;
   protected Item parentItem;
@@ -100,6 +106,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   private boolean focusOnShow = true;
   private int maxHeight = Style.DEFAULT;
   private int minWidth = 120;
+  private Element onHideFocusElement;
   private int scrollerHeight = 8;
   private int scrollIncrement = 24;
   private boolean showing;
@@ -117,7 +124,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
     getElement().makePositionable(true);
 
     ul = appearance.getMenuList(getElement());
@@ -129,48 +136,51 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
 
     eventPreview = new BaseEventPreview() {
 
-      protected boolean onAutoHide(NativePreviewEvent pe) {
-        return Menu.this.onAutoHide(pe);
+      @Override
+      protected boolean onPreview(NativePreviewEvent pe) {
+        Menu.this.onPreviewEvent(pe);
+        return super.onPreview(pe);
       }
 
       @Override
       protected void onPreviewKeyPress(NativePreviewEvent pe) {
         super.onPreviewKeyPress(pe);
         onEscape(pe);
-      };
+      }
     };
 
     // add menu to ignore list
     eventPreview.getIgnoreList().add(getElement());
+    eventPreview.setAutoHide(false);
 
     getElement().setTabIndex(0);
     getElement().setAttribute("hideFocus", "true");
     getElement().addClassName(CommonStyles.get().ignore());
 
-    keyNav = new KeyNav() {
+    keyNav = new KeyNav(this) {
       public void onDown(NativeEvent evt) {
         onKeyDown(evt);
-      };
+      }
 
       public void onEnter(NativeEvent evt) {
         onKeyEnter(evt);
-      };
+      }
 
       public void onLeft(NativeEvent evt) {
         onKeyLeft(evt);
-      };
+      }
 
       public void onRight(NativeEvent evt) {
         onKeyRight(evt);
-      };
+      }
 
       public void onUp(NativeEvent evt) {
         onKeyUp(evt);
-      };
+      }
 
     };
 
-    sinkEvents(Event.MOUSEEVENTS | Event.ONCLICK);
+    sinkEvents(Event.MOUSEEVENTS | Event.ONCLICK | Event.ONMOUSEWHEEL);
   }
 
   @Override
@@ -178,9 +188,37 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
     return addHandler(handler, BeforeSelectionEvent.getType());
   }
 
+  /**
+   * Fires when the {@link Menu} is maximized.
+   * 
+   * @param handler sets the {@link MaximizeHandler}
+   * @return the {@link HandlerRegistration}.
+   */
+  public HandlerRegistration addMaximizeHandler(MaximizeHandler handler) {
+    return addHandler(handler, MaximizeEvent.getType());
+  }
+
+  /**
+   * Fires when the {@link Menu} is minimized.
+   * 
+   * @param handler sets the {@link MinimizeHandler}.
+   * @return the {@link HandlerRegistration}.
+   */
+  public HandlerRegistration addMinimizeHandler(MinimizeHandler handler) {
+    return addHandler(handler, MinimizeEvent.getType());
+  }
+
   @Override
   public HandlerRegistration addSelectionHandler(SelectionHandler<Item> handler) {
     return addHandler(handler, SelectionEvent.getType());
+  }
+  
+  /**
+   * Returns the appearance object for this instance
+   * @return the appearance impl used by this component
+   */
+  public MenuAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -240,7 +278,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
    * 
    * @param deep true to close all parent menus
    */
-  public void hide(boolean deep) {
+  public void hide(final boolean deep) {
     if (showing) {
       if (fireCancellableEvent(new BeforeHideEvent())) {
 
@@ -248,8 +286,23 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
           activeItem.deactivate();
           activeItem = null;
         }
+
         onHide();
-        RootPanel.get().remove(this);
+
+        Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+          @Override
+          public void execute() {
+            RootPanel.get().remove(Menu.this);
+            // if document.activeElement is null or the body element, focus on onHideFocusElement
+            if (onHideFocusElement != null &&
+                (XDOM.getActiveElement() == null
+                    || XDOM.getActiveElement().isOrHasChild(XElement.as(Document.get().getBody())) // IE8 sets activeElement to HTML
+                )) {
+              FocusImpl.getFocusImplForPanel().focus(onHideFocusElement);
+            }
+          }
+        });
+
         eventPreview.remove();
         showing = false;
         hidden = true;
@@ -257,6 +310,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
         if (deep && parentItem != null && parentItem.getParent() instanceof Menu) {
           ((Menu) parentItem.getParent()).hide(true);
         }
+
       }
     }
   }
@@ -317,8 +371,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   }
 
   /**
-   * Sets the active item. The widget must be of type <code>Item</code> to be
-   * activated. All other types are ignored.
+   * Sets the active item. The widget must be of type <code>Item</code> to be activated. All other types are ignored.
    * 
    * @param widget the widget to set active
    * @param autoExpand true to auto expand the item
@@ -345,8 +398,8 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   }
 
   /**
-   * Sets whether the menu should be constrained to the viewport when shown.
-   * Only applies when using {@link #showAt(int, int)}.
+   * Sets whether the menu should be constrained to the viewport when shown. Only applies when using
+   * {@link #showAt(int, int)}.
    * 
    * @param constrainViewport true to constrain
    */
@@ -355,8 +408,8 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   }
 
   /**
-   * Sets the default {@link XElement#alignTo} anchor position value for this
-   * menu relative to its element of origin (defaults to "tl-bl?").
+   * Sets the default {@link XElement#alignTo} anchor position value for this menu relative to its element of origin
+   * (defaults to "tl-bl?").
    * 
    * @param defaultAlign the default align
    */
@@ -365,8 +418,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   }
 
   /**
-   * True to enable vertical scrolling of the children in the menu (defaults to
-   * true).
+   * True to enable vertical scrolling of the children in the menu (defaults to true).
    * 
    * @param enableScrolling true to for scrolling
    */
@@ -384,8 +436,8 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   }
 
   /**
-   * Sets the max height of the menu (defaults to -1). Only applies when
-   * {@link #setEnableScrolling(boolean)} is set to true.
+   * Sets the max height of the menu (defaults to -1). Only applies when {@link #setEnableScrolling(boolean)} is set to
+   * true.
    * 
    * @param maxHeight the max height
    */
@@ -403,8 +455,18 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
   }
 
   /**
-   * The {@link XElement#alignTo} anchor position value to use for submenus of
-   * this menu (defaults to "tl-tr-?").
+   * Sets the element that should receive focus onHide unless the onHide was triggered by
+   * focusing on a different element. This is typically set on the top-level menu rather than
+   * a sub menu
+   *
+   * @param onHideFocusElement the element to focus on during onHide
+   */
+  public void setOnHideFocusElement(Element onHideFocusElement) {
+    this.onHideFocusElement = onHideFocusElement;
+  }
+
+  /**
+   * The {@link XElement#alignTo} anchor position value to use for submenus of this menu (defaults to "tl-tr-?").
    * 
    * @param subMenuAlign the sub alignment
    */
@@ -416,28 +478,29 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
    * Displays this menu relative to another element.
    * 
    * @param elem the element to align to
-   * @param alignment the {@link XElement#alignTo} anchor position to use in
-   *          aligning to the element (defaults to defaultAlign)
+   * @param alignment the {@link XElement#alignTo} anchor position to use in aligning to the element (defaults to
+   *          defaultAlign)
    */
   public void show(Element elem, AnchorAlignment alignment) {
-    show(elem, alignment, new int[] {0, 0});
+    show(elem, alignment, 0, 0);
   }
 
   /**
    * Displays this menu relative to another element.
    * 
    * @param elem the element to align to
-   * @param alignment the {@link XElement#alignTo} anchor position to use in
-   *          aligning to the element (defaults to defaultAlign)
-   * @param offsets the menu align offsets
+   * @param alignment the {@link XElement#alignTo} anchor position to use in aligning to the element (defaults to
+   *          defaultAlign)
+   * @param offsetX X offset
+   * @param offsetY Y offset
    */
-  public void show(Element elem, AnchorAlignment alignment, int[] offsets) {
+  public void show(Element elem, AnchorAlignment alignment, int offsetX, int offsetY) {
     if (!fireCancellableEvent(new BeforeShowEvent())) {
       return;
     }
 
-    RootPanel.get().add(this);
     getElement().makePositionable(true);
+    RootPanel.get().add(this);
 
     onShow();
     getElement().updateZIndex(0);
@@ -445,12 +508,12 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
     showing = true;
     doAutoSize();
 
-    getElement().alignTo(elem, alignment, offsets);
+    getElement().alignTo(elem, alignment, offsetX, offsetY);
 
     if (enableScrolling) {
       constrainScroll(getElement().getY());
     }
-    getElement().show();
+    showElement();
 
     eventPreview.add();
 
@@ -458,6 +521,23 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
       focus();
     }
     fireEvent(new ShowEvent());
+  }
+
+  /**
+   * Displays the element only.
+   * <p/>
+   * Override this method to provide an animation when showing the menu.
+   * <pre><code>
+   * Menu menu1 = new Menu() {
+   *   @Override
+   *   protected void showElement() {
+   *     getElement().<FxElement> cast().slideIn(Direction.DOWN);
+   *   }
+   * };
+   * </code></pre>
+   */
+  protected void showElement() {
+    getElement().show();
   }
 
   /**
@@ -480,9 +560,8 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
       return;
     }
 
-    RootPanel.get().add(this);
-
     getElement().makePositionable(true);
+    RootPanel.get().add(this);
 
     onShow();
     getElement().updateZIndex(0);
@@ -500,7 +579,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
       constrainScroll(y);
     }
 
-    getElement().show();
+    showElement();
     eventPreview.add();
 
     if (focusOnShow) {
@@ -611,7 +690,10 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
     }
   }
 
-  protected boolean onAutoHide(NativePreviewEvent pe) {
+  /**
+   * Provides information about external events occurring in the DOM, allow the menu to decide to hide if necessary
+   */
+  protected void onPreviewEvent(NativePreviewEvent pe) {
     int type = pe.getTypeInt();
     switch (type) {
       case Event.ONMOUSEDOWN:
@@ -623,7 +705,7 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
         // ignore targets within a parent with x-ignore, such as the listview in
         // a combo
         if (target.findParent(".x-ignore", 10) != null) {
-          return false;
+          return;
         }
 
         // is the target part of the sub menu chain, if yes, dont out hide
@@ -632,11 +714,11 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
           if (active instanceof MenuItem) {
             MenuItem menuItem = (MenuItem) active;
             if (menuItem.getParent().getElement().isOrHasChild(target)) {
-              return false;
+              return;
             }
             if (menuItem.getSubMenu() != null && menuItem.getSubMenu().isVisible()) {
               if (menuItem.getSubMenu().getElement().isOrHasChild(target)) {
-                return false;
+                return;
               }
               active = menuItem.getSubMenu().activeItem;
             } else {
@@ -651,10 +733,10 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
 
         if (!getElement().isOrHasChild(target)) {
           hide(true);
-          return true;
+          return;
         }
     }
-    return false;
+    return;
   }
 
   protected void onClick(Event ce) {
@@ -669,6 +751,8 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
       if (activeItem != null && !activeItem.onEscape()) {
         return;
       }
+      pe.getNativeEvent().preventDefault();
+      pe.getNativeEvent().stopPropagation();
       hide(false);
     }
   }
@@ -746,6 +830,12 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
     EventTarget to = ce.getRelatedEventTarget();
     if (activeItem != null && (to == null || (Element.is(to) && !activeItem.getElement().isOrHasChild(Element.as(to))))
         && activeItem.shouldDeactivate(ce)) {
+      if (to != null && Element.is(to)) {
+        XElement xto = to.cast();
+        if (xto.findParent("." + CommonStyles.get().ignore(), 3) != null) {
+          return;
+        }
+      }
       deactivateActiveItem();
     }
   }
@@ -793,6 +883,12 @@ public class Menu extends InsertContainer implements HasBeforeSelectionHandlers<
     } else {
       p.removeClassName(HideMode.DISPLAY.value());
     }
+  }
+
+  @Override
+  protected void onWindowResize(int width, int height) {
+    super.onWindowResize(width, height);
+    hide(true);
   }
 
   protected void scrollMenu(boolean top) {

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,18 +14,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
+import com.sencha.gxt.core.client.Style;
 import com.sencha.gxt.core.client.dom.XElement;
-import com.sencha.gxt.core.client.resources.ThemeStyles;
+import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.Margins;
 import com.sencha.gxt.core.client.util.Size;
 import com.sencha.gxt.core.client.util.Util;
@@ -52,11 +55,9 @@ import com.sencha.gxt.widget.core.client.toolbar.FillToolItem;
 import com.sencha.gxt.widget.core.client.toolbar.SeparatorToolItem;
 import com.sencha.gxt.widget.core.client.toolbar.ToolBar;
 
-
 /**
- * A layout container for horizontal rows of widgets. Provides support for
- * automatic overflow (i.e. when there are too many widgets to display in the
- * available width -- see {@link #setEnableOverflow(boolean)}).
+ * A layout container for horizontal rows of widgets. Provides support for automatic overflow (i.e. when there are too
+ * many widgets to display in the available width -- see {@link #setEnableOverflow(boolean)}).
  * 
  * <p/>
  * Code Snippet:
@@ -82,13 +83,11 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
    */
   public enum HBoxLayoutAlign {
     /**
-     * Children are aligned horizontally at the <b>bottom</b> side of the
-     * container.
+     * Children are aligned horizontally at the <b>bottom</b> side of the container.
      */
     BOTTOM,
     /**
-     * Children are aligned horizontally at the <b>mid-height</b> of the
-     * container.
+     * Children are aligned horizontally at the <b>mid-height</b> of the container.
      */
     MIDDLE,
     /**
@@ -100,10 +99,16 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
      */
     STRETCHMAX,
     /**
-     * Children are aligned horizontally at the <b>top</b> side of the
-     * container.
+     * Children are aligned horizontally at the <b>top</b> side of the container.
      */
     TOP
+  }
+
+  public interface HBoxLayoutContainerAppearance extends BoxLayoutContainerAppearance {
+
+    ImageResource moreIcon();
+
+    String moreButtonStyle();
   }
 
   protected List<Widget> hiddens = new ArrayList<Widget>();
@@ -116,6 +121,7 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
   private int triggerWidth = 35;
   private Map<Widget, Integer> widthMap = new HashMap<Widget, Integer>();
   private Map<Widget, Integer> loopWidthMap = new HashMap<Widget, Integer>();
+  private Map<Widget, Integer> loopHeightMap = new HashMap<Widget, Integer>();
 
   private static Logger logger = Logger.getLogger(HBoxLayoutContainer.class.getName());
 
@@ -128,17 +134,40 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
   /**
    * Creates a new HBoxlayout.
-   * 
+   *
+   * @param appearance the hbox appearance
+   */
+  public HBoxLayoutContainer(HBoxLayoutContainerAppearance appearance) {
+    this(HBoxLayoutAlign.TOP, appearance);
+  }
+
+  /**
+   * Creates a new HBoxlayout.
+   *
    * @param align the horizontal alignment
    */
   public HBoxLayoutContainer(HBoxLayoutAlign align) {
-    super();
+    this(align, GWT.<HBoxLayoutContainerAppearance>create(HBoxLayoutContainerAppearance.class));
+  }
+
+  protected HBoxLayoutContainer(HBoxLayoutAlign align, HBoxLayoutContainerAppearance appearance) {
+    super(appearance);
     setHBoxLayoutAlign(align);
   }
 
   @Override
   public HandlerRegistration addOverflowHandler(OverflowHandler handler) {
     return addHandler(handler, OverflowEvent.getType());
+  }
+
+  /**
+   * Returns the horizontal layout appearance.
+   *
+   * @return the appearance
+   */
+  @Override
+  public HBoxLayoutContainerAppearance getAppearance() {
+    return (HBoxLayoutContainerAppearance) super.getAppearance();
   }
 
   /**
@@ -160,8 +189,7 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
   }
 
   /**
-   * True to show a drop down icon when the available width is less than the
-   * required width (defaults to true).
+   * True to show a drop down icon when the available width is less than the required width (defaults to true).
    * 
    * @param enableOverflow true to enable overflow support
    */
@@ -248,29 +276,30 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
       menu.add(new SeparatorMenuItem());
     } else if (w instanceof ToggleButton) {
-      final ToggleButton b = (ToggleButton)w;
-      
+      final ToggleButton b = (ToggleButton) w;
+
       final CheckMenuItem item = new CheckMenuItem(b.getText());
       item.setItemId(b.getItemId());
       item.setChecked(b.getValue());
-      
+
       if (b.getData("gxt-menutext") != null) {
         item.setText(b.getData("gxt-menutext").toString());
       }
 
       item.setEnabled(b.isEnabled());
-      
+
       item.addCheckChangeHandler(new CheckChangeHandler<CheckMenuItem>() {
 
         @Override
         public void onCheckChange(CheckChangeEvent<CheckMenuItem> event) {
-          b.setValue(event.getItem().isChecked());
+          // must pass true to cause value change event to fire
+          b.setValue(event.getItem().isChecked(), true);
           b.fireEvent(new SelectEvent());
         }
       });
 
       menu.add(item);
-      
+
     }
 
     if (menu.getWidgetCount() > 0) {
@@ -296,13 +325,77 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
     if (GXTLogConfiguration.loggingIsEnabled()) {
       logger.finest(getId() + " doLayout  size: " + size);
     }
-    
+
     if ((size.getHeight() == 0 && size.getWidth() == 0) || size.getWidth() == 0) {
       return;
     }
 
-    final int w = size.getWidth() - getScrollOffset();
+    int w = size.getWidth() - getScrollOffset();
     int h = size.getHeight();
+
+    int styleHeight = Util.parseInt(getElement().getStyle().getProperty("height"), Style.DEFAULT);
+    int styleWidth = Util.parseInt(getElement().getStyle().getProperty("width"), Style.DEFAULT);
+
+    boolean findWidth = styleWidth == -1;
+    boolean findHeight = styleHeight == -1;
+
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest(getId() + " findWidth: " + findWidth + " findHeight: " + findHeight);
+    }
+
+    int calculateWidth = 0;
+
+    int maxWidgetHeight = 0;
+    int maxMarginTop = 0;
+    int maxMarginBottom = 0;
+
+    for (int i = 0, len = getWidgetCount(); i < len; i++) {
+      Widget widget = getWidget(i);
+
+      BoxLayoutData layoutData = null;
+      Object d = widget.getLayoutData();
+      if (d instanceof BoxLayoutData) {
+        layoutData = (BoxLayoutData) d;
+      } else {
+        layoutData = new BoxLayoutData();
+        widget.setLayoutData(layoutData);
+      }
+
+      Margins cm = layoutData.getMargins();
+      if (cm == null) {
+        cm = new Margins(0);
+        layoutData.setMargins(cm);
+      }
+    }
+
+    if (findWidth || findHeight) {
+      for (int i = 0, len = getWidgetCount(); i < len; i++) {
+        Widget widget = getWidget(i);
+
+        if (!widget.isVisible()) {
+          continue;
+        }
+
+        BoxLayoutData layoutData = (BoxLayoutData) widget.getLayoutData();
+        Margins cm = layoutData.getMargins();
+
+        calculateWidth += widget.getOffsetWidth();
+        maxWidgetHeight = Math.max(maxWidgetHeight, widget.getOffsetHeight());
+
+        calculateWidth += (cm.getLeft() + cm.getRight());
+        maxMarginTop = Math.max(maxMarginTop, cm.getTop());
+        maxMarginBottom = Math.max(maxMarginBottom, cm.getBottom());
+      }
+      maxWidgetHeight += (maxMarginTop + maxMarginBottom);
+
+      if (findWidth) {
+        w = calculateWidth;
+      }
+
+      if (findHeight) {
+        h = maxWidgetHeight;
+      }
+    }
 
     int pl = 0;
     int pt = 0;
@@ -315,6 +408,13 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
       pr = getPadding().getRight();
     }
 
+    if (findHeight) {
+      h += pt + pb;
+    }
+    if (findWidth) {
+      w += pl + pr;
+    }
+
     int stretchHeight = h - pt - pb;
     int totalFlex = 0;
     int totalWidth = 0;
@@ -322,6 +422,8 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
     for (int i = 0, len = getWidgetCount(); i < len; i++) {
       Widget widget = getWidget(i);
+
+      widget.addStyleName(CommonStyles.get().positionable());
 
       // very strange behavior where clearing the margins in causing
       // widget.getOffsetWidth to return an invalid result (for buttons -5 px
@@ -339,23 +441,15 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
         triggerWidth = widget.getOffsetWidth() + 10;
       }
 
-      BoxLayoutData layoutData = null;
-      Object d = widget.getLayoutData();
-      if (d instanceof BoxLayoutData) {
-        layoutData = (BoxLayoutData) d;
-      } else {
-        layoutData = new BoxLayoutData();
-      }
-
+      BoxLayoutData layoutData = (BoxLayoutData) widget.getLayoutData();
       Margins cm = layoutData.getMargins();
-      if (cm == null) {
-        cm = new Margins(0);
-      }
-      
-      // TODO strange issue where getOffsetWidth call in 2nd loop is returning smaller number than acutal offset
+
+      // TODO strange issue where getOffsetWidth call in 2nd loop is returning smaller number than actual offset
       // when packing CENTER or END so we cache the offsetWidth for use in 2nd loop
+      // with buttons, the button is word wrapping causing the button to be narrower and taller
       int ww = widget.getOffsetWidth();
       loopWidthMap.put(widget, ww);
+      loopHeightMap.put(widget, widget.getOffsetHeight());
 
       totalFlex += layoutData.getFlex();
       totalWidth += (ww + cm.getLeft() + cm.getRight());
@@ -374,7 +468,7 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
     int extraWidth = w - totalWidth - pl - pr;
     int allocated = 0;
-    int cw, ch, ct;
+    int componentWidth, componentHeight, componentTop;
     int availableHeight = h - pt - pb;
 
     if (getPack().equals(BoxLayoutPack.CENTER)) {
@@ -390,35 +484,27 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
         continue;
       }
 
-      BoxLayoutData layoutData = null;
-      Object d = widget.getLayoutData();
-      if (d instanceof BoxLayoutData) {
-        layoutData = (BoxLayoutData) d;
-      } else {
-        layoutData = new BoxLayoutData();
-      }
+      BoxLayoutData layoutData = (BoxLayoutData) widget.getLayoutData();
       Margins cm = layoutData.getMargins();
-      if (cm == null) {
-        cm = new Margins(0);
-      }
 
-      cw = loopWidthMap.remove(widget);
-      ch = widget.getOffsetHeight();
+      componentWidth = loopWidthMap.remove(widget);
+      componentHeight = loopHeightMap.remove(widget);
+
       pl += cm.getLeft();
 
       pl = Math.max(0, pl);
       if (hBoxLayoutAlign.equals(HBoxLayoutAlign.MIDDLE)) {
-        int diff = availableHeight - (ch + cm.getTop() + cm.getBottom());
+        int diff = availableHeight - (componentHeight + cm.getTop() + cm.getBottom());
         if (diff == 0) {
-          ct = pt + cm.getTop();
+          componentTop = pt + cm.getTop();
         } else {
-          ct = pt + cm.getTop() + (diff / 2);
+          componentTop = pt + cm.getTop() + (diff / 2);
         }
       } else {
         if (hBoxLayoutAlign.equals(HBoxLayoutAlign.BOTTOM)) {
-          ct = h - (pb + cm.getBottom() + ch);
+          componentTop = h - (pb + cm.getBottom() + componentHeight);
         } else {
-          ct = pt + cm.getTop();
+          componentTop = pt + cm.getTop();
         }
 
       }
@@ -431,9 +517,9 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
       int width = -1;
       if (component) {
-        c.setPosition(pl, ct);
+        c.setPosition(pl, componentTop);
       } else {
-        XElement.as(widget.getElement()).setLeftTop(pl, ct);
+        XElement.as(widget.getElement()).setLeftTop(pl, componentTop);
       }
 
       if (getPack().equals(BoxLayoutPack.START) && layoutData.getFlex() > 0) {
@@ -443,8 +529,8 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
           add += (extraWidth - allocated);
         }
 
-        cw += add;
-        width = cw;
+        componentWidth += add;
+        width = componentWidth;
       }
       if (hBoxLayoutAlign.equals(HBoxLayoutAlign.STRETCH)) {
         applyLayout(
@@ -458,7 +544,7 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
       } else if (width > 0) {
         applyLayout(widget, width, -1);
       }
-      pl += cw + cm.getRight();
+      pl += componentWidth + cm.getRight();
     }
 
     // do we need overflow
@@ -498,7 +584,6 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
       }
     }
-
   }
 
   protected int getWidgetWidth(Widget widget) {
@@ -538,9 +623,10 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
       more = new TextButton();
       more.addStyleName("x-toolbar-more");
+      more.addStyleName(getAppearance().moreButtonStyle());
       more.setData("x-ignore-width", true);
       more.setData("gxt-more", "true");
-      more.setIcon(ThemeStyles.get().moreIcon());
+      more.setIcon(getAppearance().moreIcon());
       more.setMenu(moreMenu);
     }
 
@@ -551,6 +637,18 @@ public class HBoxLayoutContainer extends BoxLayoutContainer implements HasOverfl
 
   protected boolean isHidden(Widget w) {
     return hiddens != null && hiddens.contains(w);
+  }
+
+  @Override
+  protected void onInsert(int index, Widget child) {
+    super.onInsert(index, child);
+    child.addStyleName(CommonStyles.get().floatLeft());
+  }
+
+  @Override
+  protected void onRemove(Widget child) {
+    super.onRemove(child);
+    child.removeStyleName(CommonStyles.get().floatLeft());
   }
 
   protected void onOverflow() {

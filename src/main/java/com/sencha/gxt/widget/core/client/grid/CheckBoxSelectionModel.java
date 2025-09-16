@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,10 +12,12 @@ import java.util.List;
 import com.google.gwt.cell.client.AbstractCell;
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.dom.client.Element;
+import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.user.client.Event;
 import com.sencha.gxt.core.client.IdentityValueProvider;
+import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
 import com.sencha.gxt.data.shared.event.StoreClearEvent;
@@ -27,48 +29,106 @@ import com.sencha.gxt.widget.core.client.event.RowClickEvent;
 import com.sencha.gxt.widget.core.client.event.RowMouseDownEvent;
 
 /**
- * A grid selection model. To use, add the column config to the column model
- * using {@link #getColumn()}.
+ * A grid selection model. To use, add the column config to the column model using {@link #getColumn()} and assign as
+ * the grid's selection model via {@link Grid#setSelectionModel(GridSelectionModel)}.
  * 
  * <p>
- * This selection mode defaults to SelectionMode.MULTI and also supports
- * SelectionMode.SIMPLE. With SIMPLE, the control and shift keys do not need to
- * be pressed for multiple selections.
+ * This selection mode defaults to SelectionMode.MULTI and also supports SelectionMode.SIMPLE. With SIMPLE, the control
+ * and shift keys do not need to be pressed for multiple selections.
  * 
  * @param <M> the model data type
  */
 public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
 
-  public interface CheckBoxColumnAppearance<M> {
+  public interface CheckBoxColumnAppearance {
+
+    String getCellClassName();
+
+    String getCellInnerClassName();
 
     boolean isHeaderChecked(XElement header);
 
     void onHeaderChecked(XElement header, boolean checked);
 
-    void renderCheckBox(Context context, M value, SafeHtmlBuilder sb);
+    SafeHtml renderHeadCheckBox();
+
+    void renderCellCheckBox(Context context, Object value, SafeHtmlBuilder sb);
+
+    boolean isRowChecker(XElement target);
+
   }
 
   protected ColumnConfig<M, M> config;
 
-  private final CheckBoxColumnAppearance<M> appearance = GWT.create(CheckBoxColumnAppearance.class);
+  private final CheckBoxColumnAppearance appearance;
 
   private GroupingHandlerRegistration handlerRegistration = new GroupingHandlerRegistration();
+  private boolean showSelectAll = true;
 
-  public CheckBoxSelectionModel(IdentityValueProvider<M> valueProvider) {
+  /**
+   * Creates a CheckBoxSelectionModel that will operate on the row itself. To customize the row it is acting on, use a
+   * constructor that lets you specify a ValueProvider, to customize how each row is drawn, use a constructor that lets
+   * you specify an appearance instance.
+   */
+  public CheckBoxSelectionModel() {
+    this(new IdentityValueProvider<M>(), GWT.<CheckBoxColumnAppearance> create(CheckBoxColumnAppearance.class));
+  }
+
+  /**
+   * Creates a CheckBoxSelectionModel with a custom ValueProvider instance.
+   * 
+   * @param valueProvider the ValueProvider to use when constructing a ColumnConfig
+   */
+  public CheckBoxSelectionModel(ValueProvider<M, M> valueProvider) {
+    this(valueProvider, GWT.<CheckBoxColumnAppearance> create(CheckBoxColumnAppearance.class));
+  }
+
+  /**
+   * Creates a CheckBoxSelectionModel with a custom appearance instance.
+   * 
+   * @param appearance the appearance that should be used to render and update the checkbox
+   */
+  public CheckBoxSelectionModel(CheckBoxColumnAppearance appearance) {
+    this(new IdentityValueProvider<M>(), appearance);
+  }
+
+  /**
+   * Creates a CheckBoxSelectionModel with a custom ValueProvider and appearance.
+   * 
+   * @param valueProvider the ValueProvider to use when constructing a ColumnConfig
+   * @param appearance the appearance that should be used to render and update the checkbox
+   */
+  public CheckBoxSelectionModel(ValueProvider<M, M> valueProvider, final CheckBoxColumnAppearance appearance) {
+    this.appearance = appearance;
     config = newColumnConfig(valueProvider);
-    config.setColumnClassSuffix("checker");
+    config.setCellPadding(false);
     config.setWidth(20);
     config.setSortable(false);
+    config.setHideable(false);
     config.setResizable(false);
     config.setFixed(true);
     config.setMenuDisabled(true);
+    config.setCellClassName(appearance.getCellClassName());
+    config.setColumnHeaderClassName(appearance.getCellInnerClassName());
 
+    config.setHeader(appearance.renderHeadCheckBox());
     config.setCell(new AbstractCell<M>() {
       @Override
       public void render(Context context, M value, SafeHtmlBuilder sb) {
-        appearance.renderCheckBox(context, value, sb);
+        CheckBoxSelectionModel.this.render(context, value, sb);
       }
     });
+
+    deselectOnSimpleClick = false;
+  }
+
+  /**
+   * Returns the check box column appearance.
+   * 
+   * @return appearance
+   */
+  public CheckBoxColumnAppearance getAppearance() {
+    return appearance;
   }
 
   @Override
@@ -106,21 +166,30 @@ public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
   }
 
   /**
-   * Returns true if the header checkbox is selected.
+   * Returns true if the header checkbox is rendered and selected.
    * 
    * @return true if selected
    */
   public boolean isSelectAllChecked() {
-    if (grid != null && grid.isViewReady()) {
-      XElement hd = grid.getView().headerElem.child(".x-grid-hd-checker");
+    if (isShowSelectAll() && grid != null && grid.isViewReady()) {
+      XElement hd = grid.getView().getHeader().getHead(grid.getColumnModel().getColumns().indexOf(getColumn())).getElement();
       return appearance.isHeaderChecked(hd);
     }
     return false;
   }
 
   /**
-   * Sets the select all checkbox in the grid header and selects / deselects all
-   * rows.
+   * Returns true if this column header contains a checkbox that the user can interact with.
+   *
+   * @return true if the column header should contain a checkbox to select all items
+   */
+  public boolean isShowSelectAll() {
+    return showSelectAll;
+  }
+
+  /**
+   * Sets the select all checkbox in the grid header and selects / deselects all rows. If the header checkbox is not
+   * visible ({@link #setShowSelectAll(boolean)}), this will only update the visible row checkboxes.
    * 
    * @param select true to select all
    */
@@ -135,10 +204,27 @@ public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
     }
   }
 
+  /**
+   * True to show the select all checkbox in the grid header, false to hide it and prevent select all behavior. Defaults
+   * to true.
+   * <p/>
+   * Must either be called before the grid header is rendered, or calling code must force the header to be rerendered
+   * (for example, via {@link GridView#refresh(boolean)}, passing {@code true} to get the header to refresh).
+   *
+   * @param showSelectAll true to show a header checkbox, false to hide it
+   */
+  public void setShowSelectAll(boolean showSelectAll) {
+    this.showSelectAll = showSelectAll;
+    config.setHeader(showSelectAll ? appearance.renderHeadCheckBox() : SafeHtmlUtils.EMPTY_SAFE_HTML);
+  }
+
   protected void handleHeaderClick(HeaderClickEvent event) {
+    if (!isShowSelectAll()) {
+      return;
+    }
     ColumnConfig<M, ?> c = grid.getColumnModel().getColumn(event.getColumnIndex());
     if (c == config) {
-      XElement hd = event.getEvent().getEventTarget().<Element> cast().getParentElement().cast();
+      XElement hd = grid.getView().getHeader().getHead(grid.getColumnModel().getColumns().indexOf(getColumn())).getElement();
       boolean isChecked = appearance.isHeaderChecked(hd);
       if (isChecked) {
         setChecked(false);
@@ -151,20 +237,18 @@ public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
   }
 
   @Override
-  protected void handleRowClick(RowClickEvent event) {
-    Element target = event.getEvent().getEventTarget().cast();
-    if (target.getClassName().equals("x-grid-row-checker")) {
+  protected void onRowClick(RowClickEvent event) {
+    if (event.getColumnIndex() == grid.getColumnModel().getColumns().indexOf(getColumn())) {
       return;
     }
-    super.handleRowClick(event);
+    super.onRowClick(event);
   }
 
   @Override
-  protected void handleRowMouseDown(RowMouseDownEvent event) {
+  protected void onRowMouseDown(RowMouseDownEvent event) {
     boolean left = event.getEvent().getButton() == Event.BUTTON_LEFT;
-    Element target = event.getEvent().getEventTarget().cast();
 
-    if (left && target.getClassName().equals("x-grid-row-checker")) {
+    if (left && event.getColumnIndex() == grid.getColumnModel().getColumns().indexOf(getColumn())) {
       M model = listStore.get(event.getRowIndex());
       if (model != null) {
         if (isSelected(model)) {
@@ -174,11 +258,11 @@ public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
         }
       }
     } else {
-      super.handleRowMouseDown(event);
+      super.onRowMouseDown(event);
     }
   }
 
-  protected ColumnConfig<M, M> newColumnConfig(IdentityValueProvider<M> valueProvider) {
+  protected ColumnConfig<M, M> newColumnConfig(ValueProvider<M, M> valueProvider) {
     return new ColumnConfig<M, M>(valueProvider);
   }
 
@@ -192,16 +276,17 @@ public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
   protected void onClear(StoreClearEvent<M> event) {
     super.onClear(event);
     updateHeaderCheckBox();
-  };
+  }
 
   protected void onRefresh(RefreshEvent event) {
     updateHeaderCheckBox();
   }
 
+  @Override
   protected void onRemove(M model) {
     super.onRemove(model);
     updateHeaderCheckBox();
-  };
+  }
 
   @Override
   protected void onSelectChange(M model, boolean select) {
@@ -209,16 +294,24 @@ public class CheckBoxSelectionModel<M> extends GridSelectionModel<M> {
     updateHeaderCheckBox();
   }
 
+  protected void render(Context context, M value, SafeHtmlBuilder sb) {
+    appearance.renderCellCheckBox(context, value, sb);
+  }
+
   protected void setChecked(boolean checked) {
-    if (grid.isViewReady()) {
-      XElement hd = grid.getView().headerElem.child(".x-grid-hd-checker");
+    if (isShowSelectAll() && grid.isViewReady()) {
+      int idx = grid.getColumnModel().getColumns().indexOf(getColumn());
+      if (idx == -1) {
+        return;
+      }
+      XElement hd = grid.getView().getHeader().getHead(idx).getElement();
       if (hd != null) {
         appearance.onHeaderChecked(hd.getParentElement().<XElement> cast(), checked);
       }
     }
   }
 
-  private void updateHeaderCheckBox() {
+  protected void updateHeaderCheckBox() {
     setChecked(getSelection().size() == listStore.size());
   }
 

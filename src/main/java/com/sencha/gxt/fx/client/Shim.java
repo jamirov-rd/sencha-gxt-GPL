@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,11 +10,11 @@ package com.sencha.gxt.fx.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.dom.client.Style.Display;
-import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Window;
 import com.sencha.gxt.core.client.dom.Layer;
 import com.sencha.gxt.core.client.dom.XDOM;
@@ -28,12 +28,9 @@ import com.sencha.gxt.core.client.util.Rectangle;
  */
 public class Shim {
 
-  private static Shim instance;
+  private static final Shim instance = GWT.create(Shim.class);
 
   public static Shim get() {
-    if (instance == null) {
-      instance = new Shim();
-    }
     return instance;
   }
 
@@ -82,7 +79,7 @@ public class Shim {
   }
 
   protected XElement createShim(Element element, int left, int top, int width, int height) {
-    Layer l = new Layer(DOM.createDiv().<XElement> cast());
+    Layer l = new Layer(Document.get().createDivElement().<XElement> cast());
     l.enableShim();
 
     XElement e = l.getElement();

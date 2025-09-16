@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,6 +12,7 @@ import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.safecss.shared.SafeStyles;
+import com.google.gwt.safecss.shared.SafeStylesBuilder;
 import com.google.gwt.safecss.shared.SafeStylesUtils;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
@@ -43,8 +44,6 @@ public class FieldLabelDefaultAppearance implements FieldLabelAppearance {
 
     String fieldLabel();
 
-    String hideLabel();
-
   }
 
   public interface FieldLabelTemplate extends XTemplates {
@@ -58,7 +57,8 @@ public class FieldLabelDefaultAppearance implements FieldLabelAppearance {
   private Style style;
 
   public FieldLabelDefaultAppearance() {
-    this(GWT.<FieldLabelResources> create(FieldLabelResources.class), GWT.<FieldLabelTemplate> create(FieldLabelTemplate.class));
+    this(GWT.<FieldLabelResources> create(FieldLabelResources.class),
+        GWT.<FieldLabelTemplate> create(FieldLabelTemplate.class));
   }
 
   public FieldLabelDefaultAppearance(FieldLabelResources resources, FieldLabelTemplate template) {
@@ -82,6 +82,7 @@ public class FieldLabelDefaultAppearance implements FieldLabelAppearance {
     return childElementWrapper;
   }
 
+  @Override
   public XElement getLabelElement(XElement parent) {
     XElement labelElement = XElement.as(parent.getFirstChildElement());
     assert labelElement.is("label." + style.fieldLabel());
@@ -98,6 +99,7 @@ public class FieldLabelDefaultAppearance implements FieldLabelAppearance {
     return getLabelElement(parent).getInnerText();
   }
 
+  @Override
   public void onUpdateOptions(XElement parent, FieldLabelOptions options) {
     LabelAlign labelAlign = options.getLabelAlign();
     XElement fieldElement = getChildElementWrapper(parent);
@@ -127,6 +129,9 @@ public class FieldLabelDefaultAppearance implements FieldLabelAppearance {
       labelElement.getStyle().setWidth(options.getLabelWidth(), Unit.PX);
       fieldElement.getStyle().setPaddingLeft(options.getLabelWidth() + pad, Unit.PX);
     }
+
+    // Adjust for label word wrap
+    labelElement.getStyle().setProperty("whiteSpace", options.getWordWrap() ? "normal" : "nowrap");
   }
 
   @Override
@@ -138,7 +143,11 @@ public class FieldLabelDefaultAppearance implements FieldLabelAppearance {
     if (pad == 0) pad = 5;
 
     String fieldLabelWidth = align == LabelAlign.TOP ? "auto" : (labelWidth + "px");
-    SafeStyles fieldLabelStyles = SafeStylesUtils.fromTrustedString("width:" + fieldLabelWidth + ";");
+
+    SafeStylesBuilder fieldLabelStylesBuilder = new SafeStylesBuilder().appendTrustedString("width:" + fieldLabelWidth + ";");
+    fieldLabelStylesBuilder.appendTrustedString("white-space: " + (options.getWordWrap() ? "normal" : "nowrap") + ";");
+    
+    SafeStyles fieldLabelStyles = fieldLabelStylesBuilder.toSafeStyles();
 
     String fieldElementPadding = align == LabelAlign.TOP ? "0" : (labelWidth + pad + "px");
     SafeStyles fieldElementStyles = SafeStylesUtils.fromTrustedString("padding-left:" + fieldElementPadding + ";");

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -33,7 +33,12 @@ public class GrayTabPanelBottomAppearance extends GrayTabPanelAppearance impleme
 
   @Override
   public XElement getBar(XElement parent) {
-    return parent.selectNode("." + style.tabFooter());
+    return parent.getLastChild().cast();
+  }
+
+  @Override
+  public void onScrolling(XElement parent, boolean scrolling) {
+    parent.selectNode("." + style.tabFooter()).setClassName(style.tabScrolling(), scrolling);
   }
 
   @Override

@@ -1,30 +1,40 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.form;
 
+import java.util.Collections;
+import java.util.List;
+
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.DivElement;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.InputElement;
+import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.editor.client.EditorError;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.HasChangeHandlers;
+import com.google.gwt.event.logical.shared.ValueChangeEvent;
+import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.HasName;
 import com.sencha.gxt.core.client.GXT;
+import com.sencha.gxt.core.client.Style.Side;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
 import com.sencha.gxt.core.client.util.Rectangle;
+import com.sencha.gxt.core.client.util.TextMetrics;
 import com.sencha.gxt.messages.client.DefaultMessages;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.ComponentHelper;
@@ -33,10 +43,9 @@ import com.sencha.gxt.widget.core.client.form.FormPanel.Encoding;
 import com.sencha.gxt.widget.core.client.form.FormPanel.Method;
 
 /**
- * A file upload field. When using this field, the containing form panel's
- * encoding must be set to MULTIPART using
- * {@link FormPanel#setEncoding(Encoding)}. In addition, the method should be
- * set to POST using {@link FormPanel#setMethod(Method)}
+ * A file upload field. When using this field, the containing form panel's encoding must be set to MULTIPART using
+ * {@link FormPanel#setEncoding(Encoding)}. In addition, the method should be set to POST using
+ * {@link FormPanel#setMethod(Method)}
  * 
  * <p />
  * You must set a name for uploads to work with Firefox.
@@ -95,13 +104,14 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
 
     input = new TextField();
     input.setReadOnly(true);
+    input.setTabIndex(-1);
     getElement().appendChild(input.getElement());
 
-    sinkEvents(Event.ONCHANGE | Event.ONCLICK | Event.MOUSEEVENTS);
+    sinkEvents(Event.ONCHANGE | Event.ONCLICK | Event.MOUSEEVENTS | Event.KEYEVENTS);
 
     createFileInput();
 
@@ -125,6 +135,11 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
   }
 
   @Override
+  public HandlerRegistration addValueChangeHandler(ValueChangeHandler<String> valueChangeHandler) {
+    return addHandler(valueChangeHandler, ValueChangeEvent.getType());
+  }
+
+  @Override
   public void clear() {
     input.reset();
     createFileInput();
@@ -133,6 +148,19 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
   @Override
   public void clearInvalid() {
     // do nothing
+  }
+
+  @Override
+  public void finishEditing() {
+  }
+
+  public FileUploadFieldAppearance getAppearance() {
+    return appearance;
+  }
+
+  @Override
+  public List<EditorError> getErrors() {
+    return Collections.emptyList();
   }
 
   /**
@@ -201,6 +229,17 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
     if ((event.getTypeInt() != Event.ONCLICK) && event.getEventTarget().<Element> cast().isOrHasChild(file)) {
       button.onBrowserEvent(event);
     }
+
+    if (event.getTypeInt() == Event.ONKEYPRESS
+        && button.getElement().isOrHasChild(event.getEventTarget().<XElement> cast())) {
+      int key = event.getKeyCode();
+      switch (key) {
+        case KeyCodes.KEY_ENTER:
+        case 32:
+          file.click();
+          break;
+      }
+    }
   }
 
   @Override
@@ -218,12 +257,25 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
   }
 
   /**
+   * Convenience function for setting disabled/enabled by boolean.
+   * 
+   * @param enabled the enabled state
+   */
+  @Override
+  public void setEnabled(boolean enabled) {
+    input.setEnabled(enabled);
+    setReadOnly(enabled);
+    super.setEnabled(enabled);
+  }
+
+  /**
    * Sets the file upload field messages.
    * 
    * @param messages the messages
    */
   public void setMessages(FileUploadFieldMessages messages) {
     this.messages = messages;
+    this.button.setText(messages.browserText());
   }
 
   @Override
@@ -240,6 +292,8 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
   public void setReadOnly(boolean readonly) {
     button.setEnabled(readonly);
     input.setReadOnly(readonly);
+    // A invisible file input element hovers over displayed button
+    file.setVisibility(readonly);
   }
 
   @Override
@@ -265,8 +319,6 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
     ((InputElement) file.cast()).setName(name);
 
     getElement().insertFirst(file);
-
-    // file.setEnabled(isEnabled());
   }
 
   @Override
@@ -284,8 +336,8 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
   }
 
   /**
-   * Returns the file input element. You should not store a reference to this.
-   * When resetting this field the file input will change.
+   * Returns the file input element. You should not store a reference to this. When resetting this field the file input
+   * will change.
    */
   protected InputElement getFileInput() {
     return (InputElement) file.cast();
@@ -293,7 +345,7 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
 
   @Override
   protected XElement getFocusEl() {
-    return input.getElement();
+    return button.getElement();
   }
 
   @Override
@@ -318,11 +370,26 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
     if (GXT.isIE()) {
       input.setReadOnly(false);
     }
-    input.setValue(getFileInput().getValue());
+    input.removeToolTip();
+    String fileValue = getFileInput().getValue();
+    if (!(fileValue == null || "".equals(fileValue))) {
+      // browsers put C:\fakepath\ in the value.  We don't need to display that
+      fileValue = fileValue.substring(fileValue.lastIndexOf("\\") + 1);
+      input.clearInvalid();
+
+      TextMetrics tm = TextMetrics.get();
+      tm.bind(input.getInputEl());
+      int availableSpace = input.getInputEl().getOffsetWidth() - input.getInputEl().getPadding(Side.LEFT, Side.RIGHT);
+
+      if (tm.getWidth(fileValue) > availableSpace) {
+        input.setToolTip(fileValue);
+      }
+    }
+    input.setValue(fileValue);
     if (GXT.isIE()) {
       input.setReadOnly(true);
     }
-    input.focus();
+    button.focus();
   }
 
   @Override
@@ -333,6 +400,17 @@ public class FileUploadField extends Component implements IsField<String>, HasCh
   }
 
   protected void resizeFile() {
+    // button wraps to new line in IE8
+    if (!GXT.isIE8()) {
+      int height = input.getOffsetHeight();
+      if (height > 25) {
+        getElement().getStyle().setMarginBottom(4, Unit.PX);
+        height -= 2;
+        button.setHeight(height);
+        getElement().getFirstChildElement().getStyle().setHeight(height, Unit.PX);
+      }
+    }
+
     file.setWidth(button.getOffsetWidth());
   }
 

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -39,8 +39,6 @@ import com.sencha.gxt.widget.core.client.menu.Menu;
 public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasIcon, HasBeforeSelectHandlers,
     HasSelectHandlers, HasArrowSelectHandlers, HasSafeHtml {
 
-  protected ButtonCell<C> cell;
-
   public CellButtonBase() {
     this(new ButtonCell<C>());
   }
@@ -51,8 +49,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
 
   public CellButtonBase(ButtonCell<C> cell, C initialValue) {
     super(cell, initialValue, null, true);
-    this.cell = cell;
-    
+
     setAllowTextSelection(false);
 
     sinkEvents(Event.ONCLICK);
@@ -79,17 +76,22 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return the arrow alignment
    */
   public ButtonArrowAlign getArrowAlign() {
-    return cell.getArrowAlign();
+    return getCell().getArrowAlign();
+  }
+
+  @Override
+  public ButtonCell<C> getCell() {
+    return (ButtonCell<C>) super.getCell();
   }
 
   @Override
   public String getHTML() {
-    return cell.getHTML();
+    return getCell().getHTML();
   }
 
   @Override
   public ImageResource getIcon() {
-    return cell.getIcon();
+    return getCell().getIcon();
   }
 
   /**
@@ -98,7 +100,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return the icon alignment
    */
   public IconAlign getIconAlign() {
-    return cell.getIconAlign();
+    return getCell().getIconAlign();
   }
 
   /**
@@ -107,7 +109,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return the menu
    */
   public Menu getMenu() {
-    return cell.getMenu();
+    return getCell().getMenu();
   }
 
   /**
@@ -116,7 +118,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return the menu alignment
    */
   public AnchorAlignment getMenuAlign() {
-    return cell.getMenuAlign();
+    return getCell().getMenuAlign();
   }
 
   /**
@@ -125,7 +127,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return the minWidth the minimum width
    */
   public int getMinWidth() {
-    return cell.getMinWidth();
+    return getCell().getMinWidth();
   }
 
   /**
@@ -134,7 +136,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return false if mouse effects disabled
    */
   public boolean getMouseEvents() {
-    return cell.getMouseEvents();
+    return getCell().getMouseEvents();
   }
 
   /**
@@ -143,19 +145,19 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @return the button scale
    */
   public ButtonScale getScale() {
-    return cell.getScale();
+    return getCell().getScale();
   }
 
   @Override
   public String getText() {
-    return cell.getText();
+    return getCell().getText();
   }
 
   /**
    * Hide this button's menu (if it has one).
    */
   public void hideMenu() {
-    cell.hideMenu();
+    getCell().hideMenu();
   }
 
   @Override
@@ -168,13 +170,26 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
     }
   }
 
+  @Override
+  protected void onRedraw() {
+    super.onRedraw();
+    setTabIndex(tabIndex);
+  }
+
+  @Override
+  protected void onUnload() {
+    super.onUnload();
+    getCell().getAppearance().onFocus(getElement(), false);
+    getCell().getAppearance().onOver(getElement(), false);
+  }
+
   /**
    * Sets the arrow alignment (defaults to RIGHT).
    *
    * @param arrowAlign the arrow alignment
    */
   public void setArrowAlign(ButtonArrowAlign arrowAlign) {
-    cell.setArrowAlign(arrowAlign);
+    getCell().setArrowAlign(arrowAlign);
     redraw();
   }
 
@@ -185,13 +200,13 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
 
   @Override
   public void setHTML(String html) {
-    cell.setHTML(html);
+    getCell().setHTML(html);
     redraw();
   }
 
   @Override
   public void setIcon(ImageResource icon) {
-    cell.setIcon(icon);
+    getCell().setIcon(icon);
     redraw();
   }
 
@@ -201,7 +216,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @param iconAlign the icon alignment
    */
   public void setIconAlign(IconAlign iconAlign) {
-    cell.setIconAlign(iconAlign);
+    getCell().setIconAlign(iconAlign);
     redraw();
   }
 
@@ -212,7 +227,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    */
   @UiChild(limit = 1, tagname = "menu")
   public void setMenu(Menu menu) {
-    cell.setMenu(menu);
+    getCell().setMenu(menu);
     redraw();
   }
 
@@ -223,7 +238,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @param menuAlign the menu alignment
    */
   public void setMenuAlign(AnchorAlignment menuAlign) {
-    cell.setMenuAlign(menuAlign);
+    getCell().setMenuAlign(menuAlign);
     redraw();
   }
 
@@ -234,7 +249,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @param minWidth the minimum width
    */
   public void setMinWidth(int minWidth) {
-    cell.setMinWidth(minWidth);
+    getCell().setMinWidth(minWidth);
     redraw();
   }
 
@@ -245,7 +260,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @param handleMouseEvents false to disable mouse over changes
    */
   public void setMouseEvents(boolean handleMouseEvents) {
-    cell.setMouseEvents(handleMouseEvents);
+    getCell().setMouseEvents(handleMouseEvents);
   }
 
   /**
@@ -254,13 +269,19 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * @param scale the scale
    */
   public void setScale(ButtonScale scale) {
-    cell.setScale(scale);
+    getCell().setScale(scale);
     redraw();
   }
 
   @Override
+  public void setTabIndex(int tabIndex) {
+    this.tabIndex = tabIndex;
+    getFocusEl().setTabIndex(tabIndex);
+  }
+
+  @Override
   public void setText(String text) {
-    cell.setText(text);
+    getCell().setText(text);
     redraw();
   }
 
@@ -268,7 +289,7 @@ public class CellButtonBase<C> extends CellComponent<C> implements HasHTML, HasI
    * Show this button's menu (if it has one).
    */
   public void showMenu() {
-    cell.showMenu(getElement());
+    getCell().showMenu(getElement());
   }
   
   @Override

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -31,16 +31,15 @@ import com.sencha.gxt.widget.core.client.selection.CellSelectionChangedEvent.Has
 import com.sencha.gxt.widget.core.client.selection.SelectionChangedEvent.SelectionChangedHandler;
 
 /**
- * Cell based selection model. User {@link #selectCell(int, int)} to select a
- * cell and {@link #deselectAll()} to deselect.
- * 
+ * Cell based selection model. User {@link #selectCell(int, int)} to select a cell and {@link #deselectAll()} to
+ * deselect.
  * <p />
  * CellSelectionModel extends GridSelectionModel. However, CellSelectionModel
  * only supports cell selections, no row based selections or events are
  * supported. Use
- * {@link #addCellSelectionChangedHandler(CellSelectionChangedHandler)} to be
+ * {@link #addCellSelectionChangedHandler(com.sencha.gxt.widget.core.client.selection.CellSelectionChangedEvent.CellSelectionChangedHandler)} to be
  * notified of selection changes.
- * 
+ *
  * @param <M> the model type
  */
 public class CellSelectionModel<M> extends GridSelectionModel<M> implements HasCellSelectionChangedHandlers<M> {

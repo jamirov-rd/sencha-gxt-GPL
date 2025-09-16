@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -19,13 +19,13 @@ public class ConditionParser {
   private static final Pattern BIN_OPS = Pattern.compile("\\|\\||&&|\\<=|\\>=|\\<|\\>|==|!=|\\+|\\-|\\*|\\/");
   private static final Pattern METHOD_PATTERN = Pattern.compile("([a-zA-Z0-9\\._]+\\:[a-zA-Z0-9_]+\\([^\\)]*\\))");
   private static final Pattern UNARY_OPS = Pattern.compile("!|" + METHOD_PATTERN.pattern());
-  private static final Pattern LITERAL = Pattern.compile("[0-9]+|\\\"[^\\\"]*\\\"|\\\'[^\\\']*\\\'|true|false|null");
   private static final Pattern WHITESPACE = Pattern.compile("\\s");
 
   private static final Pattern POSSIBLE_STRING_LITERAL = Pattern.compile("\\\'([^\\\']*)\\\'");
 
-  private static final Pattern NON_REF = Pattern.compile(WHITESPACE.pattern() + "|" + LITERAL.pattern() + "|"
-      + BIN_OPS.pattern() + "|" + UNARY_OPS.pattern());
+  private static final Pattern NON_REF = Pattern.compile(WHITESPACE.pattern() + "|" + BIN_OPS.pattern() + "|" + UNARY_OPS.pattern());
+
+  private static final Pattern LITERAL = Pattern.compile("^(?:[0-9]+|\\\"[^\\\"]*\\\"|\\\'[^\\\']*\\\'|true|false|null)$");
   private TreeLogger log;
 
   public ConditionParser(TreeLogger log) {
@@ -45,11 +45,9 @@ public class ConditionParser {
       @SuppressWarnings("unused")
       String currentMatch = condition.substring(begin, end);
 
-      // look for unmatched sections, indicating refs
+      // look for unmatched sections, indicating either ref or literal
       if (lastMatchEnd < begin) {
-        Token ref = new Token();
-        ref.type = Token.Type.Reference;
-        ref.contents = condition.substring(lastMatchEnd, begin);
+        Token ref = buildRefOrLitToken(l, condition.substring(lastMatchEnd, begin));
         tokens.add(ref);
       }
       lastMatchEnd = end;
@@ -65,32 +63,44 @@ public class ConditionParser {
         // TODO consider leaving out whitespace...
         t.type = Token.Type.ExpressionLiteral;
         t.contents = m.group();
-
-        // look for accidental char/string mismatch
-        Matcher str = POSSIBLE_STRING_LITERAL.matcher(t.contents);
-        if (str.matches()) {
-          if (str.group(1).length() > 1) {
-            t.contents = "\"" + str.group(1) + "\"";
-          } else {
-            // TODO mechanism to disable this warn
-            l.log(
-                Type.WARN,
-                "Possible char was turned into a string, please be aware that both ' and \" marks are used for String objects in XTemplates");
-          }
-        }
       }
 
       tokens.add(t);
     }
     // look for ending trailing refs
     if (lastMatchEnd < condition.length()) {
-      Token ref = new Token();
-      ref.type = Token.Type.Reference;
-      ref.contents = condition.substring(lastMatchEnd);
+      Token ref = buildRefOrLitToken(l, condition.substring(lastMatchEnd));
       tokens.add(ref);
     }
 
     return tokens;
+  }
+
+  private Token buildRefOrLitToken(TreeLogger l, String contents) {
+    Token ref = new Token();
+    ref.contents = contents;
+    // This is either a literal or a reference
+    Matcher lit = LITERAL.matcher(ref.contents);
+    if (lit.matches()) {
+      // Matches the literal pattern
+      ref.type = Token.Type.ExpressionLiteral;
+      // look for accidental char/string mismatch
+      Matcher str = POSSIBLE_STRING_LITERAL.matcher(ref.contents);
+      if (str.matches()) {
+        if (str.group(1).length() > 1) {
+          ref.contents = "\"" + str.group(1) + "\"";
+        } else {
+          // TODO mechanism to disable this warn
+          l.log(
+              Type.WARN,
+              "Possible char was turned into a string, please be aware that both ' and \" marks are used for String objects in XTemplates");
+        }
+      }
+    } else {
+      // Must be a reference, mark it as such
+      ref.type = Token.Type.Reference;
+    }
+    return ref;
   }
 
   public static class Token {

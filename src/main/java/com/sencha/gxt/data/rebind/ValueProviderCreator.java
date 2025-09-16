@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -16,12 +16,14 @@ import com.google.gwt.core.ext.TreeLogger;
 import com.google.gwt.core.ext.TreeLogger.Type;
 import com.google.gwt.core.ext.UnableToCompleteException;
 import com.google.gwt.core.ext.typeinfo.JClassType;
+import com.google.gwt.core.ext.typeinfo.JField;
 import com.google.gwt.core.ext.typeinfo.JGenericType;
 import com.google.gwt.core.ext.typeinfo.JMethod;
+import com.google.gwt.core.ext.typeinfo.JType;
 import com.google.gwt.dev.util.Name;
-import com.google.gwt.dev.util.Strings;
 import com.google.gwt.editor.client.Editor.Path;
 import com.google.gwt.editor.rebind.model.ModelUtils;
+import com.google.gwt.thirdparty.guava.common.base.Joiner;
 import com.google.gwt.user.rebind.SourceWriter;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.rebind.AbstractCreator;
@@ -74,48 +76,21 @@ public class ValueProviderCreator extends AbstractCreator {
     this.readability = readability;
   }
 
+  public RequiredReadability getReadability() {
+    return readability;
+  }
+
   @Override
   protected void create(SourceWriter sw) throws UnableToCompleteException {
     sw.println("public static final %1$s INSTANCE = new %1$s();", getSimpleName());
     // @Override
     sw.println("public %1$s getValue(%2$s object) {", getValueTypeName(), getObjectTypeName());
-    String getter = getGetterExpression("object");
-    if (getter == null) {
-      if (readability == RequiredReadability.NEITHER || readability == RequiredReadability.SET) {
-        // getter is not required, but log it if someone tries to call it
-        getLogger().log(
-            Type.DEBUG,
-            "Getter could not be found (and apparently not needed), writting a log message to indicate that this is probably an error.");
-        sw.indentln("com.google.gwt.core.client.GWT.log(\"Getter was called on " + supertypeToImplement.getName()
-            + ", but no getter exists.\", new RuntimeException());");
-        sw.indentln("return null;");
-      } else {
-        getLogger().log(Type.ERROR, "No getter can be found, unable to proceed");
-        throw new UnableToCompleteException();
-      }
-    } else {
-      sw.indentln("return %1$s;", getter);
-    }
+    appendGetterBody(sw, "object");
     sw.println("}");
 
     // @Override
     sw.println("public void setValue(%1$s object, %2$s value) {", getObjectTypeName(), getValueTypeName());
-    String setter = getSetterExpression("object", "value");
-    if (setter == null) {
-      if (readability == RequiredReadability.NEITHER || readability == RequiredReadability.GET) {
-        // setter is not required, but log it if someone tries to call it
-        getLogger().log(
-            Type.DEBUG,
-            "Setter could not be found (and apparently not needed), writing a log message to indicate that this is probably an error.");
-        sw.indentln("com.google.gwt.core.client.GWT.log(\"Setter was called on " + supertypeToImplement.getName()
-            + ", but no setter exists.\", new RuntimeException());");
-      } else {
-        getLogger().log(Type.ERROR, "No setter can be found, unable to proceed");
-        throw new UnableToCompleteException();
-      }
-    } else {
-      sw.indentln("%1$s;", setter);
-    }
+    appendSetterBody(sw, "object", "value");
     sw.println("}");
 
     // @Override
@@ -134,7 +109,47 @@ public class ValueProviderCreator extends AbstractCreator {
     sw.println("}");
   }
 
-  protected String getGetterExpression(String objectName) {
+  protected void appendGetterBody(SourceWriter sw, String objectName)
+      throws UnableToCompleteException {
+    String getter = getGetterExpression(objectName);
+    if (getter == null) {
+      if (readability == RequiredReadability.NEITHER || readability == RequiredReadability.SET) {
+        // getter is not required, but log it if someone tries to call it
+        getLogger().log(
+            Type.DEBUG,
+            "Getter could not be found (and apparently not needed), writting a log message to indicate that this is probably an error.");
+        sw.indentln("com.google.gwt.core.client.GWT.log(\"Getter was called on " + supertypeToImplement.getName()
+            + ", but no getter exists.\", new RuntimeException());");
+        sw.indentln("return null;");
+      } else {
+        getLogger().log(Type.ERROR, "No getter can be found, unable to proceed");
+        throw new UnableToCompleteException();
+      }
+    } else {
+      sw.indentln("return %1$s;", getter);
+    }
+  }
+
+  protected void appendSetterBody(SourceWriter sw, String objectName, String valueName) throws UnableToCompleteException {
+    String setter = getSetterExpression(objectName, valueName);
+    if (setter == null) {
+      if (readability == RequiredReadability.NEITHER || readability == RequiredReadability.GET) {
+        // setter is not required, but log it if someone tries to call it
+        getLogger().log(
+            Type.DEBUG,
+            "Setter could not be found (and apparently not needed), writing a log message to indicate that this is probably an error.");
+        sw.indentln("com.google.gwt.core.client.GWT.log(\"Setter was called on " + supertypeToImplement.getName()
+            + ", but no setter exists.\", new RuntimeException());");
+      } else {
+        getLogger().log(Type.ERROR, "No setter can be found, unable to proceed");
+        throw new UnableToCompleteException();
+      }
+    } else {
+      sw.indentln("%1$s;", setter);
+    }
+  }
+
+  protected String getGetterExpression(String objectName) throws UnableToCompleteException {
     StringBuilder sb = new StringBuilder(objectName);
     try {
       getGetterHelper(path, sb);
@@ -181,13 +196,18 @@ public class ValueProviderCreator extends AbstractCreator {
 
   @Override
   protected String getPackageName() {
-    return getObjectType().getPackage().getName();
+    String pak = getObjectType().getPackage().getName();
+    if (!pak.startsWith("java.") && !pak.startsWith("javax.")) {
+      return pak;
+    }
+    //if this does start with java, we can just drop this anywhere, since java isn't likely
+    //to not be on the classpath...
+    return "com.sencha.gxt.core.client." + pak;
   }
 
   @Override
   protected String getSimpleName() {
-    return getObjectType().getName().replace('.', '_') + "_" + Strings.join(path.toArray(new String[path.size()]), "_")
-        + "_ValueProviderImpl";
+    return getObjectType().getName().replace('.', '_') + "_" + Joiner.on("_").join(path) + "_ValueProviderImpl";
   }
 
   @Override
@@ -203,16 +223,16 @@ public class ValueProviderCreator extends AbstractCreator {
    * @return the type returned of the last method
    * @throws NoSuchMethodException if a method cannot be found
    */
-  private JClassType getGetterHelper(List<String> path, StringBuilder sb) throws NoSuchMethodException {
+  private JClassType getGetterHelper(List<String> path, StringBuilder sb) throws NoSuchMethodException, UnableToCompleteException {
     JClassType type = getObjectType();
     for (String p : path) {
       if (type == null) {
         getLogger().log(Type.WARN, "Trying to find a method in a non-class, non-interface type.");
+        throw new UnableToCompleteException();
       }
-      // TODO field?
-      // TODO is, has
 
       // Pick a method to use
+      // Try getter first
       JMethod method = getMethod(type, p);
       if (method == null) {
         method = getMethod(type, "get" + cap(p));
@@ -223,23 +243,42 @@ public class ValueProviderCreator extends AbstractCreator {
       if (method == null) {
         method = getMethod(type, "has" + cap(p));
       }
-      if (method == null) {
+
+      // Fall back to field
+      JField field = getField(type, p);
+
+      if (method != null) {
+        sb.append(".").append(method.getName()).append("()");
+        type = method.getReturnType().isClassOrInterface();
+      } else if (field != null) {
+        sb.append(".").append(p);
+        type = field.getType().isClassOrInterface();
+      } else {
         getLogger().log(Type.WARN, "Method get" + cap(p) + " could not be found");
         throw new NoSuchMethodException();
       }
 
-      sb.append(".").append(method.getName()).append("()");
-
-      type = method.getReturnType().isClassOrInterface();
     }
     return type;
   }
 
-  private String getSetterExpression(String objectName, String valueName) {
+  private JField getField(JClassType type, String p) {
+    for (JClassType superType : type.getFlattenedSupertypeHierarchy()) {
+      JField field = superType.findField(p);
+      if (field != null && field.isPublic()){
+        return field;
+      }
+    }
+    return null;
+  }
+
+  private String getSetterExpression(String objectName, String valueName) throws UnableToCompleteException {
     StringBuilder sb = new StringBuilder(objectName);
 
     // find the getter from the start of the path
     List<String> getterPath = this.path.subList(0, this.path.size() - 1);
+    String lastPathElement = path.get(path.size() - 1);
+
     JClassType type = null;
     try {
       type = getGetterHelper(getterPath, sb);
@@ -247,17 +286,34 @@ public class ValueProviderCreator extends AbstractCreator {
       return null;
     }
     if (type == null) {
-      getLogger().log(Type.WARN, "Trying to find setter method on a non-class, non-interface type ");
+      getLogger().log(Type.WARN, "Trying to find setter method on a non-class, non-interface type.");
       return null;
     }
-    String methodName = "set" + cap(path.get(path.size() - 1));
-    sb.append(".").append(methodName).append("(").append(valueName).append(")");
-    if (null == getMethod(type, methodName)) {
-      getLogger().log(Type.DEBUG, "Method " + methodName + " could not be found ");
+
+    String methodName = "set" + cap(lastPathElement);
+
+    JMethod method = getMethod(type, methodName);
+    JField field = getField(type, lastPathElement);
+    if (method != null && typesMatch(getValueType(), method.getParameterTypes()[0])) {
+      sb.append(".").append(methodName).append("(").append(valueName).append(")");
+    } else if (field != null && typesMatch(getValueType(), field.getType())) {
+      sb.append(".").append(lastPathElement).append(" = ").append(valueName);
+    } else {
+      getLogger().log(Type.DEBUG, "Method " + methodName + " of type " + getValueType() + " could not be found.");
       return null;
     }
 
     return sb.toString();
+  }
+
+  private boolean typesMatch(JClassType a, JType b) {
+    if (b.isPrimitive() != null) {
+      return a.getQualifiedSourceName().equals(b.isPrimitive().getQualifiedBoxedSourceName());
+    } else {
+      assert b.isClassOrInterface() != null;
+
+      return b.isClassOrInterface().isAssignableTo(a);
+    }
   }
 
   private JClassType getValueType() {
@@ -266,7 +322,7 @@ public class ValueProviderCreator extends AbstractCreator {
     return params[1];
   }
 
-  private final String getValueTypeName() {
+  private String getValueTypeName() {
     return getValueType().getParameterizedQualifiedSourceName();
   }
 }

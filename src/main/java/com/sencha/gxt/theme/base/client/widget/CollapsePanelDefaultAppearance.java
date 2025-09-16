@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -16,7 +16,6 @@ import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
 import com.sencha.gxt.core.client.resources.ThemeStyles;
 import com.sencha.gxt.widget.core.client.CollapsePanel.CollapsePanelAppearance;
-
 public class CollapsePanelDefaultAppearance implements CollapsePanelAppearance {
 
   public interface CollapsePanelResources extends ClientBundle {
@@ -57,7 +56,7 @@ public class CollapsePanelDefaultAppearance implements CollapsePanelAppearance {
   @Override
   public void render(SafeHtmlBuilder sb, LayoutRegion region) {
     String cls = style.panel();
-    
+
     switch (region) {
       case WEST:
         cls += " " + style.west();
@@ -71,10 +70,12 @@ public class CollapsePanelDefaultAppearance implements CollapsePanelAppearance {
       case SOUTH:
         cls += " " + style.south();
         break;
+      default:
+        // empty
     }
-    
+
     cls += " " + ThemeStyles.get().style().border();
-    
+
     sb.appendHtmlConstant("<div class='" + cls + "'>");
     sb.appendHtmlConstant("<div class='" + style.iconWrap() + "'></div>");
     sb.appendHtmlConstant("</div>");

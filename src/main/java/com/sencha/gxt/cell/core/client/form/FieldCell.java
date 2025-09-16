@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -15,10 +15,12 @@ import com.google.gwt.cell.client.ValueUpdater;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.InputElement;
 import com.google.gwt.dom.client.NativeEvent;
+import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.user.client.Event;
 import com.sencha.gxt.cell.core.client.AbstractEventInputCell;
 import com.sencha.gxt.cell.core.client.ResizableCell;
 import com.sencha.gxt.cell.core.client.form.FieldCell.FieldViewData;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.KeyNav;
@@ -171,7 +173,7 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
   /**
    * Get the events consumed by the input cell.
    * 
-   * @param userEvents the events consumed by the subclass
+   * @param consumedEvents the events consumed by the subclass
    * @return the events
    */
   private static Set<String> getConsumedEventsImpl(String... consumedEvents) {
@@ -184,7 +186,7 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
     return getConsumedEventsImpl(userEvents);
   }
 
-  protected final FieldAppearance appearance;
+  private final FieldAppearance appearance;
   protected int height = -1;
   protected Context lastContext;
   protected XElement lastParent;
@@ -231,6 +233,14 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
     super.finishEditing(parent, value, key, valueUpdater);
   }
 
+  /**
+   * Returns the appearance implementation used by this cell instance
+   * @return the appearance impl used by this cell
+   */
+  public FieldAppearance getAppearance() {
+    return appearance;
+  }
+
   @Override
   public int getHeight() {
     return height;
@@ -268,6 +278,12 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
     String eventType = event.getType();
 
     if ((isReadOnly() || isDisabled()) && !("blur".equals(eventType) || "focus".equals(eventType))) {
+      // IE8 backspace causes navigation away from page when input is read only
+      // ignore tab.  Otherwise, IE8 will get stuck on that field when using keyboard nav
+      if (GXT.isIE8() && "keydown".equals(eventType) && (KeyCodes.KEY_TAB != event.getKeyCode()) && isReadOnly()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       return;
     }
 
@@ -311,7 +327,7 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
   public abstract void onEmpty(XElement parent, boolean empty);
 
   public void onValid(XElement parent, boolean valid) {
-    appearance.onValid(parent, valid);
+    getAppearance().onValid(parent, valid);
   }
 
   @Override
@@ -324,10 +340,21 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
     this.height = height;
   }
 
+  /**
+   * Sets the name attribute on the input element.
+   * 
+   * @param parent the parent
+   * @param name the name
+   */
   public void setName(XElement parent, String name) {
     getInputElement(parent).setAttribute("name", name);
   }
 
+  /**
+   * Sets the field's read only state. Relevant only when input type has the value "text" or "password".
+   * 
+   * @param readOnly the read only state
+   */
   public void setReadOnly(boolean readOnly) {
     this.readOnly = readOnly;
   }
@@ -359,6 +386,9 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
   }
 
   protected void clearContext() {
+    if (GXTLogConfiguration.loggingIsEnabled()) {
+      logger.finest("clearContext");
+    }
     lastContext = null;
     lastParent = null;
     lastValueUpdater = null;
@@ -387,7 +417,7 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
     clearViewData(context.getKey());
     focusContext = null;
     clearContext();
-    appearance.onFocus(parent, false);
+    getAppearance().onFocus(parent, false);
     fireEvent(context, new BlurEvent());
   }
 
@@ -401,7 +431,7 @@ public abstract class FieldCell<T> extends AbstractEventInputCell<T, FieldViewDa
     }
 
     focusContext = context;
-    appearance.onFocus(parent, true);
+    getAppearance().onFocus(parent, true);
     fireEvent(context, new FocusEvent());
   }
 

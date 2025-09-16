@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,7 +10,7 @@ package com.sencha.gxt.core.client.dom;
 import com.google.gwt.core.client.JavaScriptObject;
 
 /**
- * Loads the ext javascript to make avaliable Ext, Element, DomHelper, DomQuery,
+ * Loads the ext javascript to make available Ext, Element, DomHelper, DomQuery,
  * and Template objects available. Only the parts of the library being used are
  * loaded and were manually moved into the class. No event, listener, or
  * animation code is used. Provides low level dom related functions. A reference
@@ -21,7 +21,7 @@ class Ext {
   private static JavaScriptObject ext;
 
   /**
-   * Loads the native exj javascript.
+   * Loads the native ext javascript.
    */
   native static void loadExt() /*-{
 		var document = $doc;
@@ -31,7 +31,7 @@ class Ext {
 		if (!!Ext) {
 			return;
 		}
-		Ext = @com.sencha.gxt.core.client.dom.Ext::ext = {};		
+		Ext = @com.sencha.gxt.core.client.dom.Ext::ext = {};
 
 		Ext.apply = function(o, c, defaults) {
 			if (defaults) {
@@ -111,6 +111,7 @@ class Ext {
 			var tagTokenRe = /^(#)?([\w-\*]+)/;
 			var nthRe = /(\d*)n\+?(\d*)/, nthRe2 = /\D/;
 			var document = $doc;
+			var functions = {};
 			function child(p, index) {
 				var i = 0;
 				var n = p.firstChild;
@@ -151,7 +152,8 @@ class Ext {
 				return this;
 			}
 			;
-			byClassName = function(c, a, v) {
+			functions["byClassName"] = byClassName;
+			function byClassName(c, a, v) {
 				if (!v) {
 					return c;
 				}
@@ -163,7 +165,8 @@ class Ext {
 				}
 				return r;
 			};
-			attrValue = function(n, attr) {
+			functions["attrValue"] = attrValue;
+			function attrValue(n, attr) {
 				if (!n.tagName && typeof n.length != "undefined") {
 					n = n[0];
 				}
@@ -178,7 +181,8 @@ class Ext {
 				}
 				return n.getAttribute(attr) || n[attr];
 			};
-			getNodes = function(ns, mode, tagName) {
+			functions["getNodes"] = getNodes;
+			function getNodes(ns, mode, tagName) {
 				var result = [], ri = -1, cs;
 				if (!ns) {
 					return result;
@@ -189,7 +193,9 @@ class Ext {
 				}
 				if (!mode) {
 					for ( var i = 0, ni; ni = ns[i]; i++) {
-					    if (typeof ni.getElementsByTagNameNS != "undefined") {
+					    if (tagName == "*") {
+					        cs = ni.getElementsByTagName("*");
+					    } else if (typeof ni.getElementsByTagNameNS != "undefined") {
 						    cs = ni.getElementsByTagNameNS("*", tagName);
 					    } else {
 					        cs = ni.getElementsByTagName(tagName);
@@ -241,7 +247,8 @@ class Ext {
 				}
 				return a;
 			}
-			byTag = function(cs, tagName) {
+			functions["byTag"] = byTag;
+			function byTag(cs, tagName) {
 				if (cs.tagName || cs == document) {
 					cs = [ cs ];
 				}
@@ -257,7 +264,8 @@ class Ext {
 				}
 				return r;
 			};
-			byId = function(cs, attr, id) {
+			functions["byId"] = byId;
+			function byId(cs, attr, id) {
 				if (cs.tagName || cs == document) {
 					cs = [ cs ];
 				}
@@ -273,7 +281,8 @@ class Ext {
 				}
 				return r;
 			};
-			byAttribute = function(cs, attr, value, op, custom) {
+			functions["byAttribute"] = byAttribute;
+			function byAttribute(cs, attr, value, op, custom) {
 				var r = [], ri = -1, st = custom == "{";
 				var f = Ext.DomQuery.operators[op];
 				for ( var i = 0, ci; ci = cs[i]; i++) {
@@ -295,7 +304,8 @@ class Ext {
 				}
 				return r;
 			};
-			byPseudo = function(cs, name, value) {
+			functions["byPseudo"] = byPsuedo;
+			function byPsuedo(cs, name, value) {
 				return Ext.DomQuery.pseudos[name](cs, value);
 			};
 			// This is for IE MSXML which does not support expandos.
@@ -322,7 +332,8 @@ class Ext {
 				}
 				return r;
 			}
-			_nodup = function(cs) {
+			functions["_nodup"] = _nodup;
+			function _nodup(cs) {
 				if (!cs) {
 					return [];
 				}
@@ -390,7 +401,8 @@ class Ext {
 				}
 				return r;
 			}
-			quickId = function quickId(ns, mode, root, id) {
+			functions["quickId"] = quickId;
+			function quickId(ns, mode, root, id) {
 				if (ns == root) {
 					var d = root.ownerDocument || root;
 					return d.getElementById(id);
@@ -405,7 +417,7 @@ class Ext {
 				},
 				compile : function(path, type) {
 					type = type || "select";
-					var fn = [ "var f = function(root){\n var mode; ++batch; var n = root || document;\n" ];
+					var fn = [ "var f = function(root, f){\n var mode; ++batch; var n = root || document;\n" ];
 					var q = path, mode, lq;
 					var tk = Ext.DomQuery.matchers;
 					var tklen = tk.length;
@@ -427,23 +439,23 @@ class Ext {
 						if (type == "select") {
 							if (tm) {
 								if (tm[1] == "#") {
-									fn[fn.length] = 'n = quickId(n, mode, root, "'
+									fn[fn.length] = 'n = f.quickId(n, mode, root, "'
 											+ tm[2] + '");';
 								} else {
-									fn[fn.length] = 'n = getNodes(n, mode, "'
+									fn[fn.length] = 'n = f.getNodes(n, mode, "'
 											+ tm[2] + '");';
 								}
 								q = q.replace(tm[0], "");
 							} else if (q.substr(0, 1) != '@') {
-								fn[fn.length] = 'n = getNodes(n, mode, "*");';
+								fn[fn.length] = 'n = f.getNodes(n, mode, "*");';
 							}
 						} else {
 							if (tm) {
 								if (tm[1] == "#") {
-									fn[fn.length] = 'n = byId(n, null, "'
+									fn[fn.length] = 'n = f.byId(n, null, "'
 											+ tm[2] + '");';
 								} else {
-									fn[fn.length] = 'n = byTag(n, "'
+									fn[fn.length] = 'n = f.byTag(n, "'
 											+ tm[2] + '");';
 								}
 								q = q.replace(tm[0], "");
@@ -476,7 +488,7 @@ class Ext {
 							q = q.replace(mm[1], "");
 						}
 					}
-					fn[fn.length] = "return _nodup(n);\n}";
+					fn[fn.length] = "return f._nodup(n);\n}";
 					eval(fn.join(""));
 					return f;
 				},
@@ -497,7 +509,7 @@ class Ext {
 								throw p + " is not a valid selector";
 							}
 						}
-						var result = cache[p](root);
+						var result = cache[p](root, functions);
 						if (result && result != document) {
 							results = results.concat(result);
 						}
@@ -515,7 +527,7 @@ class Ext {
 					if (!valueCache[path]) {
 						valueCache[path] = Ext.DomQuery.compile(path, "select");
 					}
-					var n = valueCache[path](root);
+					var n = valueCache[path](root, functions);
 					n = n[0] ? n[0] : n;
 					var v = (n && n.firstChild ? n.firstChild.nodeValue : null);
 					return ((v === null || v === undefined || v === '') ? defaultValue
@@ -540,29 +552,29 @@ class Ext {
 					if (!simpleCache[ss]) {
 						simpleCache[ss] = Ext.DomQuery.compile(ss, "simple");
 					}
-					var result = simpleCache[ss](els);
+					var result = simpleCache[ss](els, functions);
 					return nonMatches ? quickDiff(result, els) : result;
 				},
 				matchers : [
 						{
 							re : /^\.([\w-]+)/,
-							select : 'n = byClassName(n, null, " {1} ");'
+							select : 'n = f.byClassName(n, null, " {1} ");'
 						},
 						{
 							re : /^\:([\w-]+)(?:\(((?:[^\s>\/]*|.*?))\))?/,
-							select : 'n = byPseudo(n, "{1}", "{2}");'
+							select : 'n = f.byPseudo(n, "{1}", "{2}");'
 						},
 						{
 							re : /^(?:([\[\{])(?:@)?([\w-]+)\s?(?:(=|.=)\s?['"]?(.*?)["']?)?[\]\}])/,
-							select : 'n = byAttribute(n, "{2}", "{4}", "{3}", "{1}");'
+							select : 'n = f.byAttribute(n, "{2}", "{4}", "{3}", "{1}");'
 						},
 						{
 							re : /^#([\w-]+)/,
-							select : 'n = byId(n, null, "{1}");'
+							select : 'n = f.byId(n, null, "{1}");'
 						},
 						{
 							re : /^@([\w-:]+)/,
-							select : 'return {firstChild:{nodeValue:attrValue(n, "{1}")}};'
+							select : 'return {firstChild:{nodeValue:f.attrValue(n, "{1}")}};'
 						} ],
 				operators : {
 					"=" : function(a, v) {

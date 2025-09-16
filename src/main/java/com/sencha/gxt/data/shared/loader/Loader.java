@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,6 +9,7 @@ package com.sencha.gxt.data.shared.loader;
 
 import com.google.gwt.core.client.Callback;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.event.shared.EventHandler;
 import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.event.shared.SimpleEventBus;
@@ -106,26 +107,41 @@ public class Loader<C, M> implements HasLoaderHandlers<C, M> {
 
   @Override
   public HandlerRegistration addBeforeLoadHandler(BeforeLoadHandler<C> handler) {
-    return ensureHandler().addHandler(BeforeLoadEvent.getType(), handler);
+    return addHandler(BeforeLoadEvent.getType(), handler);
+  }
+
+  /**
+   * Adds an event handler to the loader.
+   *
+   * @param <H> type parameter to ensure that the event and handler match
+   * @param type the type of event to listen for
+   * @param handler the handler to call when the event goes off
+   * @return a handler registration to remove the handler if needed
+   */
+  protected <H extends EventHandler> HandlerRegistration addHandler(GwtEvent.Type<H> type, H handler) {
+    if (eventBus == null) {
+      eventBus = new SimpleEventBus();
+    }
+    return eventBus.addHandler(type, handler);
   }
 
   @Override
   public HandlerRegistration addLoaderHandler(LoaderHandler<C, M> handler) {
     GroupingHandlerRegistration group = new GroupingHandlerRegistration();
-    group.add(ensureHandler().addHandler(BeforeLoadEvent.getType(), handler));
-    group.add(ensureHandler().addHandler(LoadEvent.getType(), handler));
-    group.add(ensureHandler().addHandler(LoadExceptionEvent.getType(), handler));
+    group.add(addHandler(BeforeLoadEvent.getType(), handler));
+    group.add(addHandler(LoadEvent.getType(), handler));
+    group.add(addHandler(LoadExceptionEvent.getType(), handler));
     return group;
   }
 
   @Override
   public HandlerRegistration addLoadExceptionHandler(LoadExceptionHandler<C> handler) {
-    return ensureHandler().addHandler(LoadExceptionEvent.getType(), handler);
+    return addHandler(LoadExceptionEvent.getType(), handler);
   }
 
   @Override
   public HandlerRegistration addLoadHandler(LoadHandler<C, M> handler) {
-    return ensureHandler().addHandler(LoadEvent.getType(), handler);
+    return addHandler(LoadEvent.getType(), handler);
   }
 
   /**
@@ -204,7 +220,9 @@ public class Loader<C, M> implements HasLoaderHandlers<C, M> {
    *         cancelled
    */
   protected boolean fireEvent(GwtEvent<?> event) {
-    ensureHandler().fireEvent(event);
+    if (eventBus != null) {
+      eventBus.fireEvent(event);
+    }
     if (event instanceof CancellableEvent) {
       return !((CancellableEvent) event).isCancelled();
     }
@@ -288,10 +306,6 @@ public class Loader<C, M> implements HasLoaderHandlers<C, M> {
    */
   protected void setLastLoadConfig(C lastLoadConfig) {
     this.lastLoadConfig = lastLoadConfig;
-  }
-
-  SimpleEventBus ensureHandler() {
-    return eventBus == null ? eventBus = new SimpleEventBus() : eventBus;
   }
 
 }

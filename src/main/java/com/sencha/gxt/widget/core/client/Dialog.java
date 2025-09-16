@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,17 +8,22 @@
 package com.sencha.gxt.widget.core.client;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.messages.client.DefaultMessages;
-import com.sencha.gxt.widget.core.client.button.ButtonBar;
 import com.sencha.gxt.widget.core.client.button.TextButton;
+import com.sencha.gxt.widget.core.client.event.DialogHideEvent;
+import com.sencha.gxt.widget.core.client.event.DialogHideEvent.DialogHideHandler;
+import com.sencha.gxt.widget.core.client.event.DialogHideEvent.HasDialogHideHandlers;
 import com.sencha.gxt.widget.core.client.event.SelectEvent;
+import com.sencha.gxt.widget.core.client.event.SelectEvent.HasSelectHandlers;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
 
 /**
- * A <code>Window</code> with specialized support for buttons. Defaults to a
- * dialog with an 'ok' button.</p>
+ * A <code>Window</code> with specialized support for buttons. Defaults to a dialog with an 'ok' button.</p>
  * 
  * Code snippet:
  * 
@@ -34,54 +39,90 @@ import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
  * </pre>
  * 
  * <p />
- * The predefined buttons can be retrieved from the button bar using their
- * respective ids (see {@link PredefinedButton#name()} and
- * {@link #getButtonById(String)}) or by index (see {@link #getButtonBar()} and
- * {@link ButtonBar#getWidget(int)})..
+ * To check which button is clicked using the <a href='http://www.gwtproject.org/articles/mvp-architecture.html'>basic
+ * MVP pattern</a>, add a {@link HasSelectHandlers} or {@link HasDialogHideHandlers} method to the view's display
+ * interface defined by the presenter:
+ * 
+ * <pre>
+ * public interface Display extends IsWidget {
+ *   HasSelectHandlers getYesButton();
+ *   HasDialogHideHandlers getDialog();
+ * }
+ * </pre>
+ * 
+ * <p />
+ * 
+ * Add an implementation of the method(s) to the view:
+ * 
+ * <pre>
+ * {@literal @}Override
+ * public HasSelectHandlers getYesButton() {
+ *   return dialog.getButton(PredefinedButton.YES);
+ * }
+ *
+ * {@literal @}Override
+ * public HasDialogHideHandlers getDialog() {
+ *   return dialog;
+ * }
+ * </pre>
+ * <p />
+ * And add a handler for the method(s) to the presenter:
+ * 
+ * <pre>
+ *   display.getYesButton().addSelectHandler(new SelectHandler() {
+ *     {@literal @}Override
+ *     public void onSelect(SelectEvent event) {
+ *       // Take action when user hides dialog by clicking on YES button
+ *     }
+ *   });
+ *   
+ *   display.getDialog().addDialogHideHandler(new DialogHideHandler() {
+ *     {@literal @}Override
+ *     public void onDialogHide(DialogHideEvent event) {
+ *       // Invoke event.getHideButton() and take action based on value of returned enum
+ *     }
+ *   });
+ * </pre>
+ * 
+ * Note: this example illustrates using both a select handler and a dialog hide handler; you can use either approach.
  */
-public class Dialog extends Window {
+public class Dialog extends Window implements HasDialogHideHandlers {
 
   /**
-   * The translatable strings (e.g. button text and ToolTips) for the dialog
-   * window.
+   * The translatable strings (e.g. button text and ToolTips) for the dialog window.
    */
   public interface DialogMessages {
 
     /**
-     * Returns the text that appears on the button for
-     * {@link PredefinedButton#CANCEL}.
+     * Returns the text that appears on the button for {@link PredefinedButton#CANCEL}.
      * 
      * @return the "Cancel" button text
      */
     String cancel();
 
     /**
-     * Returns the text that appears on the button for
-     * {@link PredefinedButton#CLOSE}.
+     * Returns the text that appears on the button for {@link PredefinedButton#CLOSE}.
      * 
      * @return the "Close" button text
      */
     String close();
 
     /**
-     * Returns the text that appears on the button for
-     * {@link PredefinedButton#NO}.
+     * Returns the text that appears on the button for {@link PredefinedButton#NO}.
      * 
      * @return the "No" button text
      */
     String no();
 
     /**
-     * Returns the text that appears on the button for
-     * {@link PredefinedButton#OK}.
+     * Returns the text that appears on the button for {@link PredefinedButton#OK}.
      * 
      * @return the "OK" button text
      */
     String ok();
 
     /**
-     * Returns the text that appears on the button for
-     * {@link PredefinedButton#YES}.
+     * Returns the text that appears on the button for {@link PredefinedButton#YES}.
      * 
      * @return the "Yes" button text
      */
@@ -112,7 +153,7 @@ public class Dialog extends Window {
     /**
      * A "No" button
      */
-    NO;
+    NO
   }
 
   protected class DefaultDialogMessages implements DialogMessages {
@@ -152,6 +193,8 @@ public class Dialog extends Window {
 
   private DialogMessages dialogMessages;
 
+  private TextButton hideButton;
+
   /**
    * Creates a dialog window with default appearance.
    */
@@ -169,21 +212,24 @@ public class Dialog extends Window {
     setPredefinedButtons(PredefinedButton.OK);
   }
 
-  /**
-   * Returns the text button associated with the specified predefined button
-   * name (e.g. getButtonById(PredefinedButton.OK.name()).
-   * 
-   * @param string the predefined button name
-   * @return the text button associated with the button name, or null if there
-   *         is no button with the specified name
-   */
-  public TextButton getButtonById(String string) {
-    return (TextButton) buttonBar.getItemByItemId(string);
+  @Override
+  public HandlerRegistration addDialogHideHandler(DialogHideHandler handler) {
+    return addHandler(handler, DialogHideEvent.getType());
   }
 
   /**
-   * Returns the translatable strings (e.g. button text and ToolTips) for the
-   * dialog window.
+   * Returns the text button associated with the specified predefined button.
+   * 
+   * @param predefinedButton the predefined button
+   * @return the text button associated with the predefined button, or null if the predefined button has not been added
+   *         to the dialog box (see {@link #setPredefinedButtons(PredefinedButton...)}).
+   */
+  public TextButton getButton(PredefinedButton predefinedButton) {
+    return (TextButton) buttonBar.getItemByItemId(predefinedButton.name());
+  }
+
+  /**
+   * Returns the translatable strings (e.g. button text and ToolTips) for the dialog window.
    * 
    * @return the translatable strings for the dialog window
    */
@@ -195,12 +241,40 @@ public class Dialog extends Window {
   }
 
   /**
+   * Returns the predefined button associated with the specified text button or null if no predefined button is
+   * associated with the text button.
+   * 
+   * @param textButton the text button to look up
+   * @return the associated predefined button
+   */
+  public PredefinedButton getPredefinedButton(TextButton textButton) {
+    PredefinedButton predefinedButton;
+    try {
+      predefinedButton = PredefinedButton.valueOf(textButton.getItemId());
+    } catch (IllegalArgumentException e) {
+      predefinedButton = null;
+    }
+    return predefinedButton;
+  }
+
+  /**
    * Returns the buttons that are currently configured for this dialog window.
    * 
    * @return the buttons the buttons
    */
   public List<PredefinedButton> getPredefinedButtons() {
-    return buttons;
+    return Collections.unmodifiableList(buttons);
+  }
+
+  @Override
+  public void hide() {
+    boolean hidePossible = !hidden;
+    super.hide();
+    if (hidePossible && hidden) {
+      // hideButton is null when invoked under program control or via Close ToolButton
+      PredefinedButton predefinedButton = hideButton == null ? null : getPredefinedButton(hideButton);
+      fireEvent(new DialogHideEvent(predefinedButton));
+    }
   }
 
   /**
@@ -213,8 +287,7 @@ public class Dialog extends Window {
   }
 
   /**
-   * Sets the translatable strings (e.g. button text and ToolTips) for the
-   * dialog window.
+   * Sets the translatable strings (e.g. button text and ToolTips) for the dialog window.
    * 
    * @param dialogMessages the translatable strings
    */
@@ -232,8 +305,7 @@ public class Dialog extends Window {
   }
 
   /**
-   * Sets the predefined buttons to display (defaults to OK). Can be any
-   * combination of:
+   * Sets the predefined buttons to display (defaults to OK). Can be any combination of:
    * 
    * <pre>
    * {@link PredefinedButton#OK}
@@ -258,15 +330,18 @@ public class Dialog extends Window {
    * Creates the buttons based on button creation constant
    */
   protected void createButtons() {
+    Widget focusWidget = getFocusWidget();
+
+    boolean focus = focusWidget == null || (focusWidget != null && getButtonBar().getWidgetIndex(focusWidget) != -1);
+
     getButtonBar().clear();
-    setFocusWidget(null);
 
     for (int i = 0; i < buttons.size(); i++) {
       PredefinedButton b = buttons.get(i);
       TextButton tb = new TextButton(getText(b));
       tb.setItemId(b.name());
       tb.addSelectHandler(handler);
-      if (i == 0) {
+      if (i == 0 && focus) {
         setFocusWidget(tb);
       }
       addButton(tb);
@@ -292,15 +367,16 @@ public class Dialog extends Window {
   }
 
   /**
-   * Called after a button in the button bar is selected. If
-   * {@link #setHideOnButtonClick(boolean)} is true, hides the dialog when any
-   * button is pressed.
+   * Called after a button in the button bar is selected. If {@link #setHideOnButtonClick(boolean)} is true, hides the
+   * dialog when any button is pressed.
    * 
-   * @param button the button
+   * @param textButton the button
    */
-  protected void onButtonPressed(TextButton button) {
-    if (button == getButtonBar().getItemByItemId(PredefinedButton.CLOSE.name()) || hideOnButtonClick) {
-      hide(button);
+  protected void onButtonPressed(TextButton textButton) {
+    if (textButton == getButton(PredefinedButton.CLOSE) || hideOnButtonClick) {
+      hideButton = textButton;
+      hide();
+      hideButton = null;
     }
   }
 

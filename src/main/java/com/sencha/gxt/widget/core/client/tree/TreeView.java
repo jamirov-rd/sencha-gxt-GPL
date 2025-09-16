@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.tree;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.Style.Display;
@@ -19,8 +20,6 @@ import com.google.gwt.user.client.ui.AbstractImagePrototype;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Util;
-import com.sencha.gxt.data.shared.Store;
-import com.sencha.gxt.data.shared.TreeStore;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.tree.Tree.CheckState;
 import com.sencha.gxt.widget.core.client.tree.Tree.Joint;
@@ -41,20 +40,18 @@ public class TreeView<M> {
      * Render the node wrapper, used with buffered rendering.
      */
     BUFFER_WRAP
-  };
+  }
 
   protected TreeNode<M> over;
   protected Tree<M, ?> tree;
-  protected TreeStore<M> treeStore;
 
   private int cacheSize = 20;
   private int cleanDelay = 500;
   private int scrollDelay = 1;
 
   @SuppressWarnings("unchecked")
-  public void bind(Component component, Store<M> store) {
+  public void bind(Component component) {
     this.tree = (Tree<M, ?>) component;
-    this.treeStore = (TreeStore<M>) store;
   }
 
   public void collapse(TreeNode<M> node) {
@@ -79,7 +76,7 @@ public class TreeView<M> {
   public Element getCheckElement(TreeNode<M> node) {
     if (node.getCheckElement() == null) {
       node.setCheckElement(getElementContainer(node) != null
-          ? tree.appearance.getCheckElement(getElementContainer(node)) : null);
+          ? tree.getAppearance().getCheckElement(getElementContainer(node)) : null);
     }
     return node.getCheckElement();
   }
@@ -91,23 +88,44 @@ public class TreeView<M> {
   public Element getContainer(TreeNode<M> node) {
     if (node.getContainerElement() == null) {
       SafeHtmlBuilder sb = new SafeHtmlBuilder();
-      tree.appearance.renderContainer(sb);
-      node.setContainerElement(node.getElement().appendChild(XDOM.create(sb.toSafeHtml())));
+      tree.getAppearance().renderContainer(sb);
+      node.setContainerElement(getElement(node).appendChild(XDOM.create(sb.toSafeHtml())));
     }
     return node.getContainerElement();
   }
 
+  /**
+   * Gets the rendered element, if any, for the given tree node object. This method will look up the dom element if it
+   * has not yet been seen. The getElement() method for the node will return the same value as this method does after
+   * it has been cached.
+   * 
+   * @param node the tree node to find an element for
+   * @return the element that the node represents, or null if not yet rendered
+   */
+  public XElement getElement(TreeNode<M> node) {
+    XElement elt = node.getElement().cast();
+    if (elt == null) {
+      if (tree.isAttached() && tree.getElement().getOffsetParent() != null) {
+        elt = Document.get().getElementById(node.getDomId()).cast();
+      } else {
+        elt = tree.getElement().child("*#" + node.getDomId());
+      }
+      node.setElement(elt);
+    }
+    return elt;
+  }
+
   public XElement getElementContainer(TreeNode<M> node) {
     if (node.getElementContainer() == null) {
-      node.setElContainer(node.getElement() != null
-          ? tree.appearance.getContainerElement(node.getElement().<XElement> cast()) : null);
+      node.setElContainer(getElement(node) != null
+          ? tree.getAppearance().getContainerElement(getElement(node)) : null);
     }
     return node.getElementContainer().cast();
   }
 
   public Element getIconElement(TreeNode<M> node) {
     if (node.getIconElement() == null) {
-      node.setIconElement(getElementContainer(node) != null ? tree.appearance.getIconElement(getElementContainer(node))
+      node.setIconElement(getElementContainer(node) != null ? tree.getAppearance().getIconElement(getElementContainer(node))
           : null);
     }
     return node.getIconElement();
@@ -115,7 +133,7 @@ public class TreeView<M> {
 
   public Element getJointElement(TreeNode<M> node) {
     if (node.getJointElement() == null) {
-      node.setJointElement(tree.appearance.getJointElement(getElementContainer(node)));
+      node.setJointElement(tree.getAppearance().getJointElement(getElementContainer(node)));
     }
     return node.getJointElement();
   }
@@ -127,13 +145,13 @@ public class TreeView<M> {
   public SafeHtml getTemplate(M m, String id, SafeHtml text, ImageResource icon, boolean checkable, CheckState checked,
       Joint joint, int level, TreeViewRenderMode renderMode) {
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
-    tree.appearance.renderNode(sb, id, text, tree.getStyle(), icon, checkable, checked, joint, level, renderMode);
+    tree.getAppearance().renderNode(sb, id, text, tree.getStyle(), icon, checkable, checked, joint, level, renderMode);
     return sb.toSafeHtml();
   }
 
   public Element getTextElement(TreeNode<M> node) {
     if (node.getTextElement() == null) {
-      node.setTextElement(getElementContainer(node) != null ? tree.appearance.getTextElement(getElementContainer(node))
+      node.setTextElement(getElementContainer(node) != null ? tree.getAppearance().getTextElement(getElementContainer(node))
           : null);
     }
     return node.getTextElement();
@@ -145,12 +163,12 @@ public class TreeView<M> {
       return false;
     }
     XElement xtarget = target.cast();
-    boolean joint = tree.appearance.isJointElement(xtarget);
+    boolean joint = tree.getAppearance().isJointElement(xtarget);
     if (joint) {
       return false;
     }
     if (!joint && tree.isCheckable()) {
-      return !tree.appearance.isCheckElement(xtarget);
+      return !tree.getAppearance().isCheckElement(xtarget);
     }
     return true;
   }
@@ -158,14 +176,14 @@ public class TreeView<M> {
   public void onCheckChange(TreeNode<M> node, boolean checkable, CheckState state) {
     Element checkEl = (Element) getCheckElement(node);
     if (checkEl != null) {
-      node.setCheckElement(tree.appearance.onCheckChange(node.getElement().<XElement> cast(),
+      node.setCheckElement(tree.getAppearance().onCheckChange(getElement(node),
           checkEl.<XElement> cast(), checkable, state));
     }
   }
 
   public void onDropChange(TreeNode<M> node, boolean drop) {
     XElement e = tree.getView().getElementContainer(node);
-    tree.appearance.onDropOver(e, drop);
+    tree.getAppearance().onDropOver(e, drop);
   }
 
   public void onEvent(Event ce) {
@@ -193,7 +211,8 @@ public class TreeView<M> {
       } else {
         e = DOM.createSpan();
       }
-      node.setIconElement((Element) node.getElement().getFirstChild().insertBefore(e, iconEl));
+      e.setClassName(iconEl.getClassName());
+      node.setIconElement((Element) getElement(node).getFirstChild().insertBefore(e, iconEl));
       iconEl.removeFromParent();
     }
   }
@@ -201,32 +220,33 @@ public class TreeView<M> {
   public void onJointChange(TreeNode<M> node, Joint joint) {
     Element jointEl = getJointElement(node);
     if (jointEl != null) {
-      node.setJointElement(tree.appearance.onJointChange(node.getElement().<XElement> cast(),
+      node.setJointElement(tree.getAppearance().onJointChange(getElement(node),
           jointEl.<XElement> cast(), joint, tree.getStyle()));
     }
   }
 
   public void onLoading(TreeNode<M> node) {
-    // onIconStyleChange(node, IconHelper.createStyle("x-tree3-loading"));
+    onIconStyleChange(node, tree.getAppearance().loadingIcon());
   }
 
   public void onOverChange(TreeNode<M> node, boolean over) {
-    tree.appearance.onHover(getElementContainer(node).<XElement> cast(), over);
+    tree.getAppearance().onHover(getElementContainer(node).<XElement> cast(), over);
   }
 
   public void onSelectChange(M model, boolean select) {
     if (select) {
-      M p = treeStore.getParent(model);
+      M p = tree.getStore().getParent(model);
       if (p != null) {
-        tree.setExpanded(treeStore.getParent(model), true);
+        tree.setExpanded(tree.getStore().getParent(model), true);
       }
     }
     TreeNode<M> node = findNode(model);
     if (node != null) {
       Element e = getElementContainer(node);
       if (e != null) {
-        tree.appearance.onSelect(e.<XElement> cast(), select);
+        tree.getAppearance().onSelect(e.<XElement> cast(), select);
       }
+      tree.moveFocus(node.getElement());
     }
   }
 

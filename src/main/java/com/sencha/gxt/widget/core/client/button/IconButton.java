@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.button;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
@@ -86,7 +87,7 @@ public class IconButton extends Component implements HasBeforeSelectHandlers, Ha
 
   protected IconConfig config;
   protected boolean cancelBubble = true;
-  protected final IconButtonAppearance appearance;
+  private final IconButtonAppearance appearance;
 
   /**
    * Creates a new icon button.
@@ -102,7 +103,7 @@ public class IconButton extends Component implements HasBeforeSelectHandlers, Ha
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     this.appearance.render(sb);
 
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
 
     // mark element to not start drags
     addStyleName(CommonStyles.get().nodrag());
@@ -178,6 +179,10 @@ public class IconButton extends Component implements HasBeforeSelectHandlers, Ha
     removeStyleName(config.disableStyle);
     addStyleName(style);
     this.config = new IconConfig(style);
+  }
+
+  public IconButtonAppearance getAppearance() {
+    return appearance;
   }
 
   @Override

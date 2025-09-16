@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,14 +8,14 @@
 package com.sencha.gxt.theme.base.client.grid;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.dom.client.Style.Display;
 import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.CssResource.Import;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
-import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
+import com.sencha.gxt.widget.core.client.grid.GridView.GridStateStyles;
 import com.sencha.gxt.widget.core.client.grid.GroupingView;
 import com.sencha.gxt.widget.core.client.grid.GroupingView.GroupingData;
 import com.sencha.gxt.widget.core.client.grid.GroupingView.GroupingViewAppearance;
@@ -35,9 +35,14 @@ public class GroupingViewDefaultAppearance implements GroupingViewAppearance {
   public interface GroupingViewResources extends ClientBundle {
 
     ImageResource groupBy();
-    
+
+    @Import(GridStateStyles.class)
     @Source("GroupingView.css")
-    GroupingView.GroupingViewStyle style();
+    GroupingViewStyle style();
+  }
+
+  public interface GroupingViewStyle extends GroupingView.GroupingViewStyle {
+
   }
 
   public interface GroupTemplate<M> {
@@ -61,7 +66,7 @@ public class GroupingViewDefaultAppearance implements GroupingViewAppearance {
 
   @Override
   public XElement findHead(XElement element) {
-    return element.findParent("." + style.gridGroupHead(), 10);
+    return element.findParent("." + style.groupHead(), 10);
   }
 
   @Override
@@ -76,17 +81,14 @@ public class GroupingViewDefaultAppearance implements GroupingViewAppearance {
 
   @Override
   public boolean isCollapsed(XElement group) {
-    return group.hasClassName(style.gridGroupCollapsed());
+    return group.hasClassName(style.groupCollapsed());
   }
 
   @Override
   public void onGroupExpand(XElement group, boolean expanded) {
-    group.setClassName(style.gridGroupCollapsed(), !expanded);
-    if (GXT.isIE7()) {
-      group.getNextSiblingElement().getStyle().setDisplay(expanded ? Display.BLOCK : Display.NONE);
-    } else {
-      group.getNextSiblingElement().getStyle().setProperty("display", expanded ? "table-row" : "none");
-    }
+    group.setClassName(style.groupCollapsed(), !expanded);
+    assert group.getNextSiblingElement() != null;
+    group.getNextSiblingElement().<XElement>cast().setClassName(style.bodyCollapsed(), !expanded);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})

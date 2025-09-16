@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,7 +12,7 @@ import com.sencha.gxt.widget.core.client.event.BeforeStartEditEvent.HasBeforeSta
 import com.sencha.gxt.widget.core.client.event.CancelEditEvent.HasCancelEditHandlers;
 import com.sencha.gxt.widget.core.client.event.CompleteEditEvent.HasCompleteEditHandlers;
 import com.sencha.gxt.widget.core.client.event.StartEditEvent.HasStartEditHandlers;
-import com.sencha.gxt.widget.core.client.form.Field;
+import com.sencha.gxt.widget.core.client.form.IsField;
 import com.sencha.gxt.widget.core.client.grid.ColumnConfig;
 import com.sencha.gxt.widget.core.client.grid.Grid;
 import com.sencha.gxt.widget.core.client.grid.Grid.GridCell;
@@ -29,13 +29,13 @@ public interface GridEditing<M> extends HasBeforeStartEditHandlers<M>, HasStartE
     HasCompleteEditHandlers<M>, HasCancelEditHandlers<M> {
 
   /**
-   * Adds an editor for the give column.
+   * Adds an editor for the given column.
    * 
    * @param columnConfig the column config
    * @param converter the converter
    * @param field the field
    */
-  <N, O> void addEditor(ColumnConfig<M, N> columnConfig, Converter<N, O> converter, Field<O> field);
+  <N, O> void addEditor(ColumnConfig<M, N> columnConfig, Converter<N, O> converter, IsField<O> field);
 
   /**
    * Adds an editor for the given column.
@@ -43,7 +43,7 @@ public interface GridEditing<M> extends HasBeforeStartEditHandlers<M>, HasStartE
    * @param columnConfig the column config
    * @param field the field
    */
-  <N> void addEditor(ColumnConfig<M, N> columnConfig, Field<N> field);
+  <N> void addEditor(ColumnConfig<M, N> columnConfig, IsField<N> field);
 
   /**
    * Cancels an active edit.
@@ -76,7 +76,7 @@ public interface GridEditing<M> extends HasBeforeStartEditHandlers<M>, HasStartE
    * @param columnConfig the column config
    * @return the editor
    */
-  <O> Field<O> getEditor(ColumnConfig<M, ?> columnConfig);
+  <O> IsField<O> getEditor(ColumnConfig<M, ?> columnConfig);
 
   /**
    * Returns true if editing is active.

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -15,8 +15,6 @@ import com.sencha.gxt.cell.core.client.form.ToggleButtonCell;
  * A 2-state toggle button.
  */
 public class ToggleButton extends CellButtonBase<Boolean> {
-
-  protected ToggleButtonCell cell;
 
   /**
    * Creates a new toggle button.
@@ -42,7 +40,11 @@ public class ToggleButton extends CellButtonBase<Boolean> {
    */
   public ToggleButton(ToggleButtonCell cell) {
     super(cell, false);
-    this.cell = cell;
+  }
+
+  @Override
+  public ToggleButtonCell getCell() {
+    return (ToggleButtonCell) super.getCell();
   }
 
   /**
@@ -51,7 +53,7 @@ public class ToggleButton extends CellButtonBase<Boolean> {
    * @return the allow depress state
    */
   public boolean isAllowDepress() {
-    return cell.isAllowDepress();
+    return getCell().isAllowDepress();
   }
 
   /**
@@ -60,7 +62,7 @@ public class ToggleButton extends CellButtonBase<Boolean> {
    * @param allowDepress true to allow depressing
    */
   public void setAllowDepress(boolean allowDepress) {
-    cell.setAllowDepress(allowDepress);
+    getCell().setAllowDepress(allowDepress);
   }
 
   @Override

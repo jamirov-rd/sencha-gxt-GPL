@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.menu;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.uibinder.client.UiChild;
 import com.google.gwt.uibinder.client.UiConstructor;
@@ -30,7 +31,7 @@ public class MenuBarItem extends Component implements HasHTML {
     void render(SafeHtmlBuilder builder);
   }
 
-  protected final MenuBarItemAppearance appearance;
+  private final MenuBarItemAppearance appearance;
   protected Menu menu;
   protected boolean expanded;
 
@@ -49,7 +50,7 @@ public class MenuBarItem extends Component implements HasHTML {
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
     sinkEvents(Event.MOUSEEVENTS);
 
     setText(text);

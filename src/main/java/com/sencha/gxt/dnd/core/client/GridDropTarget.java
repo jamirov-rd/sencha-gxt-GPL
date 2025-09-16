@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,8 +9,8 @@ package com.sencha.gxt.dnd.core.client;
 
 import java.util.List;
 
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.EventTarget;
-import com.google.gwt.user.client.Element;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.dnd.core.client.DND.Feedback;
@@ -20,13 +20,13 @@ import com.sencha.gxt.widget.core.client.grid.Grid;
 /**
  * Enables a {@link Grid} to act as the target of a drag and drop operation.
  * <p/>
- * Use {@link #setFeedback(Feedback)} to specify whether to allow inserting
+ * Use {@link #setFeedback(com.sencha.gxt.dnd.core.client.DND.Feedback)} to specify whether to allow inserting
  * items between rows, appending items to the end, or both (defaults to
  * {@link Feedback#BOTH}).
  * <p/>
- * Use {@link #setOperation(Operation)} to specify whether to move items or copy
+ * Use {@link #setOperation(com.sencha.gxt.dnd.core.client.DND.Operation)} to specify whether to move items or copy
  * them (defaults to {@link Operation#MOVE}).
- * 
+ *
  * @param <M> the model type
  */
 public class GridDropTarget<M> extends DropTarget {
@@ -82,7 +82,7 @@ public class GridDropTarget<M> extends DropTarget {
   @Override
   protected void onDragMove(DndDragMoveEvent event) {
     EventTarget target = event.getDragMoveEvent().getNativeEvent().getEventTarget();
-    if (Element.is(target) && !grid.getView().getScroller().getParentElement().isOrHasChild(Element.as(target))) {
+    if (Element.is(target) && !grid.getView().getScroller().isOrHasChild(Element.as(target))) {
       event.setCancelled(true);
       event.getStatusProxy().setStatus(false);
       return;

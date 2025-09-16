@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -103,14 +103,14 @@ public class FormPanel extends SimpleContainer implements FormPanelImplHost, Has
    * Label alignment enumeration.
    */
   public enum LabelAlign {
-    LEFT, TOP;
+    LEFT, TOP
   }
 
   /**
    * Form method enumeration.
    */
   public enum Method {
-    GET, POST;
+    GET, POST
   }
 
   private static FormPanelImpl impl = GWT.create(FormPanelImpl.class);

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.grid;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.ClientBundle;
-import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.resources.client.ImageResource.ImageOptions;
 import com.google.gwt.resources.client.ImageResource.RepeatStyle;
@@ -31,36 +30,42 @@ public class ColumnHeaderDefaultAppearance implements ColumnHeaderAppearance {
     @ImageOptions(repeatStyle = RepeatStyle.Horizontal)
     ImageResource columnHeaderOver();
 
+    /** Menu icon */
     ImageResource columnsIcon();
 
+    /** grid header marker */
     ImageResource sortAsc();
 
+    /** grid header marker */
     ImageResource sortDesc();
-    
+
+    /** Menu icon */
     ImageResource sortAscendingIcon();
-    
+
+    /** Menu icon */
     ImageResource sortDescendingIcon();
-    
+
+    /** Column dnd indicator 1 */
     ImageResource columnMoveTop();
-    
+
+    /** Column dnd indicator 2 */
     ImageResource columnMoveBottom();
 
     @Source("ColumnHeader.css")
-    ColumnHeaderStyle style();
+    DefaultColumnHeaderStyles style();
 
   }
-
-  public interface ColumnHeaderStyle extends CssResource, ColumnHeaderStyles {
+  public interface DefaultColumnHeaderStyles extends ColumnHeaderStyles {
 
   }
 
   public interface ColumnHeaderTemplate extends XTemplates {
     @XTemplate(source = "ColumnHeader.html")
-    SafeHtml render(ColumnHeaderStyle style);
+    SafeHtml render(ColumnHeaderStyles style);
   }
 
   private final ColumnHeaderResources resources;
-  private final ColumnHeaderStyle style;
+  private final ColumnHeaderStyles style;
   private ColumnHeaderTemplate templates = GWT.create(ColumnHeaderTemplate.class);
 
   public ColumnHeaderDefaultAppearance() {
@@ -104,4 +109,8 @@ public class ColumnHeaderDefaultAppearance implements ColumnHeaderAppearance {
     return "." + style.headerInner();
   }
 
+  @Override
+  public int getColumnMenuWidth() {
+    return 14;
+  }
 }

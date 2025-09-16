@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -69,6 +69,7 @@ public abstract class StatusProxyBaseAppearance implements StatusProxyAppearance
     builder.append(templates.template(style));
   }
 
+  @Override
   public void setStatus(Element parent, boolean allowed) {
     if (allowed) {
       setStatus(parent, resources.dropAllowed());
@@ -77,6 +78,7 @@ public abstract class StatusProxyBaseAppearance implements StatusProxyAppearance
     }
   }
 
+  @Override
   public void setStatus(Element parent, ImageResource icon) {
     XElement wrap = iconWrap(parent);
     wrap.setInnerHTML("");

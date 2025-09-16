@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -53,8 +53,7 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     private GridSelectionModel<?> sm;
 
     /**
-     * Creates a selection model callback that determines whether a given cell
-     * is selectable.
+     * Creates a selection model callback that determines whether a given cell is selectable.
      * 
      * @param sm the selection model
      */
@@ -79,12 +78,12 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
 
     @Override
     public void onRowClick(RowClickEvent event) {
-      handleRowClick(event);
+      GridSelectionModel.this.onRowClick(event);
     }
 
     @Override
     public void onRowMouseDown(RowMouseDownEvent event) {
-      handleRowMouseDown(event);
+      GridSelectionModel.this.onRowMouseDown(event);
     }
 
     @Override
@@ -94,19 +93,13 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * True if this grid selection model supports keyboard navigation (defaults to
-   * true).
+   * True if this grid selection model supports keyboard navigation (defaults to true).
    */
   protected boolean enableNavKeys = true;
   /**
    * The grid associated with this selection model.
    */
   protected Grid<M> grid;
-  /**
-   * True if the selection is group (defaults to false).
-   */
-  // TODO: Consider removing this, there are no references in our source code.
-  protected boolean grouped = false;
   /**
    * The current keyboard navigator.
    */
@@ -147,6 +140,18 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   protected GroupingHandlerRegistration handlerRegistration;
 
   private Handler handler = new Handler();
+  
+  /**
+   * Track the selection index, when the shift combined with and so then this is the starting point of the selection.
+   */
+  private int indexOnSelectNoShift;
+
+  /**
+   * True to deselect a selected item on click (defaults to true).
+   */
+  protected boolean deselectOnSimpleClick = true;
+
+  private boolean focusCellCalled;
 
   @Override
   public void bind(Store<M> store) {
@@ -188,6 +193,15 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
+   * Returns the currently bound grid.
+   * 
+   * @return the grid
+   */
+  public Grid<M> getGrid() {
+    return grid;
+  }
+
+  /**
    * Selects the next row.
    * 
    * @param keepexisting true to keep existing selections
@@ -214,20 +228,20 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * Handles a row click event. The row click event is responsible for adding to
-   * a selection in multiple selection mode.
+   * Handles a row click event. The row click event is responsible for adding to a selection in multiple selection mode.
    * 
    * @param event the row click event
    */
-  protected void handleRowClick(RowClickEvent event) {
+  protected void onRowClick(RowClickEvent event) {
     if (Element.is(event.getEvent().getEventTarget())
         && !grid.getView().isSelectableTarget(Element.as(event.getEvent().getEventTarget()))) {
       return;
     }
+    
     if (isLocked()) {
       return;
     }
-    
+
     if (fireSelectionChangeOnClick) {
       fireSelectionChange();
       fireSelectionChangeOnClick = false;
@@ -241,44 +255,65 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
       deselectAll();
       return;
     }
+
+    M sel = listStore.get(rowIndex);
+
+    boolean isSelected = isSelected(sel);
+    boolean isControl = xe.getCtrlOrMetaKey();
+    boolean isShift = xe.getShiftKey();
+
+    // we only handle multi select with control key here
     if (selectionMode == SelectionMode.MULTI) {
-      M sel = listStore.get(rowIndex);
-      if (xe.getCtrlOrMetaKey() && isSelected(sel)) {
+      if (isSelected && isControl) {
+        grid.getView().focusCell(rowIndex, colIndex, false);
+        focusCellCalled = true;
+        // reset the starting location of the click
+        indexOnSelectNoShift = rowIndex;
         doDeselect(Collections.singletonList(sel), false);
-      } else if (xe.getCtrlOrMetaKey()) {
+      } else if (isControl) {
         grid.getView().focusCell(rowIndex, colIndex, false);
+        focusCellCalled = true;
+        // reset the starting location of the click
+        indexOnSelectNoShift = rowIndex;
         doSelect(Collections.singletonList(sel), true, false);
-      } else if (isSelected(sel) && !event.getEvent().getShiftKey() && !xe.getCtrlOrMetaKey() && selected.size() > 1) {
-        grid.getView().focusCell(rowIndex, colIndex, false);
+      } else if (isSelected && !isControl && !isShift && selected.size() > 1) {
         doSelect(Collections.singletonList(sel), false, false);
       }
-    }
 
+      if (!focusCellCalled) {
+        grid.getView().focusCell(rowIndex, colIndex, false);
+      }
+    }
   }
 
   /**
-   * Handles a row mouse down event. The row mouse down event is responsible for
-   * initiating a selection.
+   * Handles a row mouse down event. The row mouse down event is responsible for initiating a selection.
    * 
    * @param event the row mouse down event
    */
-  protected void handleRowMouseDown(RowMouseDownEvent event) {
+  protected void onRowMouseDown(RowMouseDownEvent event) {
     if (Element.is(event.getEvent().getEventTarget())
         && !grid.getView().isSelectableTarget(Element.as(event.getEvent().getEventTarget()))) {
       return;
     }
+    
     if (isLocked()) {
       return;
     }
+    
     int rowIndex = event.getRowIndex();
     int colIndex = event.getColumnIndex();
     if (rowIndex == -1) {
       return;
     }
-    
+
+    focusCellCalled = false;
     mouseDown = true;
 
     XEvent e = event.getEvent().<XEvent> cast();
+
+    // it is important the focusCell be called once, and only once in onRowMouseDown and onRowMouseClick
+    // everything but multi select with the control key pressed is handled in mouse down
 
     if (event.getEvent().getButton() == Event.BUTTON_RIGHT) {
       if (selectionMode != SelectionMode.SINGLE && isSelected(listStore.get(rowIndex))) {
@@ -286,48 +321,78 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
       }
       grid.getView().focusCell(rowIndex, colIndex, false);
       select(rowIndex, false);
+      focusCellCalled = true;
     } else {
       M sel = listStore.get(rowIndex);
-      if (selectionMode == SelectionMode.SIMPLE) {
-        if (!isSelected(sel)) {
-          grid.getView().focusCell(rowIndex, colIndex, false);
-          select(sel, true);
-        }
+      if (sel == null) {
+        return;
+      }
+      
+      boolean isSelected = isSelected(sel);
+      boolean isMeta = e.getCtrlOrMetaKey();
+      boolean isShift = event.getEvent().getShiftKey();
 
-      } else if (selectionMode == SelectionMode.SINGLE) {
-        if (e.getCtrlOrMetaKey() && isSelected(sel)) {
-          deselect(sel);
-        } else if (!isSelected(sel)) {
+      switch (selectionMode) {
+        case SIMPLE:
           grid.getView().focusCell(rowIndex, colIndex, false);
-          select(sel, false);
-        }
-      } else if (!e.getCtrlOrMetaKey()) {
-        if (event.getEvent().getShiftKey() && lastSelected != null) {
-          int last = listStore.indexOf(lastSelected);
-          int index = rowIndex;
-          grid.getView().focusCell(index, colIndex, false);
-          select(last, index, e.getCtrlOrMetaKey());
-        } else if (!isSelected(sel)) {
+          focusCellCalled = true;
+          if (!isSelected) {
+            select(sel, true);
+          } else if (isSelected && deselectOnSimpleClick) {
+            deselect(sel);
+          }
+          break;
+          
+        case SINGLE:
           grid.getView().focusCell(rowIndex, colIndex, false);
-          doSelect(Collections.singletonList(sel), false, false);
-        }
-      } else {
-        // EXTGWT-2019 when inline editing for grid and tree grid with row based
-        // selection model focus is not
-        // being moved to grid when clicking on another cell in same row as
-        // active edit and therefore
-        // field is not bluring and firing change event
-        grid.getView().focus();
+          focusCellCalled = true;
+          if (isSelected && isMeta) {
+            deselect(sel);
+          } else if (!isSelected) {
+            select(sel, false);
+          }
+          break;
+          
+        case MULTI:
+          if (isMeta) {
+            break;
+          }
+          
+          if (isShift && lastSelected != null) {
+            int last = listStore.indexOf(lastSelected);
+            grid.getView().focusCell(last, colIndex, false);
+            
+            int start;
+            int end;
+            // This deals with flipping directions
+            if (indexOnSelectNoShift < rowIndex) {
+              start = indexOnSelectNoShift;
+              end = rowIndex;
+            } else {
+              start = rowIndex;
+              end = indexOnSelectNoShift;
+            }
+            
+            focusCellCalled = true;
+            select(start, end, false);
+          } else if (!isSelected) {
+            // reset the starting location of multi select
+            indexOnSelectNoShift = rowIndex;
+            
+            grid.getView().focusCell(rowIndex, colIndex, false);
+            focusCellCalled = true;
+            doSelect(Collections.singletonList(sel), false, false);
+          } 
+          break;
       }
     }
-    
+
     mouseDown = false;
   }
 
   /**
-   * Returns true if there is an item in the list store following the most
-   * recently selected item (i.e. the selected item is not the last item in the
-   * list store).
+   * Returns true if there is an item in the list store following the most recently selected item (i.e. the selected
+   * item is not the last item in the list store).
    * 
    * @return true if there is an item following the most recently selected item
    */
@@ -336,9 +401,8 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
   }
 
   /**
-   * Returns true if there is an item in the list store preceding the most
-   * recently selected item (i.e. the selected item is not the first item in the
-   * list store).
+   * Returns true if there is an item in the list store preceding the most recently selected item (i.e. the selected
+   * item is not the first item in the list store).
    * 
    * @return true if there is an item preceding the most recently selected item
    */
@@ -369,6 +433,9 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
     if (Element.is(ne.getEventTarget()) && !grid.getView().isSelectableTarget(Element.as(ne.getEventTarget()))) {
       return;
     }
+    if (listStore.size() == 0) {
+      return;
+    }
     if (!e.getCtrlOrMetaKey() && selected.size() == 0 && getLastFocused() == null) {
       select(0, false);
     } else {
@@ -396,6 +463,8 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
             }
           }
         }
+      } else {
+        grid.getView().onNoNext(idx);
       }
     }
 
@@ -490,7 +559,6 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
           setLastFocused(lF);
           grid.getView().focusCell(idx - 1, 0, false);
         }
-
       } else {
         if (e.getShiftKey() && lastSelected != getLastFocused()) {
           grid.getView().focusCell(idx - 1, 0, false);
@@ -503,6 +571,8 @@ public class GridSelectionModel<M> extends AbstractStoreSelectionModel<M> {
         }
 
       }
+    } else {
+      grid.getView().onNoPrev();
     }
     e.preventDefault();
   }

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,14 +13,14 @@ import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.theme.gray.client.tabs.GrayPlainTabPanelAppearance.GrayPlainTabPanelResources;
 import com.sencha.gxt.theme.gray.client.tabs.GrayPlainTabPanelAppearance.GrayPlainTabPanelStyle;
 import com.sencha.gxt.widget.core.client.PlainTabPanel;
-import com.sencha.gxt.widget.core.client.PlainTabPanel.PlainTabPanelAppearance;
+import com.sencha.gxt.widget.core.client.PlainTabPanel.PlainTabPanelBottomAppearance;
 
 /**
  * A gray-coloured appearance for {@link PlainTabPanel} with tabs below the
  * content area. This appearance differs from
  * {@link GrayTabPanelBottomAppearance} in that it has a simplified tab strip.
  */
-public class GrayPlainTabPanelBottomAppearance extends GrayTabPanelBottomAppearance implements PlainTabPanelAppearance {
+public class GrayPlainTabPanelBottomAppearance extends GrayTabPanelBottomAppearance implements PlainTabPanelBottomAppearance {
 
   public interface PlainTabPanelBottomTemplates extends BottomTemplate {
 

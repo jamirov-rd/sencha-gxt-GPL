@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,6 +13,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.event.logical.shared.BeforeSelectionEvent;
@@ -25,7 +27,6 @@ import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.uibinder.client.UiChild;
 import com.google.gwt.user.client.Event;
-import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.HasWidgets;
 import com.google.gwt.user.client.ui.IndexedPanel;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -58,9 +59,9 @@ import com.sencha.gxt.widget.core.client.menu.MenuItem;
 
 /**
  * A basic tab container.
- * 
- * <p />
+ * <p/>
  * Code snippet:
+ * <p/>
  * 
  * <pre>
  *   TabPanel panel = new TabPanel();
@@ -99,9 +100,9 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
 
     void onDeselect(Element item);
 
-    void onMouseOut(XElement parent, Event event);
+    void onMouseOut(XElement parent, XElement target);
 
-    void onMouseOver(Event event);
+    void onMouseOver(XElement parent, XElement target);
 
     void onScrolling(XElement bar, boolean scrolling);
 
@@ -142,13 +143,14 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
 
   }
 
-  protected TabPanelAppearance appearance;
+  private final TabPanelAppearance appearance;
 
   protected Menu closeContextMenu;
   private boolean animScroll = true;
   private boolean autoSelect = true;
   private boolean bodyBorder = true;
   private boolean closeMenu = false;
+  private boolean scheduledDelegateUpdates;
   private TabPanelMessages messages;
   private boolean resizeTabs = false;
   private int scrollDuration = 150;
@@ -167,7 +169,12 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
     @Override
     protected Widget getParentLayoutWidget() {
       return container.getParent();
-    };
+    }
+
+    protected void onRemove(Widget child) {
+      super.onRemove(child);
+      configMap.remove(child);
+    }
   };
 
   /**
@@ -188,7 +195,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb);
 
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
 
     ComponentHelper.setParent(this, container);
     appearance.getBody(getElement()).appendChild(container.getElement());
@@ -197,14 +204,24 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * Adds an item to the tab panel with the specified text.
+   * Adds an item to the tab panel with the specified tab configuration.
    * 
-   * @param widget
+   * @param widget the widget to add to the tab panel
    * @param config the configuration of the tab
    */
   @UiChild(tagname = "child")
   public void add(IsWidget widget, TabItemConfig config) {
     add(asWidgetOrNull(widget), config);
+  }
+
+  /**
+   * Adds an item to the tab panel with the specified text.
+   * 
+   * @param widget the widget to add to the tab panel
+   * @param text the text for the tab
+   */
+  public void add(IsWidget widget, String text) {
+    add(asWidgetOrNull(widget), text);
   }
 
   @Override
@@ -213,8 +230,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * Adds an item to the tab panel with the specified text. Shorthand for
-   * {@link #add(Widget, TabItemConfig)}.
+   * Adds an item to the tab panel with the specified text. Shorthand for {@link #add(Widget, TabItemConfig)}.
    * 
    * @param widget the widget to add to the tab panel
    * @param text the text for the tab
@@ -259,13 +275,19 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * Searches for an item based on its id and optionally the item's text.
+   * Searches for a child widget based on its id and optionally the text of the {@link TabItemConfig}.
+   * <p/>
+   * Iterates through each item and checks if its id matches the parameter {@code id}. Then, if the
+   * {@code alsoCheckText} parameter is true, this also looks at the last passed in string of html or text for each
+   * {@code TabItemConfig}. If that content matches, then it returns that tab.
+   * <p/>
+   * With {@code alsoCheckText} set to true, the first matching item will be returned.
    * 
    * @param id the item id
-   * @param checkText true to match the items id and text
+   * @param alsoCheckText {@code false} to only compare with id, {@code true} to compare both the items id and text
    * @return the item
    */
-  public Widget findItem(String id, boolean checkText) {
+  public Widget findItem(String id, boolean alsoCheckText) {
     int count = container.getWidgetCount();
     for (int i = 0; i < count; i++) {
       Widget item = container.getWidget(i);
@@ -273,6 +295,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
 
       if (widgetId.equals(id)) return item;
       if (item instanceof Component && ((Component) item).getItemId().equals(id)) return item;
+      if (alsoCheckText && getConfig(item).getHTML().equals(id)) return item;
     }
     return null;
   }
@@ -286,6 +309,10 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   @Override
   public Widget getActiveWidget() {
     return container.getActiveWidget();
+  }
+
+  public TabPanelAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -426,8 +453,6 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
       setActiveWidget(widget);
     }
 
-    delegateUpdates();
-
     if (getWidgetCount() == 1) {
       syncSize();
     }
@@ -469,6 +494,9 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   @Override
   public void onBrowserEvent(Event event) {
     XElement target = event.getEventTarget().cast();
+    if (target == null) {
+      return;
+    }
     boolean isbar = appearance.getBar(getElement()).isOrHasChild(target);
     boolean orig = disableContextMenu;
 
@@ -481,9 +509,6 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
 
     if (!isbar) {
       disableContextMenu = orig;
-    }
-
-    if (!appearance.getBar(getElement()).isOrHasChild(target)) {
       return;
     }
 
@@ -511,11 +536,11 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
         }
         break;
       case Event.ONMOUSEOVER:
-        appearance.onMouseOver(event);
+        appearance.onMouseOver(getElement(), event.getEventTarget().<XElement>cast());
         break;
       case Event.ONMOUSEOUT:
 
-        appearance.onMouseOut(getElement(), event);
+        appearance.onMouseOut(getElement(), event.getEventTarget().<XElement>cast());
         break;
     }
   }
@@ -583,17 +608,24 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
     setActiveWidget(asWidgetOrNull(widget));
   }
 
-  @Override
-  public void setActiveWidget(Widget item) {
+  /**
+   * Sets the active widget.
+   * 
+   * @param item the widget
+   * @param fireEvents {@code true} to fire events
+   */
+  public void setActiveWidget(Widget item, boolean fireEvents) {
     if (item == null || item.getParent() != container) {
       return;
     }
 
     if (getActiveWidget() != item) {
-      BeforeSelectionEvent<Widget> event = BeforeSelectionEvent.fire(this, item);
-      // event can be null if no handlers
-      if (event != null && event.isCanceled()) {
-        return;
+      if (fireEvents) {
+        BeforeSelectionEvent<Widget> event = BeforeSelectionEvent.fire(this, item);
+        // event can be null if no handlers
+        if (event != null && event.isCanceled()) {
+          return;
+        }
       }
 
       if (getActiveWidget() != null) {
@@ -607,19 +639,22 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
       }
       stack.add(item);
 
-      if (scrolling) {
-        scrollToTab(item, getAnimScroll());
-      }
-
       focusTab(item, false);
-
-      SelectionEvent.fire(this, item);
+      if (fireEvents) {
+        SelectionEvent.fire(this, item);
+      }
+      delegateUpdates();
     }
   }
 
+  @Override
+  public void setActiveWidget(Widget item) {
+    setActiveWidget(item, true);
+  }
+
   /**
-   * True to animate tab scrolling so that hidden tabs slide smoothly into view
-   * (defaults to true). Only applies when {@link #tabScroll} = true.
+   * True to animate tab scrolling so that hidden tabs slide smoothly into view (defaults to true). Only applies when
+   * {@link #tabScroll} = true.
    * 
    * @param animScroll the animation scroll state
    */
@@ -628,8 +663,8 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * True to have the first item selected when the panel is displayed for the
-   * first time if there is not selection (defaults to true).
+   * True to have the first item selected when the panel is displayed for the first time if there is not selection
+   * (defaults to true).
    * 
    * @param autoSelect the auto select state
    */
@@ -638,8 +673,8 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * True to display an interior border on the body element of the panel, false
-   * to hide it (defaults to true, pre-render).
+   * True to display an interior border on the body element of the panel, false to hide it (defaults to true,
+   * pre-render).
    * 
    * @param bodyBorder the body border style
    */
@@ -670,8 +705,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * The minimum width in pixels for each tab when {@link #resizeTabs} = true
-   * (defaults to 30).
+   * The minimum width in pixels for each tab when {@link #resizeTabs} = true (defaults to 30).
    * 
    * @param minTabWidth the minimum tab width
    */
@@ -680,14 +714,11 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * True to automatically resize tabs. The resize operation takes into
-   * consideration the current width of the tab panel as well as the current
-   * values of {@link #setTabWidth(int)} and {@link #setMinTabWidth(int)}. The
-   * resulting tab width will not be less than the value specified by
-   * <code>setMinTabWidth</code> nor greater than the value specified by
-   * <code>setTabWidth</code>. To automatically resize the tabs to completely
-   * fill the tab strip, use <code>setTabWidth(Integer.MAX_VALUE)</code> and
-   * <code>setResizeTabs(true)</code>.
+   * True to automatically resize tabs. The resize operation takes into consideration the current width of the tab panel
+   * as well as the current values of {@link #setTabWidth(int)} and {@link #setMinTabWidth(int)}. The resulting tab
+   * width will not be less than the value specified by <code>setMinTabWidth</code> nor greater than the value specified
+   * by <code>setTabWidth</code>. To automatically resize the tabs to completely fill the tab strip, use
+   * <code>setTabWidth(Integer.MAX_VALUE)</code> and <code>setResizeTabs(true)</code>.
    * 
    * @param resizeTabs true to enable tab resizing
    */
@@ -696,8 +727,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * Sets the number of milliseconds that each scroll animation should last
-   * (defaults to 150).
+   * Sets the number of milliseconds that each scroll animation should last (defaults to 150).
    * 
    * @param scrollDuration the scroll duration
    */
@@ -706,10 +736,9 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * Sets the number of pixels to scroll each time a tab scroll button is
-   * pressed (defaults to 100, or if {@link #setResizeTabs(boolean)} = true, the
-   * calculated tab width). Only applies when {@link #setTabScroll(boolean)} =
-   * true.
+   * Sets the number of pixels to scroll each time a tab scroll button is pressed (defaults to 100, or if
+   * {@link #setResizeTabs(boolean)} = true, the calculated tab width). Only applies when {@link #setTabScroll(boolean)}
+   * = true.
    * 
    * @param scrollIncrement the scroll increment
    */
@@ -718,8 +747,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * The number of pixels of space to calculate into the sizing and scrolling of
-   * tabs (defaults to 2).
+   * The number of pixels of space to calculate into the sizing and scrolling of tabs (defaults to 2).
    * 
    * @param tabMargin the tab margin
    */
@@ -728,9 +756,8 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * True to enable scrolling to tabs that may be invisible due to overflowing
-   * the overall TabPanel width. Only available with tabs on top. (defaults to
-   * false).
+   * True to enable scrolling to tabs that may be invisible due to overflowing the overall TabPanel width. Only
+   * available with tabs on top. (defaults to false).
    * 
    * @param tabScroll true to enable tab scrolling
    */
@@ -748,14 +775,17 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   /**
-   * Updates the appearance of the specified tab item. Must be invoked after
-   * changing the tab item configuration.
+   * Updates the appearance of the specified tab item. Must be invoked after changing the tab item configuration.
    * 
    * @param widget the widget for the tab to update
    * @param config the new or updated tab item configuration
    */
   public void update(Widget widget, TabItemConfig config) {
-    appearance.updateItem(findItem(getWidgetIndex(widget)), config);
+    XElement item = findItem(getWidgetIndex(widget));
+    if (item != null) {
+      configMap.put(widget, config);
+      appearance.updateItem(item, config);
+    }
   }
 
   protected void close(Widget item) {
@@ -777,7 +807,7 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   protected Element findItem(Element target) {
-    return target.<XElement> cast().findParentElement(appearance.getItemSelector(), 5);
+    return target.<XElement> cast().findParentElement(appearance.getItemSelector(), -1);
   }
 
   protected XElement findItem(int index) {
@@ -820,19 +850,6 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
 
     if (getActiveWidget() == null && autoSelect && getWidgetCount() > 0) {
       setActiveWidget(getWidget(0));
-    }
-
-    if (resizeTabs) {
-
-      Timer t = new Timer() {
-        @Override
-        public void run() {
-          delegateUpdates();
-        }
-
-      };
-      t.schedule(1);
-      delegateUpdates();
     }
   }
 
@@ -1056,11 +1073,20 @@ public class TabPanel extends Component implements IndexedPanel.ForIsWidget, Has
   }
 
   private void delegateUpdates() {
-    if (resizeTabs) {
-      autoSizeTabs();
-    }
-    if (tabScroll) {
-      autoScrollTabs();
+    if (!scheduledDelegateUpdates) {
+      scheduledDelegateUpdates = true;
+      Scheduler.get().scheduleFinally(new ScheduledCommand() {
+        @Override
+        public void execute() {
+          scheduledDelegateUpdates = false;
+          if (resizeTabs) {
+            autoSizeTabs();
+          }
+          if (tabScroll) {
+            autoScrollTabs();
+          }
+        }
+      });
     }
   }
 

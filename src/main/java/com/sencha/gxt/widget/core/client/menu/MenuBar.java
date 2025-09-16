@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,6 +9,7 @@ package com.sencha.gxt.widget.core.client.menu;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
@@ -18,10 +19,13 @@ import com.sencha.gxt.core.client.Style.Anchor;
 import com.sencha.gxt.core.client.Style.AnchorAlignment;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.util.KeyNav;
-import com.sencha.gxt.widget.core.client.ComponentHelper;
 import com.sencha.gxt.widget.core.client.container.InsertContainer;
 import com.sencha.gxt.widget.core.client.event.HideEvent;
 import com.sencha.gxt.widget.core.client.event.HideEvent.HideHandler;
+import com.sencha.gxt.widget.core.client.event.MaximizeEvent;
+import com.sencha.gxt.widget.core.client.event.MaximizeEvent.MaximizeHandler;
+import com.sencha.gxt.widget.core.client.event.MinimizeEvent;
+import com.sencha.gxt.widget.core.client.event.MinimizeEvent.MinimizeHandler;
 
 public class MenuBar extends InsertContainer {
 
@@ -30,20 +34,36 @@ public class MenuBar extends InsertContainer {
     void render(SafeHtmlBuilder builder);
   }
 
-  class Handler implements HideHandler {
+  class Handler implements HideHandler, MaximizeHandler, MinimizeHandler {
 
     @Override
     public void onHide(HideEvent event) {
       autoSelect = false;
-      focus();
       autoSelect = true;
       if (active != null) active.expanded = false;
     }
 
+    @Override
+    public void onMaximize(MaximizeEvent event) {
+      int index = getWidgetIndex(active);
+      index = index != getWidgetCount() - 1 ? index + 1 : 0;
+      MenuBarItem item = (MenuBarItem) getWidget(index);
+      setActiveItem(item, true);
+    }
+
+    @Override
+    public void onMinimize(MinimizeEvent event) {
+      int index = getWidgetIndex(active);
+      index = index > 0 ? index - 1 : getWidgetCount() - 1;
+      MenuBarItem item = (MenuBarItem) getWidget(index);
+      setActiveItem(item, true);
+    }
+
   }
+
   protected MenuBarItem active;
 
-  protected final MenuBarAppearance appearance;
+  private final MenuBarAppearance appearance;
 
   private boolean autoSelect = true;
   private Handler handler = new Handler();
@@ -58,8 +78,8 @@ public class MenuBar extends InsertContainer {
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
-    sinkEvents(Event.ONCLICK | Event.ONFOCUS | Event.ONBLUR);
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
+    sinkEvents(Event.ONCLICK | Event.MOUSEEVENTS | Event.ONFOCUS | Event.ONBLUR);
 
     getElement().setTabIndex(-1);
     getElement().setAttribute("hideFocus", "true");
@@ -70,6 +90,13 @@ public class MenuBar extends InsertContainer {
         MenuBar.this.onKeyPress(evt);
       }
     };
+
+    // Ignore Menu preview event hiding menubar when toggle click occurs.
+    addStyleName("x-ignore");
+  }
+
+  public MenuBarAppearance getAppearance() {
+    return appearance;
   }
 
   @Override
@@ -79,9 +106,15 @@ public class MenuBar extends InsertContainer {
       case Event.ONCLICK:
         onClick(event);
         break;
+      case Event.ONMOUSEOVER:
+        onMouseOver(event);
+        break;
+      case Event.ONMOUSEOUT:
+        onMouseOut(event);
+        break;
       case Event.ONFOCUS:
         if (autoSelect && active == null && getWidgetCount() > 0) {
-          setActiveItem((MenuBarItem)getWidget(0), false);
+          setActiveItem((MenuBarItem) getWidget(0), false);
         }
         break;
       case Event.ONBLUR:
@@ -99,18 +132,25 @@ public class MenuBar extends InsertContainer {
    * @param expand true to expand the item's menu
    */
   public void setActiveItem(final MenuBarItem item, boolean expand) {
+    setActiveItem(item, expand, true);
+  }
+
+  /**
+   * Sets the active item.
+   * 
+   * @param item the item to activate
+   * @param expand true to expand the item's menu
+   * @param selectFirst sets the first item enabled or disabled
+   */
+  public void setActiveItem(final MenuBarItem item, boolean expand, boolean selectFirst) {
     if (active != item) {
       if (active != null) {
         onDeactivate(active);
       }
       onActivate(item);
 
-      // if (GXT.isFocusManagerEnabled()) {
-      // FocusFrame.get().frame(active);
-      // }
-
       if (expand) {
-        expand(item, true);
+        expand(item, selectFirst);
       }
     }
   }
@@ -138,8 +178,9 @@ public class MenuBar extends InsertContainer {
   }
 
   protected void expand(MenuBarItem item, boolean selectFirst) {
+    item.menu.setOnHideFocusElement(getFocusEl());
     item.menu.setFocusOnShow(false);
-    item.menu.show(item.getElement(), new AnchorAlignment(Anchor.TOP_LEFT, Anchor.BOTTOM_LEFT), new int[] {0, 1});
+    item.menu.show(item.getElement(), new AnchorAlignment(Anchor.TOP_LEFT, Anchor.BOTTOM_LEFT), 0, 1);
     item.expanded = true;
     if (item.menu.getWidgetCount() > 0 && selectFirst) {
       item.menu.setActiveItem(item.menu.getWidget(0), false);
@@ -201,7 +242,10 @@ public class MenuBar extends InsertContainer {
   protected void onInsert(int index, Widget child) {
     super.onInsert(index, child);
     MenuBarItem item = (MenuBarItem) child;
-    item.menu.addHideHandler(handler);
+    Menu itemMenu = item.getMenu();
+    itemMenu.addHideHandler(handler);
+    itemMenu.addMaximizeHandler(handler);
+    itemMenu.addMinimizeHandler(handler);
   }
 
   protected void onKeyPress(NativeEvent evt) {
@@ -226,15 +270,29 @@ public class MenuBar extends InsertContainer {
       int idx = getWidgetIndex(active);
       idx = idx != 0 ? idx - 1 : getWidgetCount() - 1;
       MenuBarItem item = (MenuBarItem) getWidget(idx);
-      setActiveItem(item, item.expanded);
+      setActiveItem(item, true, true);
     }
   }
 
-  @Override
-  protected void onRemove(Widget child) {
-    super.onRemove(child);
-    MenuBarItem item = (MenuBarItem) child;
-    ComponentHelper.removeHandler(item.menu, HideEvent.getType(), handler);
+  protected void onMouseOut(Event event) {
+    EventTarget eventTarget = event.getEventTarget();
+    if ((eventTarget == null || (Element.is(eventTarget) && findWidget((Element) Element.as(eventTarget)) == null))
+        && active != null && !active.expanded) {
+      onDeactivate(active);
+    }
+  }
+
+  protected void onMouseOver(Event event) {
+    EventTarget eventTarget = event.getEventTarget();
+    if (eventTarget != null) {
+      Element element = eventTarget.<Element> cast();
+      if (element != null) {
+        MenuBarItem item = (MenuBarItem) findWidget(element);
+        if (item != null && item != active) {
+          setActiveItem(item, active != null && active.expanded, false);
+        }
+      }
+    }
   }
 
   protected void onRight(NativeEvent event) {
@@ -242,7 +300,7 @@ public class MenuBar extends InsertContainer {
       int idx = getWidgetIndex(active);
       idx = idx != getWidgetCount() - 1 ? idx + 1 : 0;
       MenuBarItem item = (MenuBarItem) getWidget(idx);
-      setActiveItem(item, item.expanded);
+      setActiveItem(item, true, true);
     }
   }
 

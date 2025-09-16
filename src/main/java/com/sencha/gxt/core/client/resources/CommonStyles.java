@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,15 +18,12 @@ import com.google.gwt.resources.client.ImageResource;
 public class CommonStyles {
 
   public interface CommonStylesAppearance {
-    ImageResource shim();
-
     Styles styles();
   }
 
   public static class CommonStylesDefaultAppearance implements CommonStylesAppearance {
     
     public interface CommonDefaultResources extends ClientBundle {
-
       ImageResource shim();
 
       @Source("CommonStyles.css")
@@ -47,11 +44,6 @@ public class CommonStyles {
       bundle = GWT.create(CommonDefaultResources.class);
       styles = bundle.styles();
     }
-
-    @Override
-    public ImageResource shim() {
-      return bundle.shim();
-    }
     @Override
     public Styles styles() {
       return styles;
@@ -66,7 +58,7 @@ public class CommonStyles {
 
     String columnRowResize();
 
-    String disabled();
+    String floatLeft();
 
     String floatRight();
 
@@ -100,7 +92,7 @@ public class CommonStyles {
 
   private final CommonStylesAppearance appearance;
 
-  private static CommonStyles instance;
+  private static final CommonStyles instance = GWT.create(CommonStyles.class);
 
   /**
    * Returns the singleton instance.
@@ -108,9 +100,6 @@ public class CommonStyles {
    * @return the common styles
    */
   public static Styles get() {
-    if (instance == null) {
-      instance = new CommonStyles();
-    }
     return instance.appearance.styles();
   }
 

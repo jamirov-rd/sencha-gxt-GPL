@@ -1,52 +1,28 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 @eval rowExpand com.sencha.gxt.core.client.util.ImageHelper.createModuleBasedUrl("base/images/grid/row-expand-sprite.gif");
 
-@external x-expander;
-@external x-grid-td-expander;
-
-.dataTable {}
-.cellDirty {}
-.cellInvalid {}
-.cellSelected {}
-.columnLines {}
-
-.row {}
-.rowAlt {}
-.rowDirty {}
-.rowOver {}
-.rowHighlight {}
-.rowSelected {}
-
-.rowBody {}
-.headerRow {}
-
-.rowWrap .cell, .rowWrap .cellInner {
+.hasExpander .grid-cell, .hasExpander .grid-cellInner {
   background: none repeat scroll 0 0 transparent;
   border-width: 0;
 }
 
-@sprite .rowWrap .x-grid-td-expander {
+@sprite .grid-rowWrap .cell {
   vertical-align: top;
   gwt-image: 'specialColumn';
   height: auto;
   width: auto;
 }
 
-@sprite .rowSelected .x-grid-td-expander {
+@sprite .grid-rowSelected .cell {
   gwt-image: 'specialColumnSelected';
   height: auto;
   width: auto;
-}
-
-.x-grid-td-expander .cellInner {
-  padding: 0 !important;
-  height: 100%;
 }
 
 .rowExpander {
@@ -67,21 +43,16 @@
   background-position: -21px 2px;
 }
 
-.rowCollapsed .rowBodyRow {
+.rowCollapsed .grid-rowBodyRow {
   display: none; 
 }
 
-.rowExpanded .rowBodyRow {
+.rowExpanded .grid-rowBodyRow {
   display: table-row; 
 }
 
 @if user.agent ie6 {
-  .x-expander .cellInner {
+  .hasExpander .grid-cellInner {
     padding: 3px 3px 2px 5px;
   }
-}
-
-.x-grid-td-expander .cellInner {
-  padding: 0 !important;
-  height: 100%;
 }

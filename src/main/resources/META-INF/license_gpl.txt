@@ -1,5 +1,12 @@
+====
+    Sencha GXT 3.1.1 - Sencha for GWT
+    Copyright(c) 2007-2014, Sencha, Inc.
+    licensing@sencha.com
+
+    http://www.sencha.com/products/gxt/license/
+====
 Sencha GXT Library
-Copyright (c) 2006-2012, Sencha Inc.
+Copyright (c) 2006-2014, Sencha Inc.
 All rights reserved.
 licensing@sencha.com
 

@@ -1,14 +1,14 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.core.client;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.user.client.DOM;
 
 /**
  * Determines information about the current platform the application is running on.
@@ -16,7 +16,7 @@ import com.google.gwt.user.client.DOM;
 public class Supports {
 
   static {
-    Element div = DOM.createDiv();
+    Element div = Document.get().createDivElement();
     
     StringBuilder sb = new StringBuilder();
     sb.append("<div style='height:30px;width:50px'>");

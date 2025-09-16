@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,21 +14,18 @@ import com.sencha.gxt.theme.base.client.menu.MenuItemBaseAppearance;
 
 public class GrayMenuItemAppearance extends MenuItemBaseAppearance {
 
-  public static class GrayMenuItemAppearanceHelper {
-
-    public static String getMenuParent() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append("gray/images/menu/menuParent.gif);").toString();
-    }
-
-  }
-
   public interface GrayMenuItemResources extends MenuItemBaseAppearance.MenuItemResources, ClientBundle {
 
     ImageResource menuParent();
 
-    @Source({"com/sencha/gxt/theme/base/client/menu/MenuItem.css", "GrayMenuItem.css"})
+    @Override
+    @Source({"com/sencha/gxt/theme/base/client/menu/Item.css",
+            "com/sencha/gxt/theme/gray/client/menu/GrayItem.css",
+            "com/sencha/gxt/theme/base/client/menu/MenuItem.css",
+            "GrayMenuItem.css"})
     GrayMenuItemStyle style();
 
+    ImageResource itemOver();
   }
 
   public interface GrayMenuItemStyle extends MenuItemBaseAppearance.MenuItemStyle {

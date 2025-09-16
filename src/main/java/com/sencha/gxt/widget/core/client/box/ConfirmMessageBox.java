@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,12 +14,18 @@ package com.sencha.gxt.widget.core.client.box;
  * 
  * <pre>
     final ConfirmMessageBox mb = new ConfirmMessageBox("Confirmation Required", "Are you ready?");
-    mb.addHideHandler(new HideHandler() {
-      public void onHide(HideEvent event) {
-        if (mb.getHideButton() == mb.getButtonById(PredefinedButton.YES.name())) {
-          // perform YES action
-        } else if (mb.getHideButton() == mb.getButtonById(PredefinedButton.NO.name())){
-          // perform NO action
+    mb.addDialogHideHandler(new DialogHideHandler() {
+      {@literal @}Override
+      public void onDialogHide(DialogHideEvent event) {
+        switch (event.getHideButton()) {
+          case YES:
+            //Perform YES action
+            break;
+          case NO:
+            //perform NO action
+            break;
+          default:
+            //error, button added with no specific action ready
         }
       }
     });

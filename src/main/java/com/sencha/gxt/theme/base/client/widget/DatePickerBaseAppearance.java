@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -165,7 +165,7 @@ public abstract class DatePickerBaseAppearance implements DatePickerAppearance {
 
   @Override
   public String monthPickerCancelSelector() {
-    return "button." + style.cancel();
+    return "." + style.cancel();
   }
 
   @Override
@@ -175,7 +175,7 @@ public abstract class DatePickerBaseAppearance implements DatePickerAppearance {
 
   @Override
   public String monthPickerOkSelector() {
-    return "button." + style.ok();
+    return "." + style.ok();
   }
 
   @Override
@@ -303,12 +303,10 @@ public abstract class DatePickerBaseAppearance implements DatePickerAppearance {
       }
     }
 
-    sb.appendHtmlConstant("<tr class=" + style.monthButtons() + "><td colspan='4'><button type='button' class='"
-        + style.ok() + "'>");
-    sb.appendHtmlConstant(messages.okText());
-    sb.appendHtmlConstant("</button><button type=button class=" + style.cancel() + ">");
-    sb.appendHtmlConstant(messages.cancelText());
-    sb.appendHtmlConstant("</button></td></tr></table></div>");
+    sb.appendHtmlConstant("<tr class=" + style.monthButtons() + "><td colspan='4'>");
+    sb.appendHtmlConstant("<div class='" + style.ok() + "'></div>");
+    sb.appendHtmlConstant("<div class=" + style.cancel() + "></div>");
+    sb.appendHtmlConstant("</td></tr></table></div>");
   }
 
   @Override

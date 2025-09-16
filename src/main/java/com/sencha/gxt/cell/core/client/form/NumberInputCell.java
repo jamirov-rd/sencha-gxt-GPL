@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -15,6 +15,7 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.i18n.client.LocaleInfo;
+import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.widget.core.client.event.XEvent;
 import com.sencha.gxt.widget.core.client.form.NumberPropertyEditor;
 import com.sencha.gxt.widget.core.client.form.PropertyEditor;
@@ -171,7 +172,8 @@ public class NumberInputCell<N extends Number> extends TwinTriggerFieldCell<N> {
       return;
     }
 
-    if (!allowed.contains(key)) {
+    boolean paste = key == 'v' && event.<XEvent>cast().getCtrlOrMetaKey();
+    if (!paste && !allowed.contains(key)) {
       event.stopPropagation();
       event.preventDefault();
     }

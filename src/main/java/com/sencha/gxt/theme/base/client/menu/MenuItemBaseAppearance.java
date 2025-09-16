@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,27 +8,24 @@
 package com.sencha.gxt.theme.base.client.menu;
 
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.ui.Widget;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
-import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
 import com.sencha.gxt.core.client.util.IconHelper;
 import com.sencha.gxt.core.client.util.Util;
 import com.sencha.gxt.widget.core.client.menu.MenuItem;
 
-public abstract class MenuItemBaseAppearance implements MenuItem.MenuItemAppearance {
+public abstract class MenuItemBaseAppearance extends ItemBaseAppearance implements MenuItem.MenuItemAppearance {
 
-  public interface MenuItemResources {
-
+  public interface MenuItemResources extends ItemResources {
+    @Override
     MenuItemStyle style();
-
   }
 
-  public interface MenuItemStyle extends CssResource {
+  public interface MenuItemStyle extends ItemStyle {
 
     String menuItem();
 
@@ -48,13 +45,12 @@ public abstract class MenuItemBaseAppearance implements MenuItem.MenuItemAppeara
   }
 
   private final MenuItemStyle style;
-  private MenuItemTemplate template;
+  private final MenuItemTemplate template;
 
   public MenuItemBaseAppearance(MenuItemResources resources, MenuItemTemplate template) {
+    super(resources);
     style = resources.style();
     this.template = template;
-
-    StyleInjectorHelper.ensureInjected(this.style, true);
   }
 
   public XElement getAnchor(XElement parent) {

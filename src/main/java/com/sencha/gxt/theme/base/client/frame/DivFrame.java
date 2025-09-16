@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.frame;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.Node;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.dom.client.Style.Display;
@@ -103,7 +102,7 @@ public class DivFrame implements Frame {
   }
 
   @Override
-  public Size getFrameSize() {
+  public Size getFrameSize(XElement parent) {
     return new Size(resources.leftBorder().getWidth(), resources.rightBorder().getWidth());
   }
 
@@ -117,7 +116,7 @@ public class DivFrame implements Frame {
   }
 
   @Override
-  public void onFocus(XElement parent, boolean focus, NativeEvent event) {
+  public void onFocus(XElement parent, boolean focus) {
 
   }
 
@@ -136,12 +135,12 @@ public class DivFrame implements Frame {
   }
 
   @Override
-  public void onOver(XElement parent, boolean over, NativeEvent event) {
+  public void onOver(XElement parent, boolean over) {
     parent.setClassName(style.over(), over);
   }
 
   @Override
-  public void onPress(XElement parent, boolean pressed, NativeEvent event) {
+  public void onPress(XElement parent, boolean pressed) {
     parent.setClassName(style.pressed(), pressed);
   }
 

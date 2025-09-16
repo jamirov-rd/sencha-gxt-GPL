@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,8 +10,6 @@
 @eval dirty com.sencha.gxt.core.client.util.ImageHelper.createModuleBasedUrl("base/images/grid/dirty.gif");
 
 @external x-treegrid x-treegrid-column;
-@external x-grid-td-numberer;
-@external x-grid-footer;
 
 .grid {
   position: relative;
@@ -28,10 +26,6 @@
 
 .body {
   
-}
-
-TH {
-  border-bottom: none !important;
 }
 
 .dataTable {
@@ -52,7 +46,7 @@ TH {
   border: 1px dotted #545352;
 } 
 
-.rowSelected .cell {
+.grid-rowSelected .cell {
   background-color: #DFE8F6 !important;
   border-color: #A3BAE9;
   border-style: dotted;
@@ -91,14 +85,14 @@ TH {
   text-overflow: ellipsis;
 }
 
+.noPadding/*.cellInner*/ {
+  padding: 0;
+  height: 100%;
+}
+
 .cellDirty {
   background: transparent no-repeat 0 0; 
   background-image: dirty;
-}
-
-.cellInvalid {
-  background: repeat-x bottom;
-  background-image: invalidLine;
 }
 
 .cellDirty {
@@ -106,7 +100,7 @@ TH {
   background-image: dirty;
 }
 
-.cellSelected {
+.row .grid-cellSelected {
   background-color: #b8cfee !important;
   color: #000;
 }
@@ -126,8 +120,6 @@ TH {
   font: normal 11px tahoma, arial, helvetica, sans-serif; 
 }
 
-.rowBodyRow {}
-
 .rowBody {
   font: 11px/13px tahoma,arial,verdana,sans-serif;
   padding: 4px;
@@ -141,7 +133,7 @@ TH {
   overflow: hidden;
 }
 
-.rowSelected .cell, .rowSelected .rowWrap {
+.grid-rowSelected .cell, .grid-rowSelected .rowWrap {
   background-color: #DFE8F6 !important;
   border-color: #A3BAE9;
   border-style: dotted;
@@ -149,35 +141,6 @@ TH {
 
 .rowWrap .cell, .rowWrap .cellInner {
   border: none; 
-}
-
-.x-grid-td-numberer {
-  background: transparent repeat-y right;
-}
-
-.x-grid-td-numberer .cellInner {
-  padding: 3px 5px 0 0 !important;
-  text-align: center;
-}
-
-.rowSelected .x-grid-td-numberer {
-  background: transparent repeat-y right;
-}
-
-@sprite .row .x-grid-td-numberer {
-  gwt-image: 'specialColumn';
-  height: auto;
-  width: auto;
-}
-
-.x-grid-td-numberer .cellInner {
-  color: #444;
-}
-
-@sprite .rowSelected .x-grid-td-numberer {
-  gwt-image: 'specialColumnSelected';
-  height: auto;
-  width: auto;
 }
 
 .footer {

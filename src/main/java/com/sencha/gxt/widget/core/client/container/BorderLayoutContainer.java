@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style.Visibility;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
@@ -30,6 +31,7 @@ import com.sencha.gxt.core.client.util.Margins;
 import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.core.client.util.Size;
 import com.sencha.gxt.widget.core.client.CollapsePanel;
+import com.sencha.gxt.widget.core.client.Collapsible;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.ContentPanel;
 import com.sencha.gxt.widget.core.client.SplitBar;
@@ -51,28 +53,23 @@ import com.sencha.gxt.widget.core.client.event.SplitBarDragEvent;
 import com.sencha.gxt.widget.core.client.event.SplitBarDragEvent.SplitBarDragHandler;
 
 /**
- * A multi-pane, application-oriented layout container that supports multiple
- * regions, automatic split bars between regions and built-in expanding and
- * collapsing of regions.
+ * A multi-pane, application-oriented layout container that supports multiple regions, automatic split bars between
+ * regions and built-in expanding and collapsing of regions.
  * <p/>
- * Region positions are specified using compass points (e.g. north for top, west
- * for left, east for right, south for bottom) and center. The center region is
- * a privileged position that receives the remaining space not allocated to
- * other regions. Border layout containers should generally specify a center
- * region and one or more other regions.
+ * Region positions are specified using compass points (e.g. north for top, west for left, east for right, south for
+ * bottom) and center. The center region is a privileged position that receives the remaining space not allocated to
+ * other regions. Border layout containers should generally specify a center region and one or more other regions.
  * <p/>
- * Region layout parameters are specified using {@link BorderLayoutData} which
- * controls the margin between the regions, the size of the region, the minimum
- * and maximum size, whether the region has a split bar, whether the region is
+ * Region layout parameters are specified using {@link BorderLayoutData} which controls the margin between the regions,
+ * the size of the region, the minimum and maximum size, whether the region has a split bar, whether the region is
  * collapsible and other details.
  * <p/>
- * Region size may be specified as a percent of the parent container size or a
- * fixed number of pixels. The region size is specified as a single value that
- * describes the orientation associated with the region (height for north and
- * south, width for west and east).
+ * Region size may be specified as a percent of the parent container size or a fixed number of pixels. The region size
+ * is specified as a single value that describes the orientation associated with the region (height for north and south,
+ * width for west and east).
  * <p/>
- * The size, split bar and collapsible attributes are specified in the
- * <code>BorderLayoutData</code> for the region adjacent to the center region.
+ * The size, split bar and collapsible attributes are specified in the <code>BorderLayoutData</code> for the region
+ * adjacent to the center region.
  * <p />
  * Code Snippet:
  * 
@@ -125,12 +122,10 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   /**
-   * Specifies region layout parameters which control the margin between the
-   * regions, the size of the region, the minimum and maximum size, whether the
-   * region has a split bar, whether the region is collapsible and other
-   * details. The size, split bar and collapsible attributes are specified in
-   * the <code>BorderLayoutData</code> for the region adjacent to the center
-   * region. The center region is allocated the remaining space.
+   * Specifies region layout parameters which control the margin between the regions, the size of the region, the
+   * minimum and maximum size, whether the region has a split bar, whether the region is collapsible and other details.
+   * The size, split bar and collapsible attributes are specified in the <code>BorderLayoutData</code> for the region
+   * adjacent to the center region. The center region is allocated the remaining space.
    */
   public static class BorderLayoutData extends MarginData implements HasSize, LayoutData {
 
@@ -142,23 +137,22 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     private boolean collapsible;
     private boolean collapseMini;
     private boolean collapseHidden;
-    private boolean floatable;
+    private boolean floatable = true;
     private boolean collapsed;
 
     /**
-     * Creates a border layout data with default values for <code>size</code>
-     * (100), <code>minSize</code> (50) and <code>maxSize</code> (500).
+     * Creates a border layout data with default values for <code>size</code> (100), <code>minSize</code> (50) and
+     * <code>maxSize</code> (500).
      */
     public BorderLayoutData() {
 
     }
 
     /**
-     * Creates a border layout data with default values for <code>minSize</code>
-     * (50) and <code>maxSize</code> (500) and the specified value for size.
+     * Creates a border layout data with default values for <code>minSize</code> (50) and <code>maxSize</code> (500) and
+     * the specified value for size.
      * 
-     * @param size the region size (height for north and south, width for west
-     *          and east)
+     * @param size the region size (height for north and south, width for west and east)
      */
     @UiConstructor
     public BorderLayoutData(double size) {
@@ -261,8 +255,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * True to hide the collapse panel when a region is collapsed (defaults to
-     * false).
+     * True to hide the collapse panel when a region is collapsed (defaults to false).
      * 
      * @param collapseHidden the collapse hidden state
      */
@@ -271,8 +264,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * True to add a mini-collapase tool in the split bar. Enabling will make
-     * the region resizable.
+     * True to add a mini-collapase tool in the split bar. Enabling will make the region resizable.
      * 
      * @param collapseMini true to add tool
      */
@@ -282,9 +274,8 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * True to allow the user to collapse this region (defaults to false). If
-     * true, an expand/collapse tool button will automatically be rendered into
-     * the title bar of the region, otherwise the button will not be shown.
+     * True to allow the user to collapse this region (defaults to false). If true, an expand/collapse tool button will
+     * automatically be rendered into the title bar of the region, otherwise the button will not be shown.
      * 
      * @param collapsible true to enable collapsing
      */
@@ -293,10 +284,9 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * True to allow clicking a collapsed region's bar to display the region's
-     * panel floated above the layout, false to force the user to fully expand a
-     * collapsed region by clicking the expand button to see it again (defaults
-     * to true).
+     * True to allow clicking a collapsed region's bar to display the region's panel floated above the layout, false to
+     * force the user to fully expand a collapsed region by clicking the expand button to see it again (defaults to
+     * true).
      * 
      * @param floatable true to enable floating
      */
@@ -314,8 +304,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * Sets the maximum allowable size in pixels for this region (defaults to
-     * 500).
+     * Sets the maximum allowable size in pixels for this region (defaults to 500).
      * 
      * @param maxSize the max size
      */
@@ -324,8 +313,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * Sets the minimum allowable size in pixels for this region (defaults to
-     * 50).
+     * Sets the minimum allowable size in pixels for this region (defaults to 50).
      * 
      * @param minSize the min size
      */
@@ -339,9 +327,8 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     }
 
     /**
-     * True to display a {@link SplitBar} between this region and its neighbor,
-     * allowing the user to resize the regions dynamically (defaults to false).
-     * When split = true, it is common to specify a {@link #minSize} and
+     * True to display a {@link SplitBar} between this region and its neighbor, allowing the user to resize the regions
+     * dynamically (defaults to false). When split = true, it is common to specify a {@link #minSize} and
      * {@link #maxSize} for the region.
      * 
      * @param split true to enable a split bar
@@ -397,7 +384,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
 
     getElement().makePositionable();
   }
@@ -413,8 +400,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   /**
-   * Collapses the panel in the given region. If the target widget is hidden no
-   * action will be performed.
+   * Collapses the panel in the given region. If the target widget is hidden no action will be performed.
    * 
    * @param region the region to be collapsed
    */
@@ -430,8 +416,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   /**
-   * Expands the panel in the given region. If the target widget is hidden no
-   * action will be performed.
+   * Expands the panel in the given region. If the target widget is hidden no action will be performed.
    * 
    * @param region the region to expand
    */
@@ -446,6 +431,10 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
       ContentPanel cp = (ContentPanel) collapse.getData("panel");
       onExpand(cp);
     }
+  }
+
+  public BorderLayoutAppearance getAppearance() {
+    return appearance;
   }
 
   @Override
@@ -464,12 +453,10 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   /**
-   * Returns the widget in the specified region, or null if there is no widget
-   * for that region.
+   * Returns the widget in the specified region, or null if there is no widget for that region.
    * 
    * @param region the region
-   * @return the widget in the specified region, or null if there is no widget
-   *         for that region
+   * @return the widget in the specified region, or null if there is no widget for that region
    */
   public Widget getRegionWidget(LayoutRegion region) {
     switch (region) {
@@ -517,10 +504,9 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   /**
-   * Sets the widget in the center region of the border layout container. The
-   * center region is a privileged position that receives the remaining space
-   * not allocated to other regions. Border layout containers should generally
-   * specify a center region and one or more other regions.
+   * Sets the widget in the center region of the border layout container. The center region is a privileged position
+   * that receives the remaining space not allocated to other regions. Border layout containers should generally specify
+   * a center region and one or more other regions.
    * 
    * @param child the widget to put in the center region
    * @param layoutData the layout data for the widget
@@ -547,12 +533,19 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
 
   /**
    * Sets the widget in the east (right) region of the border layout container.
-   * 
+   * <p>
+   * <ul>
+   * <li>In order to use layoutData.setCollapsible(true) the child has to be a {@link ContentPanel}
+   * <li>When using layoutData.setSplit(true) the child can implement {@link Collapsible}.
+   * When the child implements collapsible, on selection of the split, it will collapse the child.
+   * </ul>
+   *
    * @param child the widget to put in the east region
    * @param layoutData the layout data for the widget
    */
   @UiChild(limit = 1, tagname = "east")
   public void setEastWidget(IsWidget child, BorderLayoutData layoutData) {
+    assertLayoutDataFeaturesUsed("setEastWidget", child, layoutData);
     if (child != null) {
       child.asWidget().setLayoutData(layoutData);
     }
@@ -573,12 +566,19 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
 
   /**
    * Sets the widget in the north (top) region of the border layout container.
+   * <p>
+   * <ul>
+   * <li>In order to use layoutData.setCollapsible(true) the child has to be a {@link ContentPanel}
+   * <li>When using layoutData.setSplit(true) the child can implement {@link Collapsible}.
+   * When the child implements collapsible, on selection of the split, it will collapse the child.
+   * </ul>
    * 
    * @param child the widget to put in the north region
    * @param layoutData the layout data for the widget
    */
   @UiChild(limit = 1, tagname = "north")
   public void setNorthWidget(IsWidget child, BorderLayoutData layoutData) {
+    assertLayoutDataFeaturesUsed("setNorthWidget", child, layoutData);
     if (child != null) {
       child.asWidget().setLayoutData(layoutData);
     }
@@ -597,14 +597,20 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   /**
-   * Sets the widget in the south (bottom) region of the border layout
-   * container.
-   * 
+   * Sets the widget in the south (bottom) region of the border layout container.
+   * <p>
+   * <ul>
+   * <li>In order to use layoutData.setCollapsible(true) the child has to be a {@link ContentPanel}
+   * <li>When using layoutData.setSplit(true) the child can implement {@link Collapsible}.
+   * When the child implements collapsible, on selection of the split, it will collapse the child.
+   * </ul>
+   *
    * @param child the widget to put in the south region
    * @param layoutData the layout data for the widget
    */
   @UiChild(limit = 1, tagname = "south")
   public void setSouthWidget(IsWidget child, BorderLayoutData layoutData) {
+    assertLayoutDataFeaturesUsed("setSouthWidget", child, layoutData);
     if (child != null) {
       child.asWidget().setLayoutData(layoutData);
     }
@@ -624,12 +630,19 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
 
   /**
    * Sets the widget in the west (left) region of the border layout container.
-   * 
+   * <p>
+   * <ul>
+   * <li>In order to use layoutData.setCollapsible(true) the child has to be a {@link ContentPanel}
+   * <li>When using layoutData.setSplit(true) the child can implement {@link Collapsible}.
+   * When the child implements collapsible, on selection of the split, it will collapse the child.
+   * </ul>
+   *
    * @param child the widget to put in the west region
    * @param layoutData the layout data for the widget
    */
   @UiChild(limit = 1, tagname = "west")
   public void setWestWidget(IsWidget child, BorderLayoutData layoutData) {
+    assertLayoutDataFeaturesUsed("setWestWidget", child, layoutData);
     if (child != null) {
       child.asWidget().setLayoutData(layoutData);
     }
@@ -667,47 +680,12 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   protected CollapsePanel createCollapsePanel(ContentPanel panel, BorderLayoutData data, LayoutRegion region) {
-    CollapsePanel cp = new CollapsePanel(panel, data, region) {
+    return new CollapsePanel(panel, data, region) {
       protected void onExpandButton() {
         super.onExpandButton();
         onExpandClick(this);
       }
     };
-
-    BorderLayoutData collapseData = new BorderLayoutData();
-    collapseData.setSize(data.isCollapseHidden() ? 0 : 24);
-
-    Margins m = data.getMargins();
-    if (m == null) {
-      m = new Margins();
-      data.setMargins(m);
-    }
-    collapseData.setMargins(new Margins(m.getTop(), m.getRight(), m.getBottom(), m.getLeft()));
-
-    if (data.isCollapseHidden()) {
-      cp.collapseHidden();
-      collapseData.setSize(0);
-      switch (region) {
-        case WEST:
-          collapseData.getMargins().setLeft(0);
-          break;
-        case EAST:
-          collapseData.getMargins().setRight(0);
-          break;
-        case NORTH:
-          collapseData.getMargins().setTop(0);
-          break;
-        case SOUTH:
-          collapseData.getMargins().setBottom(0);
-          break;
-      }
-    }
-
-    cp.setLayoutData(collapseData);
-    cp.setData("panel", panel);
-    panel.setData("collapse", cp);
-
-    return cp;
   }
 
   protected SplitBar createSplitBar(Component component) {
@@ -725,11 +703,11 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
 
   @Override
   protected void doLayout() {
-    if (isStateful()) {
-      for (int i = 0; i < getWidgetCount(); i++) {
-        Widget w = getWidget(i);
-        if (w instanceof ContentPanel && w.getLayoutData() instanceof BorderLayoutData) {
-          BorderLayoutData data = (BorderLayoutData) w.getLayoutData();
+    for (int i = 0; i < getWidgetCount(); i++) {
+      Widget w = getWidget(i);
+      if (w instanceof ContentPanel && w.getLayoutData() instanceof BorderLayoutData) {
+        BorderLayoutData data = (BorderLayoutData) w.getLayoutData();
+        if (getRegion((Component) w) != LayoutRegion.CENTER) {
           if (data.isCollapsed()) {
             switchPanels((ContentPanel) w);
           }
@@ -865,38 +843,11 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
   }
 
   protected void onCollapse(ContentPanel panel) {
-    BorderLayoutData data = (BorderLayoutData) panel.getLayoutData();
-
-    LayoutRegion region = getRegion(panel);
-
-    CollapsePanel cp = (CollapsePanel) panel.getData("collapse");
-    if (cp == null) {
-      cp = createCollapsePanel(panel, data, region);
-    }
-
-    cp.clearSizeCache();
-
-    setCollapsed(panel, true);
-
-    switch (region) {
-      case WEST:
-        setWestWidget(cp);
-        break;
-      case EAST:
-        setEastWidget(cp);
-        break;
-      case NORTH:
-        setNorthWidget(cp);
-        break;
-      case SOUTH:
-        setSouthWidget(cp);
-        break;
-    }
-
-    panel.clearSizeCache();
+    switchPanels(panel);
 
     doLayout();
 
+    CollapsePanel cp = (CollapsePanel) panel.getData("collapse");
     SplitBar bar = cp.getSplitBar();
     if (bar != null) {
       bar.sync();
@@ -923,6 +874,9 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
       case SOUTH:
         setSouthWidget(panel);
         break;
+      case CENTER:
+        // do nothing
+        break;
     }
 
     setCollapsed(panel, false);
@@ -939,6 +893,7 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     ContentPanel panel = collapse.getContentPanel();
     onExpand(panel);
   }
+
 
   @Override
   protected void onInsert(int index, Widget child) {
@@ -963,9 +918,9 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
       final BorderLayoutData panelData = (BorderLayoutData) collapse.getContentPanel().getLayoutData();
       SplitBar bar = collapse.getData("splitBar");
       if (bar == null || bar.getTargetWidget() != c) {
-
         bar = collapse.getSplitBar();
-        bar.setCollapsible(true);
+        bar.setCollapsible(panelData.isCollapseMini());
+
         c.setData("splitBar", bar);
 
         if (panelData.isCollapseHidden()) {
@@ -998,6 +953,9 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
         case EAST:
           config = ToolButton.DOUBLERIGHT;
           break;
+        case WEST:
+        case CENTER:
+          // do nothing
       }
 
       cp.getHeader().addTool(new ToolButton(config, new SelectHandler() {
@@ -1016,9 +974,8 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
       if (bar == null || bar.getTargetWidget() != c) {
         bar = createSplitBar(c);
         final SplitBar fbar = bar;
-
+        bar.setCollapsible(data.isCollapseMini());
         if (data.isCollapseMini()) {
-          bar.setCollapsible(true);
           switch (getRegion(c)) {
             case EAST:
               bar.updateMini(Direction.RIGHT);
@@ -1032,16 +989,19 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
             case SOUTH:
               bar.updateMini(Direction.DOWN);
               break;
+            case CENTER:
+              // do nothing
           }
-        }
-        if (data.isCollapseMini()) {
           bar.addSelectHandler(new SelectHandler() {
             @Override
             public void onSelect(SelectEvent event) {
-              ((ContentPanel) c).collapse();
+              if (c instanceof Collapsible) {
+                ((Collapsible) c).collapse();
+              }
             }
           });
         }
+
         bar.addSplitBarDragHandler(new SplitBarDragHandler() {
 
           @Override
@@ -1111,6 +1071,41 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
     CollapsePanel cp = (CollapsePanel) panel.getData("collapse");
     if (cp == null) {
       cp = createCollapsePanel(panel, data, region);
+
+      BorderLayoutData collapseData = new BorderLayoutData();
+      collapseData.setSize(data.isCollapseHidden() ? 0 : 24);
+
+      Margins m = data.getMargins();
+      if (m == null) {
+        m = new Margins();
+        data.setMargins(m);
+      }
+      collapseData.setMargins(new Margins(m.getTop(), m.getRight(), m.getBottom(), m.getLeft()));
+
+      if (data.isCollapseHidden()) {
+        cp.collapseHidden();
+        collapseData.setSize(0);
+        switch (region) {
+          case WEST:
+            collapseData.getMargins().setLeft(0);
+            break;
+          case EAST:
+            collapseData.getMargins().setRight(0);
+            break;
+          case NORTH:
+            collapseData.getMargins().setTop(0);
+            break;
+          case SOUTH:
+            collapseData.getMargins().setBottom(0);
+            break;
+          case CENTER:
+            // do nothing
+        }
+      }
+
+      cp.setLayoutData(collapseData);
+      cp.setData("panel", panel);
+      panel.setData("collapse", cp);
     }
 
     cp.clearSizeCache();
@@ -1130,8 +1125,17 @@ public class BorderLayoutContainer extends SimpleContainer implements HasCenterW
       case SOUTH:
         setSouthWidget(cp);
         break;
+      case CENTER:
+        // do nothing
+    }
+  }
+
+  private void assertLayoutDataFeaturesUsed(String from, IsWidget child, BorderLayoutData layoutData) {
+    if (layoutData == null || child == null) {
+      return;
     }
 
+    assert !layoutData.isCollapsible() || child.asWidget() instanceof ContentPanel : "In order to use layoutData.setCollapsible(true) " + from + "(child, layoutData) a GXT ContentPanel has to be used as the child widget.";
   }
 
 }

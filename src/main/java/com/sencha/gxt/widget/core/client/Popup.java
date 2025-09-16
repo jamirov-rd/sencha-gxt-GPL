@@ -1,13 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client;
 
-import com.google.gwt.user.client.Element;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Window;
@@ -20,6 +20,11 @@ import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
 import com.sencha.gxt.core.client.util.Point;
 import com.sencha.gxt.core.client.util.Rectangle;
+import com.sencha.gxt.fx.client.animation.AfterAnimateEvent;
+import com.sencha.gxt.fx.client.animation.AfterAnimateEvent.AfterAnimateHandler;
+import com.sencha.gxt.fx.client.animation.FadeIn;
+import com.sencha.gxt.fx.client.animation.FadeOut;
+import com.sencha.gxt.fx.client.animation.Fx;
 import com.sencha.gxt.widget.core.client.container.SimpleContainer;
 import com.sencha.gxt.widget.core.client.event.BeforeHideEvent;
 import com.sencha.gxt.widget.core.client.event.BeforeShowEvent;
@@ -40,7 +45,7 @@ public class Popup extends SimpleContainer {
 
   private Element alignElem;
   private AnchorAlignment alignPos;
-  private int[] alignOffsets;
+  private int alignOffsetX = 0, alignOffsetY = 2;
   private Point alignPoint;
   private BaseEventPreview preview = new BaseEventPreview() {
     @Override
@@ -117,11 +122,15 @@ public class Popup extends SimpleContainer {
       preview.remove();
     }
     if (isAnimate()) {
-      // el().fadeOut(new FxConfig(new Listener<FxEvent>() {
-      // public void handleEvent(FxEvent fe) {
-      // afterHide();
-      // }
-      // }));
+      Fx fx = new Fx();
+      fx.addAfterAnimateHandler(new AfterAnimateHandler() {
+        @Override
+        public void onAfterAnimate(AfterAnimateEvent event) {
+          afterHide();
+        }
+      });
+
+      fx.run(new FadeOut(getElement()));
     } else {
       afterHide();
     }
@@ -182,8 +191,7 @@ public class Popup extends SimpleContainer {
   }
 
   /**
-   * True to close the popup when the user clicks outside of the menu (default
-   * to true).
+   * True to close the popup when the user clicks outside of the menu (default to true).
    * 
    * @param autoHide true for auto hide
    */
@@ -201,8 +209,8 @@ public class Popup extends SimpleContainer {
   }
 
   /**
-   * The default {@link XElement#alignTo} anchor position value for this menu
-   * relative to its element of origin (defaults to "tl-bl?").
+   * The default {@link XElement#alignTo} anchor position value for this menu relative to its element of origin
+   * (defaults to "tl-bl?").
    * 
    * @param defaultAlign the default alignment
    */
@@ -240,9 +248,8 @@ public class Popup extends SimpleContainer {
   }
 
   /**
-   * Displays the popup aligned to the bottom left of the widget. For exact
-   * control of popup position see
-   * {@link #show(Element, com.sencha.gxt.core.client.Style.AnchorAlignment, int[])}.
+   * Displays the popup aligned to the bottom left of the widget. For exact control of popup position see
+   * {@link #show(com.google.gwt.dom.client.Element, com.sencha.gxt.core.client.Style.AnchorAlignment, int, int)}.
    * 
    * @param widget the widget to use for alignment
    */
@@ -274,15 +281,17 @@ public class Popup extends SimpleContainer {
    * 
    * @param elem the element to align to
    * @param pos the position
-   * @param offsets the offsets
+   * @param offsetX X offset
+   * @param offsetY Y offset
    */
-  public void show(Element elem, AnchorAlignment pos, int[] offsets) {
+  public void show(Element elem, AnchorAlignment pos, int offsetX, int offsetY) {
     if (!fireCancellableEvent(new BeforeShowEvent())) {
       return;
     }
     alignElem = elem;
     alignPos = pos;
-    alignOffsets = offsets;
+    alignOffsetX = offsetX;
+    alignOffsetY = offsetY;
     onShowPopup();
   }
 
@@ -316,8 +325,6 @@ public class Popup extends SimpleContainer {
     }
 
     getElement().setZIndex(XDOM.getTopZIndex());
-    //
-    // fireEvent(Events.Open, new ComponentEvent(this));
   }
 
   protected void onAfterFirstAttach() {
@@ -352,8 +359,7 @@ public class Popup extends SimpleContainer {
 
     if (alignElem != null) {
       alignPos = alignPos != null ? alignPos : getDefaultAlign();
-      alignOffsets = alignOffsets != null ? alignOffsets : new int[] {0, 2};
-      p = getElement().getAlignToXY(alignElem, alignPos, alignOffsets);
+      p = getElement().getAlignToXY(alignElem, alignPos, alignOffsetX, alignOffsetY);
     } else if (alignPoint != null) {
       p = alignPoint;
     }
@@ -364,7 +370,6 @@ public class Popup extends SimpleContainer {
 
     alignElem = null;
     alignPos = null;
-    alignOffsets = null;
     alignPoint = null;
 
     if (constrainViewport) {
@@ -393,11 +398,16 @@ public class Popup extends SimpleContainer {
     }
 
     if (animate) {
-      // el().fadeIn(new FxConfig(new Listener<FxEvent>() {
-      // public void handleEvent(FxEvent fe) {
-      // afterShow();
-      // }
-      // }));
+      Fx fx = new Fx();
+      fx.addAfterAnimateHandler(new AfterAnimateHandler() {
+
+        @Override
+        public void onAfterAnimate(AfterAnimateEvent event) {
+          afterShow();
+        }
+      });
+
+      fx.run(new FadeIn(getElement()));
     } else {
       afterShow();
     }

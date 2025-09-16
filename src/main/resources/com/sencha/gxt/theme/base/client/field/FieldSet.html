@@ -1,5 +1,6 @@
 <fieldset class="{style.fieldSet}"><legend class="{style.legend}">
-  <div class="{style.toolWrap}"></div>
+  <tpl if="isGecko"><span class="{style.toolWrap}"></span></tpl>
+  <tpl if="!isGecko"><div class="{style.toolWrap}"></div></tpl>
   <span class="{style.header}"></span>
   </legend>
   <div class="{style.body}"></div>

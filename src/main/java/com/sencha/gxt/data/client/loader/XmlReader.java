@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -106,7 +106,7 @@ public class XmlReader<M, Base> extends AbstractAutoBeanReader<M, Base, String> 
 
     @Override
     public String asString() {
-      if (GXT.isIE()) {
+      if (GXT.isIE6() || GXT.isIE7() || GXT.isIE8() || GXT.isIE9()) {
         return ieNativeAsString(getFirstNode());
       } else {
         return nativeAsString(getFirstNode());

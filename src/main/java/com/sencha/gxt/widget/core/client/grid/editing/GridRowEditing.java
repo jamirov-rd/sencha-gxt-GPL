@@ -1,27 +1,36 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.grid.editing;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.ScrollEvent;
+import com.google.gwt.event.logical.shared.AttachEvent;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
+import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.google.gwt.text.shared.SafeHtmlRenderer;
 import com.google.gwt.user.client.Event;
-import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.Widget;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.GXTLogConfiguration;
+import com.sencha.gxt.core.client.Style.Side;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
@@ -32,10 +41,10 @@ import com.sencha.gxt.data.shared.ListStore;
 import com.sencha.gxt.messages.client.DefaultMessages;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.ComponentHelper;
+import com.sencha.gxt.widget.core.client.WidgetComponent;
 import com.sencha.gxt.widget.core.client.button.ButtonBar;
 import com.sencha.gxt.widget.core.client.button.TextButton;
 import com.sencha.gxt.widget.core.client.container.BoxLayoutContainer.BoxLayoutData;
-import com.sencha.gxt.widget.core.client.container.Container;
 import com.sencha.gxt.widget.core.client.container.HBoxLayoutContainer;
 import com.sencha.gxt.widget.core.client.container.MarginData;
 import com.sencha.gxt.widget.core.client.event.BeforeStartEditEvent;
@@ -51,16 +60,22 @@ import com.sencha.gxt.widget.core.client.event.SelectEvent;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
 import com.sencha.gxt.widget.core.client.event.StartEditEvent;
 import com.sencha.gxt.widget.core.client.form.Field;
+import com.sencha.gxt.widget.core.client.form.IsField;
 import com.sencha.gxt.widget.core.client.form.ValueBaseField;
+import com.sencha.gxt.widget.core.client.form.error.HasErrorHandler;
+import com.sencha.gxt.widget.core.client.form.error.TitleErrorHandler;
 import com.sencha.gxt.widget.core.client.grid.ColumnConfig;
 import com.sencha.gxt.widget.core.client.grid.ColumnHiddenChangeEvent;
 import com.sencha.gxt.widget.core.client.grid.ColumnHiddenChangeEvent.ColumnHiddenChangeHandler;
+import com.sencha.gxt.widget.core.client.grid.ColumnModel;
 import com.sencha.gxt.widget.core.client.grid.Grid;
 import com.sencha.gxt.widget.core.client.grid.Grid.GridCell;
+import com.sencha.gxt.widget.core.client.grid.GridView;
+import com.sencha.gxt.widget.core.client.tips.ToolTip;
+import com.sencha.gxt.widget.core.client.tips.ToolTipConfig;
 
 /**
- * Displays an editor for all cells in a row and allows all fields in row to be
- * edited at the same time.
+ * Displays an editor for all cells in a row and allows all fields in row to be edited at the same time.
  * 
  * @param <M> the model type
  */
@@ -96,6 +111,8 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
     XElement getContentWrap(XElement parent);
 
     String labelClass();
+
+    void onResize(XElement parent, int width, int height);
 
     void render(SafeHtmlBuilder sb);
   }
@@ -158,7 +175,7 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
       SafeHtmlBuilder sb = new SafeHtmlBuilder();
       appearance.render(sb);
 
-      setElement(XDOM.create(sb.toSafeHtml()));
+      setElement((Element) XDOM.create(sb.toSafeHtml()));
 
       con = new HBoxLayoutContainer();
       con.setEnableOverflow(false);
@@ -186,6 +203,15 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
      */
     public RowEditorAppearance getAppearance() {
       return appearance;
+    }
+
+    /**
+     * Returns the row button bar.
+     * 
+     * @return the {@link ButtonBar}.
+     */
+    public ButtonBar getButtonBar() {
+      return buttonBar;
     }
 
     /**
@@ -238,18 +264,32 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
       ComponentHelper.doDetach(con);
     }
 
+    @Override
+    protected void onAfterFirstAttach() {
+      super.onAfterFirstAttach();
+
+      if (GXT.isIE7()) {
+        buttonBar.forceLayout();
+      }
+    }
+
+    @Override
+    protected void onResize(final int width, final int height) {
+      super.onResize(width, height);
+      getAppearance().onResize(getElement(), width, height);
+    }
+
   }
 
-  protected boolean bound;
-  protected boolean lastValid;
   protected RowEditorMessages messages = new DefaultRowEditorMessages();
-  protected Timer monitorTimer;
 
-  private int monitorPoll = 200;
-  private boolean monitorValid = true;
   private final RowEditorComponent rowEditor;
 
   private static Logger logger = Logger.getLogger(GridRowEditing.class.getName());
+
+  protected WidgetComponent toolTipAlignWidget;
+
+  protected Map<ColumnConfig<M, ?>, SafeHtmlRenderer<?>> renderers = new HashMap<ColumnConfig<M, ?>, SafeHtmlRenderer<?>>();
 
   /**
    * Creates a new row editing instance.
@@ -260,12 +300,47 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
     setEditableGrid(editableGrid);
 
     rowEditor = createRowEditor();
+    rowEditor.addAttachHandler(new AttachEvent.Handler() {
+
+      @Override
+      public void onAttachOrDetach(AttachEvent event) {
+        positionButtons();
+      }
+    });
+  }
+
+  @Override
+  public <N, O> void addEditor(ColumnConfig<M, N> columnConfig, Converter<N, O> converter, IsField<O> field) {
+    // clear the existing renderer, just in case
+    removeEditor(columnConfig);
+
+    super.addEditor(columnConfig, converter, field);
+  }
+
+  /**
+   * Adds a SafeHtml renderer for the given column. This allows a value to be rendered in a customized way, rather than
+   * the default of calling toString on the column's value.
+   * 
+   * @param columnConfig the column to render in this way
+   * @param renderer how to render the column's value as html
+   */
+  public <N> void addRenderer(ColumnConfig<M, N> columnConfig, SafeHtmlRenderer<N> renderer) {
+    // clear the existing editor, just in case
+    removeEditor(columnConfig);
+    renderers.put(columnConfig, renderer);
   }
 
   @Override
   public void cancelEditing() {
     if (activeCell != null) {
       final GridCell editCell = activeCell;
+      for (int i = 0, len = columnModel.getColumnCount(); i < len; i++) {
+        ColumnConfig<M, ?> c = columnModel.getColumn(i);
+        IsField<?> field = getEditor(c);
+        if (field != null) {
+          field.clear();
+        }
+      }
       removeEditor();
       fireEvent(new CancelEditEvent<M>(editCell));
     }
@@ -288,6 +363,46 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
   }
 
   /**
+   * Returns the row editor button bar with the Cancel and Save buttons. This can be used to add a button.
+   * <p/>
+   * <ul>
+   * <li>Add a custom button to the button bar.</li>
+   * <li>Get the model with {@link com.sencha.gxt.widget.core.client.grid.Grid#getSelectionModel()}</li>
+   * <li>Close the editing with {@link #cancelEditing()}</li>
+   * </ul>
+   * <p/>
+   * 
+   * <pre>
+   * // example creating a delete button
+   * TextButton deleteBtn = new TextButton("Delete");
+   * deleteBtn.addSelectHandler(new SelectEvent.SelectHandler() {
+   *   public void onSelect(SelectEvent event) {
+   *     // close the editing
+   *     editing.cancelEditing();
+   *     // get the model
+   *     StateModel item = grid.getSelectionModel().getSelectedItem();
+   *   }
+   * });
+   * ButtonBar buttonBar = rowEditing.getButtonBar();
+   * buttonBar.add(deleteBtn);
+   * </pre>
+   * 
+   * @return the {@link ButtonBar}.
+   */
+  public ButtonBar getButtonBar() {
+    return rowEditor.getButtonBar();
+  }
+
+  /**
+   * Returns the cancel button.
+   * 
+   * @return the cancel button
+   */
+  public TextButton getCancelButton() {
+    return rowEditor.getCancelButton();
+  }
+
+  /**
    * Returns the row editor messages.
    * 
    * @return the messages
@@ -297,12 +412,18 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
   }
 
   /**
-   * Returns the interval that the row editor is validated.
+   * Returns the save button.
    * 
-   * @return the interval in ms
+   * @return the save button
    */
-  public int getMonitorPoll() {
-    return monitorPoll;
+  public TextButton getSaveButton() {
+    return rowEditor.getSaveButton();
+  }
+
+  @Override
+  public void removeEditor(ColumnConfig<M, ?> columnConfig) {
+    super.removeEditor(columnConfig);
+    renderers.remove(columnConfig);
   }
 
   @Override
@@ -329,27 +450,15 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
     rowEditor.getSaveButton().setText(messages.saveText());
   }
 
-  /**
-   * Sets the polling interval that the row editor validation is run (defaults
-   * to 200).
-   * 
-   * @param monitorPoll the polling interval in ms in that validation is done
-   */
-  public void setMonitorPoll(int monitorPoll) {
-    this.monitorPoll = monitorPoll;
-  }
-
-  /**
-   * True to monitor the valid status of this row editor (defaults to true).
-   * 
-   * @param monitorValid true to monitor this row editor
-   */
-  public void setMonitorValid(boolean monitorValid) {
-    this.monitorValid = monitorValid;
-  }
-
   @Override
   public void startEditing(GridCell cell) {
+    if (getEditableGrid() != null && getEditableGrid().isAttached() && isEditing()) {
+      if (!isValid()) {
+        showTooltip(getErrorHtml());
+        return;
+      }
+    }
+
     if (getEditableGrid() != null && getEditableGrid().isAttached() && cell != null) {
       BeforeStartEditEvent<M> ce = new BeforeStartEditEvent<M>(cell);
       fireEvent(ce);
@@ -367,19 +476,18 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
       getEditableGrid().getView().getEditorParent().appendChild(rowEditor.getElement());
       ComponentHelper.doAttach(rowEditor);
 
-      Container con = rowEditor.getFieldContainer();
+      HBoxLayoutContainer con = rowEditor.getFieldContainer();
       con.clear();
 
       int adj = 1;
       for (int i = 0, len = columnModel.getColumnCount(); i < len; i++) {
         ColumnConfig<M, ?> c = columnModel.getColumn(i);
 
-        final Widget w = doStartEditing(c, value);
+        final IsWidget w = doStartEditing(c, value);
         if (w != null) {
           BoxLayoutData ld = new BoxLayoutData();
           ld.setMargins(new Margins(1, 2, 2, 2 + adj));
-          w.setLayoutData(ld);
-          con.add(w);
+          con.add(w, ld);
           adj = 0;
         }
       }
@@ -390,21 +498,24 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
       verifyLayout();
 
       startMonitoring();
+      positionButtons();
+
       focusField(activeCell);
       fireEvent(new StartEditEvent<M>(activeCell));
     }
   }
 
+  @Override
   protected void bindHandler() {
-    boolean valid = isValid();
-    if (!valid) {
-      lastValid = false;
-    } else if (valid && !lastValid) {
-      lastValid = true;
+    if (toolTipAlignWidget.getElement().getOffsetParent() == null
+        || !this.editableGrid.getElement().getBounds().contains(toolTipAlignWidget.getElement().getXY())) {
+      hideTooltip();
+      return;
     }
 
+    super.bindHandler();
     if (rowEditor.getSaveButton() != null) {
-      rowEditor.getSaveButton().setEnabled(valid);
+      rowEditor.getSaveButton().setEnabled(isValid());
     }
   }
 
@@ -420,11 +531,9 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
     });
 
     rowEditor.getCancelButton().addSelectHandler(new SelectHandler() {
-
       @Override
       public void onSelect(SelectEvent event) {
         cancelEditing();
-
       }
     });
     return rowEditor;
@@ -433,7 +542,7 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
   @SuppressWarnings("unchecked")
   protected <N, O> void doCompleteEditing(ColumnConfig<M, N> c) {
     if (activeCell != null) {
-      Field<O> field = getEditor(c);
+      IsField<O> field = getEditor(c);
 
       if (field != null) {
         Converter<N, O> converter = getConverter(c);
@@ -459,37 +568,49 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
   }
 
   @SuppressWarnings("unchecked")
-  protected <N, O> Widget doStartEditing(ColumnConfig<M, N> c, M value) {
+  protected <N, O> IsWidget doStartEditing(ColumnConfig<M, N> c, M value) {
     if (c.isHidden()) {
       return null;
     }
 
-    Field<O> f = getEditor(c);
-
-    Converter<N, O> converter = getConverter(c);
+    IsField<O> f = getEditor(c);
 
     ValueProvider<? super M, N> v = c.getValueProvider();
     N colValue = getEditableGrid().getStore().hasRecord(value)
         ? getEditableGrid().getStore().getRecord(value).getValue(v) : v.getValue(value);
-    O convertedValue;
-    if (converter != null) {
-      convertedValue = converter.convertModelValue(colValue);
-    } else {
-      convertedValue = (O) colValue;
-    }
-
-    if (GXTLogConfiguration.loggingIsEnabled()) {
-      logger.finest("doStartEditing convertedValue = " + convertedValue);
-    }
 
     if (f != null) {
+      Converter<N, O> converter = getConverter(c);
+      O convertedValue;
+      if (converter != null) {
+        convertedValue = converter.convertModelValue(colValue);
+      } else {
+        convertedValue = (O) colValue;
+      }
+
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("doStartEditing convertedValue = " + convertedValue);
+      }
       f.setValue(convertedValue);
+
+      if (f instanceof HasErrorHandler) {
+        HasErrorHandler errorHandler = (HasErrorHandler) f;
+        if (!(errorHandler.getErrorSupport() == null || errorHandler.getErrorSupport() instanceof TitleErrorHandler)) {
+          errorHandler.setErrorSupport(new TitleErrorHandler(f.asWidget()));
+        }
+      }
+
       return f;
     } else {
-      Label l = new Label();
-      l.addStyleName(rowEditor.getAppearance().labelClass());
-      l.setText(convertedValue != null ? convertedValue.toString() : "");
-      return l;
+      final Widget label;
+      if (renderers.containsKey(c)) {
+        SafeHtmlRenderer<N> renderer = (SafeHtmlRenderer<N>) renderers.get(c);
+        label = new HTML(renderer.render(colValue));
+      } else {
+        label = new Label(colValue != null ? colValue.toString() : "");
+      }
+      label.addStyleName(rowEditor.getAppearance().labelClass());
+      return label;
     }
 
   }
@@ -503,6 +624,30 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
     return (Handler) handler;
   }
 
+  @Override
+  protected SafeHtml getErrorHtml() {
+    SafeHtmlBuilder sb = new SafeHtmlBuilder();
+    sb.appendHtmlConstant("<ul>");
+
+    ColumnModel<M> cm = getEditableGrid().getColumnModel();
+
+    for (int i = 0; i < cm.getColumnCount(); i++) {
+      ColumnConfig<M, ?> columnConfig = cm.getColumn(i);
+
+      IsField<?> f = (IsField<?>) getEditor(columnConfig);;
+
+      if (f == null) {
+        continue;
+      }
+
+      getErrorMessage(f, sb, columnConfig.getHeader());
+    }
+
+    sb.appendHtmlConstant("</ul>");
+    return sb.toSafeHtml();
+  }
+
+  @Override
   protected boolean isValid() {
     for (int i = 0, len = rowEditor.getFieldContainer().getWidgetCount(); i < len; i++) {
 
@@ -529,32 +674,50 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
 
   @Override
   protected void onScroll(ScrollEvent event) {
-    //
+    positionButtons();
   }
 
   protected void positionButtons() {
-    // TODO
-  }
+    if (rowEditor.isVisible()) {
+      GridView<M> view = getEditableGrid().getView();
+      int scroll = view.getScrollState().getX();
+      int mainBodyWidth = view.getScroller().getWidth(true);
+      int h = rowEditor.getElement().getClientHeight();
 
-  protected void startMonitoring() {
-    if (!bound && monitorValid) {
-      bound = true;
-      if (monitorTimer == null) {
-        monitorTimer = new Timer() {
-          @Override
-          public void run() {
-            bindHandler();
-          }
-        };
+      if (toolTipAlignWidget == null) {
+        toolTipAlignWidget = new WidgetComponent(new HTML());
+        rowEditor.getAppearance().getContentWrap(rowEditor.getElement()).insertFirst(toolTipAlignWidget.getElement());
+        ComponentHelper.doAttach(toolTipAlignWidget);
       }
-      monitorTimer.scheduleRepeating(monitorPoll);
+
+      if (toolTipAlignWidget != null) {
+        toolTipAlignWidget.getElement().getStyle().setProperty("position", "absolute");
+        toolTipAlignWidget.setPixelSize(mainBodyWidth
+            - (view.getScroller().isScrollableY() ? XDOM.getScrollBarWidth() : 0), h);
+        toolTipAlignWidget.setPosition(scroll, -1);
+      }
     }
   }
 
-  protected void stopMonitoring() {
-    bound = false;
-    if (monitorTimer != null) {
-      monitorTimer.cancel();
+  @Override
+  protected void showTooltip(SafeHtml msg) {
+    if (tooltip == null) {
+      ToolTipConfig config = new ToolTipConfig();
+      config.setAutoHide(false);
+      config.setMouseOffsetX(0);
+      config.setMouseOffsetY(0);
+      config.setAnchor(Side.LEFT);
+      config.setTitleHtml(getMessages().errorTipTitleText());
+      tooltip = new ToolTip(toolTipAlignWidget, config);
+      tooltip.setMaxWidth(600);
+    }
+    ToolTipConfig config = tooltip.getToolTipConfig();
+    config.setBodyHtml(msg);
+    tooltip.update(config);
+    tooltip.enable();
+    if (!tooltip.isAttached()) {
+      tooltip.show();
+      tooltip.getElement().updateZIndex(0);
     }
   }
 
@@ -590,12 +753,13 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
 
       }
       rowEditor.getFieldContainer().forceLayout();
-      positionButtons();
+
     }
+    positionButtons();
   }
 
   private void focusField(GridCell activeCell) {
-    Widget w = activeCell.getCol() < 0 || activeCell.getCol() > rowEditor.getFieldContainer().getWidgetCount() ? null
+    IsWidget w = activeCell.getCol() < 0 || activeCell.getCol() > rowEditor.getFieldContainer().getWidgetCount() ? null
         : getEditor(columnModel.getColumn(activeCell.getCol()));
 
     if (!(w instanceof Field<?>)) {
@@ -622,6 +786,7 @@ public class GridRowEditing<M> extends AbstractGridEditing<M> {
 
   private void removeEditor() {
     stopMonitoring();
+    hideTooltip();
     activeCell = null;
     ComponentHelper.doDetach(rowEditor);
     rowEditor.getElement().removeFromParent();

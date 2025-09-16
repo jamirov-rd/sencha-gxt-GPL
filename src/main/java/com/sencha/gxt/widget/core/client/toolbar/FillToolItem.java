@@ -1,13 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.toolbar;
 
-import com.google.gwt.user.client.DOM;
+import com.google.gwt.dom.client.Document;
 import com.sencha.gxt.widget.core.client.Component;
 import com.sencha.gxt.widget.core.client.container.BoxLayoutContainer.BoxLayoutData;
 
@@ -20,7 +20,7 @@ public class FillToolItem extends Component {
    * Creates a new fill item.
    */
   public FillToolItem() {
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
     
     BoxLayoutData data = new BoxLayoutData();
     data.setFlex(1.0);

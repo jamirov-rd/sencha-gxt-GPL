@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,17 +14,16 @@ import com.google.web.bindery.autobean.shared.AutoBean;
 import com.google.web.bindery.autobean.shared.AutoBeanCodex;
 import com.google.web.bindery.autobean.shared.AutoBeanFactory;
 import com.google.web.bindery.autobean.shared.AutoBeanUtils;
+import com.sencha.gxt.core.client.GXT;
 
 /**
- * This is the global state manager. In order for this class to be useful, it
- * must be initialized with a provider when your application initializes. By
- * default, GXT initializes the StateManager with a CookieProvider. The provider
- * can be replaced as needed.
+ * This is the global state manager. In order for this class to be useful, it must be initialized with a provider when
+ * your application initializes. By default, GXT initializes the StateManager with a CookieProvider. The provider can be
+ * replaced as needed.
  * 
- * The Provider is treated as an asynchronous String persistence mechanism, as
- * to be compatible with RPC, RequestFactory, Cookies, and HTML5 storage. The
- * StateManager then has tools to map these strings to and from bean-like
- * interfaces, using AutoBeans.
+ * The Provider is treated as an asynchronous String persistence mechanism, as to be compatible with RPC,
+ * RequestFactory, Cookies, and HTML5 storage. The StateManager then has tools to map these strings to and from
+ * bean-like interfaces, using AutoBeans.
  */
 public abstract class StateManager {
 
@@ -40,6 +39,11 @@ public abstract class StateManager {
   }
 
   private Provider provider;
+
+  protected StateManager() {
+    provider = new CookieProvider("/", null, null, GXT.isSecure());
+  }
+
   private SimpleEventBus eventBus;
 
   /**
@@ -52,8 +56,8 @@ public abstract class StateManager {
   }
 
   /**
-   * Returns a state bean. In order to support server side calls, the method
-   * returns its value asynchronously via a callback.
+   * Returns a state bean. In order to support server side calls, the method returns its value asynchronously via a
+   * callback.
    * 
    * @param <T> the state bean type
    * @param name the bean name
@@ -133,8 +137,7 @@ public abstract class StateManager {
   }
 
   /**
-   * Return the state bean factory responsible for creating and decoding the
-   * state beans.
+   * Return the state bean factory responsible for creating and decoding the state beans.
    * 
    * @return the state bean factory
    */

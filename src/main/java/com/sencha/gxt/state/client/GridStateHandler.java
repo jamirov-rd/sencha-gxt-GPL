@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.sencha.gxt.core.client.ValueProvider;
+import com.sencha.gxt.data.shared.ListStore;
 import com.sencha.gxt.data.shared.SortDir;
 import com.sencha.gxt.data.shared.Store.StoreSortInfo;
 import com.sencha.gxt.state.client.GridStateHandler.GridState;
@@ -25,34 +26,39 @@ import com.sencha.gxt.widget.core.client.grid.ColumnHiddenChangeEvent;
 import com.sencha.gxt.widget.core.client.grid.ColumnHiddenChangeEvent.ColumnHiddenChangeHandler;
 import com.sencha.gxt.widget.core.client.grid.Grid;
 
+/**
+ * State handler for grids
+ * 
+ * @param <M> the grid model type
+ */
 public class GridStateHandler<M> extends ComponentStateHandler<GridState, Grid<M>> {
+
+  public interface GridSortState {
+    SortDir getSortDir();
+
+    String getSortField();
+
+    void setSortDir(SortDir dir);
+
+    void setSortField(String sortField);
+  }
 
   public interface GridState {
     Set<String> getHidden();
+
+    SortDir getSortDir();
+
+    String getSortField();
 
     Map<String, Integer> getWidths();
 
     void setHidden(Set<String> hidden);
 
-    void setWidths(Map<String, Integer> widths);
+    void setSortDir(SortDir sortDir);
 
     void setSortField(String field);
 
-    String getSortField();
-
-    void setSortDir(SortDir sortDir);
-
-    SortDir getSortDir();
-  }
-
-  public interface GridSortState {
-    String getSortField();
-
-    void setSortField(String sortField);
-
-    SortDir getSortDir();
-
-    void setSortDir(SortDir dir);
+    void setWidths(Map<String, Integer> widths);
   }
 
   private class Handler implements ColumnHiddenChangeHandler, ColumnWidthChangeHandler, SortChangeHandler {
@@ -74,25 +80,42 @@ public class GridStateHandler<M> extends ComponentStateHandler<GridState, Grid<M
 
   }
 
+  /**
+   * Creates a new grid state handler instance.
+   * 
+   * @param stateType the state type
+   * @param component the grid
+   * @param key the state key
+   */
+  public GridStateHandler(Class<GridState> stateType, Grid<M> component, String key) {
+    super(stateType, component, key);
+
+    init(component);
+  }
+
+  /**
+   * Creates a nbew grid state handler instance.
+   * 
+   * @param component the grid
+   */
   public GridStateHandler(Grid<M> component) {
     super(GridState.class, component);
 
-    Handler h = new Handler();
-    component.addSortChangeHandler(h);
-    component.getColumnModel().addColumnHiddenChangeHandler(h);
-    component.getColumnModel().addColumnWidthChangeHandler(h);
+    init(component);
   }
 
+  /**
+   * Creates a new state handler instance.
+   * 
+   * @param component the grid
+   * @param key the state key
+   */
   public GridStateHandler(Grid<M> component, String key) {
     super(GridState.class, component, key);
 
-    Handler h = new Handler();
-    component.addSortChangeHandler(h);
-    component.getColumnModel().addColumnHiddenChangeHandler(h);
-    component.getColumnModel().addColumnWidthChangeHandler(h);
+    init(component);
   }
 
-  @SuppressWarnings({"rawtypes", "unchecked"})
   @Override
   public void applyState() {
     if (getObject().isStateful()) {
@@ -118,16 +141,28 @@ public class GridStateHandler<M> extends ComponentStateHandler<GridState, Grid<M
       }
 
       if (state.getSortField() != null) {
-
-        ValueProvider<? super M, Comparable> vp = (ValueProvider) getObject().getColumnModel().findColumnConfig(
-            state.getSortField()).getValueProvider();
-
-        if (vp != null) {
+        ColumnConfig<M, ?> column = getObject().getColumnModel().findColumnConfig(
+                state.getSortField());
+        if (column != null) {
           getObject().getStore().clearSortInfo();
-          getObject().getStore().addSortInfo(new StoreSortInfo<M>(vp, state.getSortDir()));
+          getObject().getStore().addSortInfo(createStoreSortInfo(getObject().getStore(), column, state.getSortDir()));
         }
-
       }
+    }
+  }
+
+  /**
+   * @see com.sencha.gxt.widget.core.client.grid.GridView#createStoreSortInfo(com.sencha.gxt.widget.core.client.grid.ColumnConfig, com.sencha.gxt.data.shared.SortDir)
+   */
+  @SuppressWarnings("unchecked")
+  protected <V> StoreSortInfo<M> createStoreSortInfo(ListStore<M> ds, ColumnConfig<M, V> column, SortDir sortDir) {
+    if (column.getComparator() == null) {
+      // These casts can fail, but that implies that the data model has changed, in which case app should deal with invalid state
+      @SuppressWarnings("rawtypes")
+      ValueProvider<M, Comparable> vp = (ValueProvider) column.getValueProvider();
+      return new StoreSortInfo<M>(ds.wrapRecordValueProvider(vp), sortDir);
+    } else {
+      return new StoreSortInfo<M>(ds.wrapRecordValueProvider(column.getValueProvider()), column.getComparator(), sortDir);
     }
   }
 
@@ -173,6 +208,13 @@ public class GridStateHandler<M> extends ComponentStateHandler<GridState, Grid<M
 
       saveState();
     }
+  }
+
+  protected void init(Grid<M> component) {
+    Handler h = new Handler();
+    component.addSortChangeHandler(h);
+    component.getColumnModel().addColumnHiddenChangeHandler(h);
+    component.getColumnModel().addColumnWidthChangeHandler(h);
   }
 
 }

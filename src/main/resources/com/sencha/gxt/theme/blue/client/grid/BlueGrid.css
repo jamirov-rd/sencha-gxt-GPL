@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,7 +22,7 @@
   border-right: 0 solid #EDEDED;
 }
 
-.cellSelected {
+.row .grid-cellSelected {
   background-color: #b8cfee !important;
   color: #000;
 }
@@ -43,7 +43,7 @@
   overflow: hidden;
 }
 
-.rowSelected .cell, .rowSelected .rowWrap {
+.grid-rowSelected .cell, .grid-rowSelected .rowWrap {
   background-color: #DFE8F6 !important;
   border-color: #A3BAE9;
 }

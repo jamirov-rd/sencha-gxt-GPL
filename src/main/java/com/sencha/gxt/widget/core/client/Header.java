@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.core.client.GWT;
@@ -74,7 +75,7 @@ public class Header extends Component implements HasIcon, HasText, HasHTML, HasS
   private List<Widget> tools = new ArrayList<Widget>();
   private HorizontalPanel widgetPanel;
   private String text, altIconText;
-  private HeaderAppearance appearance;
+  private final HeaderAppearance appearance;
 
   /**
    * Creates a header with the default appearance which includes a header bar,
@@ -95,7 +96,7 @@ public class Header extends Component implements HasIcon, HasText, HasHTML, HasS
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     this.appearance.render(sb);
 
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
 
     addStyleName("x-small-editor");
 
@@ -201,7 +202,7 @@ public class Header extends Component implements HasIcon, HasText, HasHTML, HasS
    * @return the tools
    */
   public List<Widget> getTools() {
-    return tools;
+    return Collections.unmodifiableList(tools);
   }
 
   /**

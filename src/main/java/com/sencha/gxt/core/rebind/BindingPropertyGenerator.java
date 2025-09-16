@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -80,7 +80,7 @@ public class BindingPropertyGenerator extends Generator {
         throw new UnableToCompleteException();
       }
 
-      if (!property.getPossibleValues().contains(val.value())) {
+      if (!property.getPossibleValues().contains(val.value()) && val.warn()) {
         logger.log(Type.WARN, "Value '" + val
             + "' is not present in the current set of possible values for selection property " + propertyName);
       }

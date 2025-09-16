@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.selection;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.event.shared.EventHandler;
@@ -78,7 +79,7 @@ public class CellSelectionChangedEvent<M> extends GwtEvent<CellSelectionChangedH
   }
 
   public CellSelectionChangedEvent(List<CellSelection<M>> selection) {
-    this.selection = selection;
+    this.selection = Collections.unmodifiableList(selection);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})

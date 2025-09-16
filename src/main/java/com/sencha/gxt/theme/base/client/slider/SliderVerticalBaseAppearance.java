@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.slider;
 
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.safecss.shared.SafeStyles;
 import com.google.gwt.safecss.shared.SafeStylesUtils;
@@ -17,6 +16,7 @@ import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
+import com.sencha.gxt.core.client.util.Point;
 
 public abstract class SliderVerticalBaseAppearance extends SliderBaseAppearance {
 
@@ -25,6 +25,7 @@ public abstract class SliderVerticalBaseAppearance extends SliderBaseAppearance 
 
   public interface SliderVerticalResources extends SliderResources {
 
+    @Override
     BaseSliderVerticalStyle style();
 
   }
@@ -47,9 +48,9 @@ public abstract class SliderVerticalBaseAppearance extends SliderBaseAppearance 
   }
 
   @Override
-  public int getClickedValue(Context context, Element parent, NativeEvent event) {
+  public int getClickedValue(Context context, Element parent, Point location) {
     Element innerEl = getInnerEl(parent);
-    return event.getClientY() - XElement.as(innerEl).getTop(false);
+    return location.getY() - XElement.as(innerEl).getTop(false);
   }
 
   @Override
@@ -62,26 +63,38 @@ public abstract class SliderVerticalBaseAppearance extends SliderBaseAppearance 
     return true;
   }
 
+  @Override
   public void render(double fractionalValue, int width, int height, SafeHtmlBuilder sb) {
     if (height == -1) {
       // default
       height = 200;
     }
 
-    int halfThumb = resources.style().halfThumb();
+    SafeStyles offsetStyles = createThumbStyles(fractionalValue, height);
+    SafeStyles heightStyle = SafeStylesUtils.fromTrustedString("");
+
+    // ends
+    height -= getTrackPadding();
+    heightStyle = SafeStylesUtils.fromTrustedString("height: " + height + "px;");
+
+    sb.append(template.template(resources.style(), offsetStyles, heightStyle));
+  }
+
+  protected SafeStyles createThumbStyles(double fractionalValue, int height) {
+    int halfThumb = getHalfThumbSize();
     int innerHeight = height;
     int offset = (int) (innerHeight - ((fractionalValue * innerHeight) - halfThumb));
 
     offset = innerHeight - offset;
+    return SafeStylesUtils.fromTrustedString("bottom:" + offset + "px;");
+  }
 
-    SafeStyles heightStyle = SafeStylesUtils.fromTrustedString("");
+  protected int getHalfThumbSize() {
+    return resources.style().halfThumb();
+  }
 
-    // ends
-    height -= 14;
-    heightStyle = SafeStylesUtils.fromTrustedString("height: " + height + "px;");
-
-    SafeStyles offsetStyles = SafeStylesUtils.fromTrustedString("bottom:" + offset + "px;");
-    sb.append(template.template(resources.style(), offsetStyles, heightStyle));
+  protected int getTrackPadding() {
+    return 14;
   }
 
   @Override

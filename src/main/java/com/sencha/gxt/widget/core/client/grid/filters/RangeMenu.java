@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,12 +9,15 @@ package com.sencha.gxt.widget.core.client.grid.filters;
 
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+import com.google.gwt.dom.client.Style.Cursor;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.user.client.Event;
 import com.sencha.gxt.core.client.resources.CommonIcons;
+import com.sencha.gxt.core.client.resources.CommonStyles;
 import com.sencha.gxt.core.client.util.DelayedTask;
 import com.sencha.gxt.data.shared.loader.FilterConfig;
 import com.sencha.gxt.data.shared.loader.FilterConfigBean;
@@ -32,7 +35,7 @@ import com.sencha.gxt.widget.core.client.menu.MenuItem;
  */
 public class RangeMenu<M, V extends Number> extends Menu {
 
-  enum RangeItem {
+  public enum RangeItem {
     EQUAL("eq"), GREATERTHAN("gt"), LESSTHAN("lt");
 
     private final String key;
@@ -90,7 +93,7 @@ public class RangeMenu<M, V extends Number> extends Menu {
    * @return the range items
    */
   public List<RangeItem> getRangeItems() {
-    return rangeItems;
+    return Collections.unmodifiableList(rangeItems);
   }
 
   /**
@@ -196,6 +199,9 @@ public class RangeMenu<M, V extends Number> extends Menu {
       menuItem.setIcon(icon);
       menuItem.setWidget(field);
 
+      menuItem.getElement().removeClassName(CommonStyles.get().unselectable());
+      menuItem.getElement().getStyle().setCursor(Cursor.DEFAULT);
+
       add(menuItem);
     }
   }
@@ -208,9 +214,13 @@ public class RangeMenu<M, V extends Number> extends Menu {
   public void setValue(List<FilterConfig> values) {
     for (FilterConfig config : values) {
       String c = config.getComparison();
+      String v = config.getValue();
+      if (v == null) {
+        v = "";
+      }
       V value = null;
       try {
-        value = filter.getPropertyEditor().parse(config.getValue());
+        value = filter.getPropertyEditor().parse(v);
       } catch (ParseException e) {
         // TODO exception handling
       }
@@ -222,6 +232,7 @@ public class RangeMenu<M, V extends Number> extends Menu {
         gt.setValue(value);
       }
     }
+    fireUpdate();
   }
 
   protected NumberField<V> createNumberField() {
@@ -234,6 +245,12 @@ public class RangeMenu<M, V extends Number> extends Menu {
     };
 
     return field;
+  }
+
+  @Override
+  protected void onAttach() {
+    super.onAttach();
+    updateTask.delay(filter.getUpdateBuffer());
   }
 
   protected void onFieldKeyUp(NumberField<V> field, Event event) {

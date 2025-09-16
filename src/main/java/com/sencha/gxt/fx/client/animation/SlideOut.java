@@ -1,14 +1,14 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.fx.client.animation;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Style.Unit;
-import com.google.gwt.user.client.DOM;
 import com.sencha.gxt.core.client.Style.Direction;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Util;
@@ -52,7 +52,7 @@ public class SlideOut extends Slide {
     marginTop = Util.parseInt(element.getStyle().getMarginTop(), 0);
     marginLeft = Util.parseInt(element.getStyle().getMarginLeft(), 0);
     //
-    wrapEl = XElement.as(DOM.createDiv());
+    wrapEl = Document.get().createDivElement().cast();
     oBounds = element.wrap(wrapEl);
 
     int h = oBounds.getHeight();

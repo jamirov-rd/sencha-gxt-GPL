@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,6 +10,7 @@ package com.sencha.gxt.state.client;
 import com.google.web.bindery.autobean.shared.AutoBean;
 import com.google.web.bindery.autobean.shared.AutoBeanFactory;
 import com.sencha.gxt.state.client.BorderLayoutStateHandler.BorderLayoutState;
+import com.sencha.gxt.state.client.GridFilterStateHandler.GridFilterState;
 import com.sencha.gxt.state.client.GridStateHandler.GridState;
 import com.sencha.gxt.state.client.TreeStateHandler.TreeState;
 
@@ -31,4 +32,6 @@ public interface DefaultStateAutoBeanFactory extends AutoBeanFactory {
   AutoBean<BorderLayoutState> borderLayout();
 
   AutoBean<GridState> grid();
+
+  AutoBean<GridFilterState> gridFilter();
 }

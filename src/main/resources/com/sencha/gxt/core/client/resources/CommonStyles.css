@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -42,13 +42,13 @@
 .unselectable, .unselectable * {
   -moz-user-select: none;
   -khtml-user-select: none;
-  -webkit-user-select: ignore;
+  -webkit-user-select: none;
 }
 
 .unselectableSingle {
   -moz-user-select: -moz-none;
   -khtml-user-select: none;
-  -webkit-user-select: ignore;
+  -webkit-user-select: none;
 }
 
 .repaint {
@@ -60,6 +60,10 @@
   overflow: hidden;
   line-height: 0;
   font-size: 0;
+}
+
+.floatLeft {
+  float:left;
 }
 
 .floatRight {
@@ -94,7 +98,7 @@
  * give it inline behavior.  Subsequently setting display to inline does the
  * trick.
  */
-@if user.agent ie6 { 
+@if user.agent ie6 ie8 {
   .inlineBlock {
     /* workaround to make IE "hasLayout" */ 
     display:inline;
@@ -114,23 +118,4 @@
   left: 0;
   top: 0;
   z-index: 20000;
-}
-
-.disabled * {
-  color: gray !important; 
-  cursor: default !important;
-}
-
-.disabled {
-  cursor: default !important;
-}
-
-@if user.agent ie6 ie8 {
-  .disabled {
-    filter: literal("alpha(opacity=60)");
-  }
-} @else {
-  .disabled {
-    opacity: .6; 
-  }
 }

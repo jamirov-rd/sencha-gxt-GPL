@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.container;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.uibinder.client.UiChild;
 import com.google.gwt.user.client.ui.IsWidget;
@@ -138,10 +139,11 @@ public abstract class BoxLayoutContainer extends InsertResizeContainer {
     /**
      * Children are packed together at <b>top</b> side of container.
      */
-    START;
+    START
   }
 
   private boolean adjustForFlexRemainder;
+  private final BoxLayoutContainerAppearance appearance;
   private BoxLayoutPack pack = BoxLayoutPack.START;
   private Padding padding;
   private int scrollOffset = 0;
@@ -159,9 +161,10 @@ public abstract class BoxLayoutContainer extends InsertResizeContainer {
    * @param appearance the box layout container appearance
    */
   public BoxLayoutContainer(BoxLayoutContainerAppearance appearance) {
+    this.appearance = appearance;
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb);
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
   }
 
   /**
@@ -177,6 +180,16 @@ public abstract class BoxLayoutContainer extends InsertResizeContainer {
       child.asWidget().setLayoutData(layoutData);
     }
     super.add(child);
+  }
+
+
+  /**
+   * Returns the layout's appearance.
+   *
+   * @return the appearance
+   */
+  public BoxLayoutContainerAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -274,12 +287,8 @@ public abstract class BoxLayoutContainer extends InsertResizeContainer {
   }
 
   @Override
-  protected void onInsert(int index, Widget child) {
-    child.addStyleName(CommonStyles.get().positionable());
-  }
-
-  @Override
   protected void onRemove(Widget child) {
+    super.onRemove(child);
     child.removeStyleName(CommonStyles.get().positionable());
   }
 

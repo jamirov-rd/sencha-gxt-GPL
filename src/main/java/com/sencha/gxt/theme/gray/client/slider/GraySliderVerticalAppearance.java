@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -17,25 +17,6 @@ import com.sencha.gxt.cell.core.client.SliderCell.VerticalSliderAppearance;
 import com.sencha.gxt.theme.base.client.slider.SliderVerticalBaseAppearance;
 
 public class GraySliderVerticalAppearance extends SliderVerticalBaseAppearance implements VerticalSliderAppearance {
-
-  public static class GraySliderVerticalAppearanceHelper {
-
-    public static String getTrackVerticalBottom() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append(
-          "/gray/images/slider/trackVerticalBottom.png);").toString();
-    }
-
-    public static String getTrackVerticalMiddle() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append(
-          "/gray/images/slider/trackVerticalMiddle.png);").toString();
-    }
-
-    public static String getTrackVerticalTop() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append(
-          "/gray/images/slider/trackVerticalTop.png);").toString();
-    }
-
-  }
 
   public interface GraySliderVerticalResources extends SliderVerticalResources, ClientBundle {
 

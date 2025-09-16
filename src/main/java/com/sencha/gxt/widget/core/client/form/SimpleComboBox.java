@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,6 +9,10 @@ package com.sencha.gxt.widget.core.client.form;
 
 import java.util.List;
 
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.uibinder.client.UiConstructor;
+import com.sencha.gxt.cell.core.client.form.ComboBoxCell;
+import com.sencha.gxt.cell.core.client.form.TriggerFieldCell.TriggerFieldAppearance;
 import com.sencha.gxt.data.shared.LabelProvider;
 import com.sencha.gxt.data.shared.ListStore;
 import com.sencha.gxt.data.shared.ModelKeyProvider;
@@ -33,13 +37,35 @@ public class SimpleComboBox<T> extends ComboBox<T> {
    *          the data model associated with this combo box and is responsible
    *          for returning the value displayed to the user
    */
+  @UiConstructor
   public SimpleComboBox(LabelProvider<? super T> labelProvider) {
+    this(labelProvider, GWT.<TriggerFieldAppearance>create(TriggerFieldAppearance.class));
+  }
+
+  /**
+   * Creates an empty combo box with the given appearance in preparation for values
+   * to be added to the selection list using {@link #add}.
+   * @param labelProvider the label provider that implements the interface to
+   *          the data model associated with this combo box and is responsible
+   *          for returning the value displayed to the user
+   * @param appearance the appearance to use when rendering this widget
+   */
+  public SimpleComboBox(LabelProvider<? super T> labelProvider, TriggerFieldAppearance appearance) {
     super(new ListStore<T>(new ModelKeyProvider<T>() {
       @Override
       public String getKey(T item) {
         return item.toString();
       }
-    }), labelProvider);
+    }), labelProvider, appearance);
+  }
+
+  /**
+   * Creates a new simple combo box with the given cell.
+   * 
+   * @param cell the cell
+   */
+  public SimpleComboBox(ComboBoxCell<T> cell) {
+    super(cell);
   }
 
   /**

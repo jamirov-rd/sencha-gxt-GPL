@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,15 +8,18 @@
 package com.sencha.gxt.widget.core.client.grid;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArray;
+import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
-import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
@@ -25,6 +28,8 @@ import com.google.gwt.safecss.shared.SafeStylesUtils;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.ui.Widget;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.Point;
@@ -34,6 +39,8 @@ import com.sencha.gxt.data.shared.SortInfo;
 import com.sencha.gxt.data.shared.SortInfoBean;
 import com.sencha.gxt.data.shared.Store.StoreSortInfo;
 import com.sencha.gxt.messages.client.DefaultMessages;
+import com.sencha.gxt.widget.core.client.event.CheckChangeEvent;
+import com.sencha.gxt.widget.core.client.event.CheckChangeEvent.CheckChangeHandler;
 import com.sencha.gxt.widget.core.client.event.CollapseItemEvent;
 import com.sencha.gxt.widget.core.client.event.CollapseItemEvent.CollapseItemHandler;
 import com.sencha.gxt.widget.core.client.event.CollapseItemEvent.HasCollapseItemHandlers;
@@ -54,6 +61,12 @@ import com.sencha.gxt.widget.core.client.menu.SeparatorMenuItem;
 public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandlers<List<M>>,
     HasExpandItemHandlers<List<M>> {
 
+  /**
+   * Wrapper describing a given group, with the items in the group, and the value they hold in common. These are not
+   * presently persisted, but only analyzed when changes occur to the grid's data.
+   *
+   * @param <M> the type of row in the grid
+   */
   public static class GroupingData<M> {
     private final Object value;
     private final int startRow;
@@ -117,17 +130,15 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
     GroupingViewStyle style();
   }
 
-  public interface GroupingViewStyle extends CssResource, GridDataTableStyles {
+  public interface GroupingViewStyle extends CssResource {
 
-    String gridGroup();
+    String bodyCollapsed();
 
-    String gridGroupBody();
+    String group();
 
-    String gridGroupCollapsed();
+    String groupCollapsed();
 
-    String gridGroupHead();
-
-    String gridGroupHeadInner();
+    String groupHead();
   }
 
   public interface GroupSummaryTemplate<M> {
@@ -139,29 +150,30 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
 
   protected boolean enableGrouping;
 
+  @SuppressWarnings("unused")
   private GroupSummaryTemplate<M> groupSummaryTemplate;
   private final GroupingViewAppearance groupAppearance;
 
   private boolean enableGroupingMenu = true;
   private boolean enableNoGroups = true;
   private boolean showGroupedColumn = true;
-  private boolean startCollapsed;
+  private boolean startCollapsed = false;
+  protected final Map<Object, Boolean> state = new HashMap<Object, Boolean>();
 
   private boolean isUpdating = false;
   private StoreSortInfo<M> lastStoreSort;
   private SortInfo lastSort;
-  private HandlerManager handlerManager = new HandlerManager(this);
-
   /**
    * Creates a new grouping view instance.
    */
   public GroupingView() {
-    this(GWT.<GridAppearance> create(GridAppearance.class), GWT.<GroupingViewAppearance> create(GroupingViewAppearance.class));
+    this(GWT.<GridAppearance> create(GridAppearance.class),
+        GWT.<GroupingViewAppearance> create(GroupingViewAppearance.class));
   }
 
   /**
    * Creates a new grouping view instance.
-   * 
+   *
    * @param appearance the grid appearance
    * @param groupingAppearance the grouping appearance
    */
@@ -172,7 +184,7 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
 
   /**
    * Creates a new grouping view instance.
-   * 
+   *
    * @param groupAppearance the group appearance
    */
   public GroupingView(GroupingViewAppearance groupAppearance) {
@@ -181,17 +193,191 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
 
   @Override
   public HandlerRegistration addCollapseHandler(CollapseItemHandler<List<M>> handler) {
-    return handlerManager.addHandler(CollapseItemEvent.getType(), handler);
+    return addHandler(CollapseItemEvent.getType(), handler);
   }
 
   @Override
   public HandlerRegistration addExpandHandler(ExpandItemHandler<List<M>> handler) {
-    return handlerManager.addHandler(ExpandItemEvent.getType(), handler);
+    return addHandler(ExpandItemEvent.getType(), handler);
+  }
+
+  /**
+   * Collapses all groups.
+   */
+  public void collapseAllGroups() {
+    toggleAllGroups(false);
+  }
+
+  /**
+   * Expands all groups.
+   */
+  public void expandAllGroups() {
+    toggleAllGroups(true);
+  }
+
+  /**
+   * Returns the grouping view appearance.
+   *
+   * @return the grouping appearance
+   */
+  public GroupingViewAppearance getGroupingAppearance() {
+    return groupAppearance;
   }
 
   @Override
-  protected void adjustColumnWidths(int[] columnWidths) {
-    super.adjustColumnWidths(columnWidths);
+  public StoreSortInfo<M> getSortState() {
+    if (groupingColumn != null) {
+      if (ds.getSortInfo().size() > 1) {
+        return ds.getSortInfo().get(1);
+      }
+    }
+    return super.getSortState();
+  }
+
+  public void groupBy(ColumnConfig<M, ?> column) {
+    if (grid == null) {
+      // if still being configured, save the grouping column for later
+      groupingColumn = column;
+    }
+
+    if (column != groupingColumn) {
+      // remove the existing group, if any
+      if (groupingColumn != null) {
+        if (grid.getLoader() == null || !grid.getLoader().isRemoteSort()) {
+          assert lastStoreSort != null && ds.getSortInfo().contains(lastStoreSort);
+          // remove the lastStoreSort from the listStore
+          ds.getSortInfo().remove(lastStoreSort);
+        } else {
+          assert lastSort != null;
+          grid.getLoader().removeSortInfo(lastSort);
+        }
+      } else {// groupingColumn == null;
+        assert lastStoreSort == null && lastSort == null;
+      }
+
+      // set the new one
+      groupingColumn = column;
+      if (column != null) {
+        if (grid.getLoader() == null || !grid.getLoader().isRemoteSort()) {
+          lastStoreSort = createStoreSortInfo(column, SortDir.ASC);
+          ds.addSortInfo(0, lastStoreSort);// this triggers the sort
+        } else {
+          lastSort = new SortInfoBean(column.getValueProvider(), SortDir.ASC);
+          grid.getLoader().addSortInfo(0, lastSort);
+          grid.getLoader().load();
+        }
+      } else {// new column == null
+        lastStoreSort = null;
+        lastSort = null;
+        // full redraw without groups
+        refresh(false);
+      }
+    }
+
+    if (column == null) {
+      doLastSort();
+    }
+  }
+
+  /**
+   * Returns true if the grouping menu is enabled.
+   *
+   * @return the enable grouping state
+   */
+  public boolean isEnableGroupingMenu() {
+    return enableGroupingMenu;
+  }
+
+  /**
+   * True to enable the the grouping menu items in the header context menu (defaults to true).
+   *
+   * @param enableGroupingMenu true to enable the grouping menu items
+   */
+  public void setEnableGroupingMenu(boolean enableGroupingMenu) {
+    this.enableGroupingMenu = enableGroupingMenu;
+  }
+
+  /**
+   * Returns true if the user can turn off grouping.
+   *
+   * @return the enable no groups state
+   */
+  public boolean isEnabledNoGroups() {
+    return enableNoGroups;
+  }
+
+  /**
+   * Returns true if the group is expanded.
+   *
+   * @param group the group
+   * @return true if expanded
+   */
+  public boolean isExpanded(Element group) {
+    return !groupAppearance.isCollapsed(group.<XElement> cast());
+  }
+
+  /**
+   * Returns true if the grouped column is visible.
+   *
+   * @return the show grouped column
+   */
+  public boolean isShowGroupedColumn() {
+    return showGroupedColumn;
+  }
+
+  /**
+   * Sets whether the grouped column is visible (defaults to true).
+   *
+   * @param showGroupedColumn true to show the grouped column
+   */
+  public void setShowGroupedColumn(boolean showGroupedColumn) {
+    this.showGroupedColumn = showGroupedColumn;
+  }
+
+  /**
+   * Returns true if start collapsed is enabled.
+   *
+   * @return the start collapsed state
+   */
+  public boolean isStartCollapsed() {
+    return startCollapsed;
+  }
+
+  /**
+   * Sets whether the groups should start collapsed (defaults to false).
+   *
+   * @param startCollapsed true to start collapsed
+   */
+  public void setStartCollapsed(boolean startCollapsed) {
+    this.startCollapsed = startCollapsed;
+  }
+
+  /**
+   * True to enable the no groups menu item in the header context menu (defaults to true).
+   *
+   * @param enableNoGroups true to enable no groups menu item
+   */
+  public void setEnableNoGroups(boolean enableNoGroups) {
+    this.enableNoGroups = enableNoGroups;
+  }
+
+  /**
+   * Toggles all groups.
+   *
+   * @param expanded true to expand
+   */
+  public void toggleAllGroups(boolean expanded) {
+    NodeList<Element> groups = getGroups();
+    List<GroupingData<M>> groupData = createGroupingData();
+    for (int i = 0; i < groups.getLength(); i++) {
+      toggleGroup(groups.getItem(i), expanded);
+      GroupingData<M> groupingData = groupData.get(i);
+      if (expanded) {
+        fireEvent(new ExpandItemEvent<List<M>>(groupingData.getItems()));
+      } else {
+        fireEvent(new CollapseItemEvent<List<M>>(groupingData.getItems()));
+      }
+    }
   }
 
   @Override
@@ -207,13 +393,7 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
     super.afterRender();
   }
 
-  /**
-   * Collapses all groups.
-   */
-  public void collapseAllGroups() {
-    toggleAllGroups(false);
-  }
-
+  @Override
   protected Menu createContextMenu(final int colIndex) {
     Menu menu = super.createContextMenu(colIndex);
 
@@ -229,6 +409,10 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
         });
         menu.add(new SeparatorMenuItem());
         menu.add(groupBy);
+
+        groupBy.setEnabled(cm.getColumnCount(true) > 1);
+
+        initMenuColumnShowHideHandling(menu, groupBy);
       }
       if (enableGrouping && enableNoGroups) {
         final CheckMenuItem showInGroups = new CheckMenuItem(
@@ -251,6 +435,96 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
     return menu;
   }
 
+  /**
+   * @see #createGroupingData(java.util.List, int)
+   * @return the group data for the current store
+   */
+  protected List<GroupingData<M>> createGroupingData() {
+    List<GroupingData<M>> groups = new ArrayList<GroupingData<M>>();
+
+    GroupingData<M> curGroup = null;
+    for (int i = 0, len = ds.size(); i < len; i++) {
+      M m = ds.get(i);
+      final Object gvalue;
+      if (ds.hasRecord(m)) {
+        gvalue = ds.getRecord(m).getValue(groupingColumn.getValueProvider());
+      } else {
+        gvalue = groupingColumn.getValueProvider().getValue(m);
+      }
+      if (curGroup == null || !valueBelongsInGroup(curGroup, gvalue)) {
+        curGroup = makeGroupForRow(i, m, gvalue);
+        verifyNewGroup(groups, curGroup);
+        groups.add(curGroup);
+      } else {
+        curGroup.getItems().add(m);
+      }
+    }
+
+    return groups;
+  }
+
+  /**
+   * @see #createGroupingData()
+   * @param rows set of rows in the store to build into groups
+   * @param startGroupIndex the index to use for the first group in the returned list
+   * @return a list of groups
+   */
+  protected List<GroupingData<M>> createGroupingData(List<M> rows, int startGroupIndex) {
+    List<GroupingData<M>> groups = new ArrayList<GroupingData<M>>();
+
+    // iterate through each item, creating a new group as needed. Assumes the
+    // list is sorted
+    GroupingData<M> curGroup = null;
+    for (int j = 0; j < rows.size(); j++) {
+      M model = rows.get(j);
+
+      int rowIndex = (j + startGroupIndex);
+
+      // the value for the group field
+      final Object gvalue;
+      if (ds.hasRecord(model)) {
+        gvalue = ds.getRecord(model).getValue(groupingColumn.getValueProvider());
+      } else {
+        gvalue = groupingColumn.getValueProvider().getValue(model);
+      }
+
+      if (curGroup == null || !valueBelongsInGroup(curGroup, gvalue)) {
+        curGroup = makeGroupForRow(rowIndex, model, gvalue);
+        verifyNewGroup(groups, curGroup);
+        groups.add(curGroup);
+
+      } else {
+        curGroup.getItems().add(model);
+      }
+    }
+    return groups;
+  }
+
+  protected void doLastSort() {
+    StoreSortInfo<M> info = getSortState();
+    if (info == null) {
+      return;
+    }
+
+    ValueProvider<? super M, ?> vp = info.getValueProvider();
+    if (vp == null) {
+      return;
+    }
+
+    String p = vp.getPath();
+    if (p == null) {
+      return;
+    }
+
+    ColumnConfig<M, ?> config = cm.findColumnConfig(p);
+    if (config == null) {
+      return;
+    }
+
+    int index = cm.indexOf(config);
+    doSort(index, info.getDirection());
+  }
+
   @Override
   protected SafeHtml doRender(List<ColumnData> cs, List<M> rows, int startRow) {
     enableGrouping = groupingColumn != null;
@@ -259,42 +533,8 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
       return super.doRender(cs, rows, startRow);
     }
 
-    GroupingData<M> curGroup = null;
 
-    List<GroupingData<M>> groups = new ArrayList<GroupingData<M>>();
-
-    // iterate through each item, creating a new group as needed. Assumes the
-    // list is sorted
-    for (int j = 0; j < rows.size(); j++) {
-      M model = rows.get(j);
-
-      int rowIndex = (j + startRow);
-
-      // the value for the group field
-      Object gvalue = groupingColumn.getValueProvider().getValue(model);
-
-      if (curGroup == null || !Util.equalWithNull(curGroup.getValue(), gvalue)) {
-        curGroup = new GroupingData<M>(gvalue, rowIndex);
-        curGroup.setCollapsed(startCollapsed);
-        curGroup.getItems().add(model);
-        assert !groups.contains(curGroup);
-        groups.add(curGroup);
-
-      } else {
-        curGroup.getItems().add(model);
-      }
-    }
-
-    // TODO support a grouping renderer, perhaps in the
-    // for (GroupingData<M> group : groups) {
-    // if (groupRenderer != null) {
-    // String g = groupRenderer.render(group);
-    // if (g == null || g.equals("")) {
-    // g = "&nbsp;";
-    // }
-    // group.group = g;
-    // }
-    // }
+    List<GroupingData<M>> groups = createGroupingData(rows, startRow);
 
     SafeHtmlBuilder buf = new SafeHtmlBuilder();
 
@@ -322,7 +562,8 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
 
         StoreSortInfo<M> sortInfo = createStoreSortInfo(column, sortDir);
 
-        if (sortDir == null && storeSortInfo != null && storeSortInfo.getValueProvider() == column.getValueProvider()) {
+        if (sortDir == null && storeSortInfo != null
+            && storeSortInfo.getValueProvider().getPath().equals(column.getValueProvider().getPath())) {
           sortInfo.setDirection(storeSortInfo.getDirection() == SortDir.ASC ? SortDir.DESC : SortDir.ASC);
         } else if (sortDir == null) {
           sortInfo.setDirection(SortDir.ASC);
@@ -357,48 +598,15 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
     }
   }
 
-  /**
-   * Expands all groups.
-   */
-  public void expandAllGroups() {
-    toggleAllGroups(true);
-  }
-
-  protected List<GroupingData<M>> getGroupData() {
-    List<GroupingData<M>> groups = new ArrayList<GroupingData<M>>();
-
-    GroupingData<M> curGroup = null;
-    for (int i = 0, len = ds.size(); i < len; i++) {
-      M m = ds.get(i);
-      Object gvalue = groupingColumn.getValueProvider().getValue(m);
-      if (curGroup == null || !Util.equalWithNull(curGroup.getValue(), gvalue)) {
-        curGroup = new GroupingData<M>(gvalue, i);
-        curGroup.setCollapsed(true);
-        curGroup.getItems().add(m);
-        assert !groups.contains(curGroup);
-        groups.add(curGroup);
-      } else {
-        curGroup.getItems().add(m);
-      }
-    }
-
-    return groups;
-  }
-
-  /**
-   * Returns the grouping view appearance.
-   * 
-   * @return the grouping appearance
-   */
-  public GroupingViewAppearance getGroupingAppearance() {
-    return groupAppearance;
+  protected int getGroupIndex(XElement group) {
+    return group.getParentElement().<XElement> cast().indexOf(group) / 2;
   }
 
   protected NodeList<Element> getGroups() {
     if (!enableGrouping) {
       return JsArray.createArray().cast();
     }
-    return dataTable.<XElement> cast().select("." + groupAppearance.style().gridGroup());
+    return dataTable.<XElement> cast().select("." + groupAppearance.style().group());
   }
 
   @Override
@@ -409,100 +617,18 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
     return dataTable.<XElement> cast().select("." + styles.row());
   }
 
-  @Override
-  protected StoreSortInfo<M> getSortState() {
-    if (groupingColumn != null) {
-      if (ds.getSortInfo().size() > 1) {
-        return ds.getSortInfo().get(1);
-      }
-    }
-    return super.getSortState();
-  }
-
-  public void groupBy(ColumnConfig<M, ?> column) {
-    if (grid == null) {
-      // if still being configured, save the grouping column for later
-      groupingColumn = column;
-    }
-    if (column != groupingColumn) {
-      // remove the existing group, if any
-      if (groupingColumn != null) {
-        if (grid.getLoader() == null || !grid.getLoader().isRemoteSort()) {
-          assert lastStoreSort != null && ds.getSortInfo().contains(lastStoreSort);
-          // remove the lastStoreSort from the listStore
-          ds.getSortInfo().remove(lastStoreSort);
-        } else {
-          assert lastSort != null;
-          grid.getLoader().removeSortInfo(lastSort);
-        }
-      } else {// groupingColumn == null;
-        assert lastStoreSort == null && lastSort == null;
-      }
-
-      // set the new one
-      groupingColumn = column;
-      if (column != null) {
-        if (grid.getLoader() == null || !grid.getLoader().isRemoteSort()) {
-          lastStoreSort = createStoreSortInfo(column, SortDir.ASC);
-          ds.addSortInfo(0, lastStoreSort);// this triggers the sort
-        } else {
-          lastSort = new SortInfoBean(column.getValueProvider(), SortDir.ASC);
-          grid.getLoader().addSortInfo(0, lastSort);
-          grid.getLoader().load();
-        }
-      } else {// new column == null
-        lastStoreSort = null;
-        lastSort = null;
-        // full redraw without groups
-        refresh(false);
-      }
-    }
-  }
-
   /**
-   * Returns true if the user can turn off grouping.
-   * 
-   * @return the enable no groups state
+   * @param groupIndex the index of this group
+   * @param firstModel the first model to add to the group
+   * @param value the value that this group is based on
+   * @return the newly created group
    */
-  public boolean isEnabledNoGroups() {
-    return enableNoGroups;
-  }
-
-  /**
-   * Returns true if the grouping menu is enabled.
-   * 
-   * @return the enable grouping state
-   */
-  public boolean isEnableGroupingMenu() {
-    return enableGroupingMenu;
-  }
-
-  /**
-   * Returns true if the group is expanded.
-   * 
-   * @param group the group
-   * @return true if expanded
-   */
-  public boolean isExpanded(Element group) {
-    return groupAppearance.isCollapsed(group.<XElement> cast());
-  }
-
-  /**
-   * Returns true if the grouped column is visible.
-   * 
-   * @return the show grouped column
-   */
-  public boolean isShowGroupedColumn() {
-    return showGroupedColumn;
-  }
-
-  /**
-   * Returns true if start collapsed is enabled.
-   * 
-   * @return the start collapsed state
-   */
-  public boolean isStartCollapsed() {
-    return startCollapsed;
+  protected GroupingData<M> makeGroupForRow(int groupIndex, M firstModel, Object value) {
+    GroupingData<M> curGroup;
+    curGroup = new GroupingData<M>(value, groupIndex);
+    curGroup.setCollapsed(state.containsKey(value) ? state.get(value) : isStartCollapsed());
+    curGroup.getItems().add(firstModel);
+    return curGroup;
   }
 
   @Override
@@ -524,7 +650,8 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
     if (head != null) {
       ge.stopPropagation();
       XElement group = groupAppearance.getGroup(head);
-      toggleGroup(group, groupAppearance.isCollapsed(group));
+      int index = getGroupIndex(group);
+      toggleGroup(index, groupAppearance.isCollapsed(group));
     }
   }
 
@@ -554,23 +681,36 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
   }
 
   protected void renderGroup(SafeHtmlBuilder buf, GroupingData<M> g, SafeHtml renderedRows) {
-    String groupClass = groupAppearance.style().gridGroup();
-    String headClass = groupAppearance.style().gridGroupHead();
-    buf.append(tpls.tr(groupClass,
-        tpls.tdWrap(cm.getColumnCount(), headClass + " " + styles.cell(), styles.cellInner(), renderGroupHeader(g))));
-    buf.append(tpls.tr("", tpls.tdWrap(cm.getColumnCount(), "", "", renderedRows)));
+    String groupClass = groupAppearance.style().group();
+    String bodyClass = "";
+    if (g.isCollapsed()) {
+      groupClass += " " + groupAppearance.style().groupCollapsed();
+      bodyClass = groupAppearance.style().bodyCollapsed();
+    }
+    String headClass = groupAppearance.style().groupHead();
+    final SafeHtml groupHtml;
+    String cellClasses = headClass + " " + styles.cell() + " " + states.cell();
+    if (selectable) {
+      groupHtml = (tpls.tr(groupClass,
+          tpls.tdWrap(cm.getColumnCount(), cellClasses, styles.cellInner() + " " + states.cellInner(), renderGroupHeader(g))));
+    } else {
+      String innerCellClasses = styles.cellInner() + " " + states.cellInner() + " " + styles.noPadding();
+      if (GXT.isIE()) {
+        groupHtml = (tpls.tr(groupClass, tpls.tdWrapUnselectable(cm.getColumnCount(), cellClasses,
+                innerCellClasses, renderGroupHeader(g))));
+      } else {
+        groupHtml = (tpls.tr(groupClass,
+            tpls.tdWrap(cm.getColumnCount(), cellClasses, innerCellClasses, renderGroupHeader(g))));
+      }
+
+    }
+    buf.append(groupHtml);
+
+    buf.append(tpls.tr(bodyClass, tpls.tdWrap(cm.getColumnCount(), "", "", renderedRows)));
   }
 
   protected SafeHtml renderGroupHeader(GroupingData<M> groupInfo) {
     return groupAppearance.renderGroupHeader(groupInfo);
-  }
-
-  protected SafeHtml renderGroupSummary(GroupingData<M> groupInfo) {
-    if (groupSummaryTemplate != null) {
-      return groupSummaryTemplate.renderGroupSummary(groupInfo);
-    } else {
-      return null;
-    }
   }
 
   @Override
@@ -601,63 +741,81 @@ public class GroupingView<M> extends GridView<M> implements HasCollapseItemHandl
   }
 
   /**
-   * True to enable the the grouping menu items in the header context menu
-   * (defaults to true).
-   * 
-   * @param enableGroupingMenu true to enable the grouping menu items
+   * Toggles the given group index, dealing with all logical and view details.
    */
-  public void setEnableGroupingMenu(boolean enableGroupingMenu) {
-    this.enableGroupingMenu = enableGroupingMenu;
-  }
-
-  /**
-   * True to enable the no groups menu item in the header context menu (defaults
-   * to true).
-   * 
-   * @param enableNoGroups true to enable no groups menu item
-   */
-  public void setEnableNoGroups(boolean enableNoGroups) {
-    this.enableNoGroups = enableNoGroups;
-  }
-
-  /**
-   * Sets whether the grouped column is visible (defaults to true).
-   * 
-   * @param showGroupedColumn true to show the grouped column
-   */
-  public void setShowGroupedColumn(boolean showGroupedColumn) {
-    this.showGroupedColumn = showGroupedColumn;
-  }
-
-  /**
-   * Sets whether the groups should start collapsed (defaults to false).
-   * 
-   * @param startCollapsed true to start collapsed
-   */
-  public void setStartCollapsed(boolean startCollapsed) {
-    this.startCollapsed = startCollapsed;
-  }
-
-  /**
-   * Toggles all groups.
-   * 
-   * @param expanded true to expand
-   */
-  public void toggleAllGroups(boolean expanded) {
-    NodeList<Element> groups = getGroups();
-    for (int i = 0; i < groups.getLength(); i++) {
-      toggleGroup(groups.getItem(i), expanded);
+  protected void toggleGroup(int i, boolean expanded) {
+    GroupingData<M> groupingData = createGroupingData().get(i);
+    Object key = groupingData.getValue();
+    state.put(key, !expanded);
+    toggleGroup(getGroups().getItem(i), expanded);
+    if (expanded) {
+      fireEvent(new ExpandItemEvent<List<M>>(groupingData.getItems()));
+    } else {
+      fireEvent(new CollapseItemEvent<List<M>>(groupingData.getItems()));
     }
   }
 
+  /**
+   * Toggles the visibility of the group elements, but does not handle the internal state details or events.
+   */
   protected void toggleGroup(Element group, boolean expanded) {
     assert group != null;
     groupAppearance.onGroupExpand(group.<XElement> cast(), expanded);
     calculateVBar(false);
-    if (expanded) {
-      handlerManager.fireEvent(new ExpandItemEvent<List<M>>(null));
-    } else {
-      handlerManager.fireEvent(new CollapseItemEvent<List<M>>(null));
+  }
+
+  /**
+   * @param group a group that the value might match
+   * @param value an object which may match the data in group.getValue()
+   * @return true if a row with the given value belongs in the group
+   */
+  protected boolean valueBelongsInGroup(GroupingData<M> group, Object value) {
+    return Util.equalWithNull(group.getValue(), value);
+  }
+
+  /**
+   * Ensures that items which belong in the same group are not fragmented across multiple groups. It is technically
+   * possible to override this to do nothing, but doing so is unsupported.
+   * This method should be an assertion - use {@code assert} or {@link Class#desiredAssertionStatus()} to ensure that
+   * this won't be in the compiled app if assertions are disabled.
+   *
+   * @param groups all groups created before the current one
+   * @param nextGroup the next group to add to the list, assuming it shouldn't already be listed there
+   */
+  protected void verifyNewGroup(List<GroupingData<M>> groups, GroupingData<M> nextGroup) {
+    assert !groups.contains(nextGroup) : "List didn't appear to be correctly sorted, group exists in more than one place in the list";
+  }
+
+  private void initMenuColumnShowHideHandling(Menu menu, final MenuItem groupBy) {
+    // Loop through the menu and find the columns
+    for (int i = 0; i < menu.getWidgetCount(); i++) {
+      Widget subMenuWidget = menu.getWidget(i);
+      // Only work with the columns MenuItem instances
+      if (subMenuWidget instanceof MenuItem) {
+        MenuItem columnsMenu = (MenuItem) subMenuWidget;
+        String hasColumns = columnsMenu.getData("gxt-columns");
+        // Find the columns and add handlers onto the CheckMenuItems columns
+        if (hasColumns != null && hasColumns.equals("true")) {
+          Menu colMenu = columnsMenu.getSubMenu();
+          for (int b = 0; b < colMenu.getWidgetCount(); b++) {
+            CheckMenuItem colItem = (CheckMenuItem) colMenu.getWidget(b);
+            // Observe column events 'showing' and 'hiding' events
+            colItem.addCheckChangeHandler(new CheckChangeHandler<CheckMenuItem>() {
+              @Override
+              public void onCheckChange(CheckChangeEvent<CheckMenuItem> event) {
+                Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                    // Disable the group by option when only *one* column is displayed
+                    groupBy.setEnabled(cm.getColumnCount(true) > 1);
+                  }
+                });
+              }
+            });
+          }
+        }
+      }
     }
   }
+
 }

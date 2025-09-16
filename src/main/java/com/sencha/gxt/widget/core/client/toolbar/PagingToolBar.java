@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -25,6 +25,7 @@ import com.sencha.gxt.data.shared.loader.LoadExceptionEvent;
 import com.sencha.gxt.data.shared.loader.LoaderHandler;
 import com.sencha.gxt.data.shared.loader.PagingLoadConfig;
 import com.sencha.gxt.data.shared.loader.PagingLoadResult;
+import com.sencha.gxt.data.shared.loader.PagingLoadResultBean;
 import com.sencha.gxt.data.shared.loader.PagingLoader;
 import com.sencha.gxt.messages.client.DefaultMessages;
 import com.sencha.gxt.widget.core.client.button.TextButton;
@@ -32,12 +33,17 @@ import com.sencha.gxt.widget.core.client.event.SelectEvent;
 import com.sencha.gxt.widget.core.client.event.SelectEvent.SelectHandler;
 
 /**
- * A specialized toolbar that is bound to a {@link PagingLoader} and provides
- * automatic paging controls.
+ * A specialized toolbar that is bound to a {@link PagingLoader} and provides automatic paging controls.
  * 
  * <p />
- * The tool bar is "bound" to the loader using the {@link #bind(PagingLoader)}
- * method.
+ * The tool bar is "bound" to the loader using the {@link #bind(PagingLoader)} method.
+ * <p />
+ * 
+ * <b>Enabling & disabling child toolbar items:</b> The paging toolbar setEnable overrides any child toolbar items
+ * setEnable. Given the paging toolbar overrides the child toolbar items setEnable, deferring child toolbar enablement
+ * is needed after the onload. So when the paging toolbar is enabled the has a child toolbar the items enablement can be
+ * overridden by scheduling their enablement. The example below shows an example of scheduling child toolbar item
+ * enablement.
  */
 public class PagingToolBar extends ToolBar {
 
@@ -54,9 +60,11 @@ public class PagingToolBar extends ToolBar {
     ImageResource prev();
 
     ImageResource refresh();
+
   }
 
   public interface PagingToolBarMessages {
+
     String afterPageText(int page);
 
     String beforePageText();
@@ -74,6 +82,7 @@ public class PagingToolBar extends ToolBar {
     String prevText();
 
     String refreshText();
+
   }
 
   protected static class DefaultPagingToolBarMessages implements PagingToolBarMessages {
@@ -132,27 +141,37 @@ public class PagingToolBar extends ToolBar {
   protected PagingLoader<PagingLoadConfig, ?> loader;
   protected TextBox pageText;
 
-  protected boolean savedEnableState = true;
   protected boolean showToolTips = true;
   protected int start, pageSize, totalLength;
   private final PagingToolBarAppearance appearance;
   private boolean loading;
+  private boolean buttonsEnabled;
+  // flag to track if refresh was clicked since setIcon will steal focus. If it was focused, we must refocus after icon change
+  private boolean activeRefresh = false;
 
   private LoaderHandler<PagingLoadConfig, ?> handler = new LoaderHandler<PagingLoadConfig, PagingLoadResult<?>>() {
 
     @Override
     public void onBeforeLoad(final BeforeLoadEvent<PagingLoadConfig> event) {
       loading = true;
-      savedEnableState = isEnabled();
-      setEnabled(false);
+      doEnableButtons(false);
       refresh.setIcon(appearance.loading());
-      Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+      if (activeRefresh) {
+        refresh.focus();
+      }
+      Scheduler.get().scheduleFinally(new ScheduledCommand() {
 
         @Override
         public void execute() {
           if (event.isCancelled()) {
             refresh.setIcon(appearance.refresh());
-            setEnabled(savedEnableState);
+            if (activeRefresh) {
+              refresh.focus();
+            }
+
+            doEnableButtons(true);
+            PagingToolBar.this.onLoad(new LoadEvent<PagingLoadConfig, PagingLoadResult<?>>(config,
+                new PagingLoadResultBean<Object>(null, totalLength, start)));
           }
         }
       });
@@ -161,15 +180,25 @@ public class PagingToolBar extends ToolBar {
     @Override
     public void onLoad(LoadEvent<PagingLoadConfig, PagingLoadResult<?>> event) {
       refresh.setIcon(appearance.refresh());
-      setEnabled(savedEnableState);
+      if (activeRefresh) {
+        refresh.focus();
+        activeRefresh = false;
+      }
+
+      doEnableButtons(true);
       PagingToolBar.this.onLoad(event);
-      loading = false;
     }
 
     @Override
     public void onLoadException(LoadExceptionEvent<PagingLoadConfig> event) {
       refresh.setIcon(appearance.refresh());
-      setEnabled(savedEnableState);
+      if (activeRefresh) {
+        refresh.focus();
+        activeRefresh = false;
+      }
+
+      doEnableButtons(true);
+      //setting this here since we never get into onLoad
       loading = false;
     }
   };
@@ -177,7 +206,7 @@ public class PagingToolBar extends ToolBar {
   private HandlerRegistration handlerRegistration;
   private PagingToolBarMessages messages;
   private boolean reuseConfig = true;
-  
+
   /**
    * Creates a new paging tool bar.
    * 
@@ -269,6 +298,8 @@ public class PagingToolBar extends ToolBar {
     displayText = new LabelToolItem();
     displayText.addStyleName(CommonStyles.get().nowrap());
 
+    addToolTips();
+
     add(first);
     add(prev);
     add(new SeparatorToolItem());
@@ -314,6 +345,24 @@ public class PagingToolBar extends ToolBar {
   }
 
   /**
+   * Called when a load request is initialed and called after completion of the load request. Subclasses may override as
+   * needed.
+   * 
+   * @param enabled the enabled state
+   */
+  protected void doEnableButtons(boolean enabled) {
+    buttonsEnabled = enabled;
+    first.setEnabled(enabled);
+    prev.setEnabled(enabled);
+    beforePage.setEnabled(enabled);
+    pageText.setEnabled(enabled);
+    afterText.setEnabled(enabled);
+    next.setEnabled(enabled);
+    last.setEnabled(enabled);
+    displayText.setEnabled(enabled);
+  }
+
+  /**
    * Moves to the first page.
    */
   public void first() {
@@ -336,7 +385,7 @@ public class PagingToolBar extends ToolBar {
    * 
    * @return the appearance
    */
-  public PagingToolBarAppearance getAppearance() {
+  public PagingToolBarAppearance getPagingToolbarAppearance() {
     return appearance;
   }
 
@@ -364,10 +413,19 @@ public class PagingToolBar extends ToolBar {
   /**
    * Returns the total number of pages.
    * 
-   * @return the
+   * @return the total pages
    */
   public int getTotalPages() {
     return pages;
+  }
+
+  /**
+   * Returns true if the paging toolbar buttons are enabled.
+   * 
+   * @return the buttons enabled.
+   */
+  public boolean isButtonsEnabled() {
+    return buttonsEnabled;
   }
 
   /**
@@ -424,6 +482,7 @@ public class PagingToolBar extends ToolBar {
    */
   public void refresh() {
     if (!loading) {
+      activeRefresh = true;
       doLoadRequest(start, pageSize);
     }
   }
@@ -455,9 +514,8 @@ public class PagingToolBar extends ToolBar {
   }
 
   /**
-   * Sets the current page size. This method does not effect the data currently
-   * being displayed. The new page size will not be used until the next load
-   * request.
+   * Sets the current page size. This method does not effect the data currently being displayed. The new page size will
+   * not be used until the next load request.
    * 
    * @param pageSize the new page size
    */
@@ -475,13 +533,17 @@ public class PagingToolBar extends ToolBar {
   }
 
   /**
-   * Sets if the button tool tips should be displayed (defaults to true,
-   * pre-render).
+   * Sets if the button tool tips should be displayed (defaults to true, pre-render).
    * 
    * @param showToolTips true to show tool tips
    */
   public void setShowToolTips(boolean showToolTips) {
     this.showToolTips = showToolTips;
+    if (showToolTips) {
+      addToolTips();
+    } else {
+      removeToolTips();
+    }
   }
 
   protected void doLoadRequest(int offset, int limit) {
@@ -496,6 +558,7 @@ public class PagingToolBar extends ToolBar {
   }
 
   protected void onLoad(LoadEvent<PagingLoadConfig, PagingLoadResult<?>> event) {
+    loading = false;
     config = event.getLoadConfig();
     PagingLoadResult<?> result = event.getLoadResult();
     start = result.getOffset();
@@ -546,4 +609,28 @@ public class PagingToolBar extends ToolBar {
     setActivePage(p);
   }
 
+  /**
+   * Helper method to apply the tool tip messages to built-in toolbar buttons. Additional tooltips can be set by
+   * overriding {@link #setShowToolTips(boolean)}.
+   */
+  private void addToolTips() {
+    PagingToolBarMessages m = getMessages();
+    first.setToolTip(m.firstText());
+    prev.setToolTip(m.prevText());
+    next.setToolTip(m.nextText());
+    last.setToolTip(m.lastText());
+    refresh.setToolTip(m.refreshText());
+  }
+
+  /**
+   * Helper method to remove the tool tip messages from built-in toolbar buttons. Additional tooltips can be set by
+   * overriding {@link #setShowToolTips(boolean)}.
+   */
+  private void removeToolTips() {
+    first.removeToolTip();
+    prev.removeToolTip();
+    next.removeToolTip();
+    last.removeToolTip();
+    refresh.removeToolTip();
+  }
 }

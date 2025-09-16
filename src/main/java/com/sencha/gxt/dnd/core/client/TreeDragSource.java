@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,7 +10,7 @@ package com.sencha.gxt.dnd.core.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gwt.user.client.Element;
+import com.google.gwt.dom.client.Element;
 import com.sencha.gxt.core.client.util.Format;
 import com.sencha.gxt.core.shared.FastSet;
 import com.sencha.gxt.data.shared.ModelKeyProvider;
@@ -23,15 +23,13 @@ import com.sencha.gxt.widget.core.client.tree.Tree;
 /**
  * Enables a {@link Tree} to act as the source of a drag and drop operation.
  * <p/>
- * Use {@link #setTreeSource(TreeSource)} to specify whether leaf nodes,
- * non-leaf nodes or both types of nodes can be dragged (defaults to
- * {@link TreeSource#BOTH}). The drag operation is cancelled if the user
- * attempts to drag a node type that is not permitted.
+ * Use {@link #setTreeSource(com.sencha.gxt.dnd.core.client.DND.TreeSource)} to specify whether leaf nodes, non-leaf
+ * nodes or both types of nodes can be dragged (defaults to {@link TreeSource#BOTH}). The drag operation is cancelled
+ * if the user attempts to drag a node type that is not permitted.
  * <p/>
- * The drag data consists of a list of items of type {@code <M>}. It is
- * optimized to remove children of parents that are also in the list (i.e. if a
- * parent is the subject of a drag operation then all of its children are
- * implicitly part of the drag operation).
+ * The drag data consists of a list of items of type {@code <M>}. It is optimized to remove children of parents that are
+ * also in the list (i.e. if a parent is the subject of a drag operation then all of its children are implicitly part of
+ * the drag operation).
  * 
  * @param <M> the model type
  */
@@ -112,10 +110,15 @@ public class TreeDragSource<M> extends DragSource {
         }
       }
     } else {
+      // If allowed to drop only nodes or both, then we need to remove items from the list
+      // that also have their parents being dragged
       ModelKeyProvider<? super M> kp = getWidget().getStore().getKeyProvider();
+      
+      // Start by looking for all selected non-leaf items
       FastSet nonLeafKeys = new FastSet();
       for (M item : selected) {
         if (getWidget().isLeaf(item)) {
+          // While we're at it, if we're only allowed nodes, cancel if we see a leaf
           if (treeSource == TreeSource.NODE) {
             event.setCancelled(true);
             return;
@@ -124,13 +127,20 @@ public class TreeDragSource<M> extends DragSource {
           nonLeafKeys.add(kp.getKey(item));
         }
       }
+      
+      // Walking backward (so we can remove as we go) through the list of all selected items, for
+      // each item, check if it has a parent already in the list.
+      // Clearly that parent is a non-leaf, so will be in the set we established in the last loop
+      // Note: see TreeGridDragSource it's similar
       for (int i = selected.size() - 1; i >= 0; i--) {
         // TODO consider tracking these parents, and if they are part of another
         // parent, adding them to the keyset
         M parent = selected.get(i);
         while ((parent = getWidget().getStore().getParent(parent)) != null) {
+          // If we find that this item's parent is also selected, then we can skip this item
           if (nonLeafKeys.contains(kp.getKey(parent))) {
             selected.remove(i);
+            break;
           }
         }
       }

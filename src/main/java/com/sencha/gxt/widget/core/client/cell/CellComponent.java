@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -37,7 +37,7 @@ import com.sencha.gxt.widget.core.client.ComponentHelper;
  * A {@link Component} that wraps a {@link Cell}.
  * 
  * <p />
- * It is important to not that a single cell instance should not be used in a
+ * It is important to note that a single cell instance should not be used in a
  * single <code>CellComponent</code> instance.
  * 
  * <p />
@@ -216,8 +216,11 @@ public class CellComponent<C> extends Component implements HasKeyProvider<C>, Ha
     super.onBrowserEvent(event);
 
     // Forward the event to the cell.
+    if (!Element.is(event.getEventTarget())) {
+      return;
+    }
     String eventType = event.getType();
-    if (cell.getConsumedEvents().contains(eventType)) {
+    if (cell.getConsumedEvents() != null && cell.getConsumedEvents().contains(eventType)) {
       cell.onBrowserEvent(createContext(), getElement(), value, event, valueUpdater);
     }
   }
@@ -367,6 +370,14 @@ public class CellComponent<C> extends Component implements HasKeyProvider<C>, Ha
       } else {
         rc.setSize(getElement(), width, height);
       }
+    }
+    
+    // inline-block is causing issues is some circumstances when the component has a width set
+    // we use inline-block to get "auto" width behavior. it is not needed with an explicit width.
+    if (width > 0) {
+      removeStyleName(CommonStyles.get().inlineBlock());
+    } else {
+      addStyleName(CommonStyles.get().inlineBlock());
     }
   }
 

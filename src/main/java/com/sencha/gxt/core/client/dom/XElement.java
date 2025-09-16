@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,13 +8,11 @@
 package com.sencha.gxt.core.client.dom;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.Document;
@@ -30,6 +28,7 @@ import com.google.gwt.http.client.Request;
 import com.google.gwt.http.client.RequestBuilder;
 import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.Response;
+import com.google.gwt.regexp.shared.RegExp;
 import com.google.gwt.user.client.DOM;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.Style;
@@ -52,18 +51,17 @@ import com.sencha.gxt.core.client.util.Util;
 import com.sencha.gxt.core.shared.FastMap;
 
 /**
- * Adds additional features and functionality to the GWT <code>Element</code>
- * class.
+ * Adds additional features and functionality to the GWT <code>Element</code> class.
  * 
  * <p />
- * XElement's cannot be directly instantiated. New XElements can be created
- * using the static {@link #createElement(String)} method.
+ * XElement's cannot be directly instantiated. New XElements can be created using the static
+ * {@link #createElement(String)} method.
  */
+@SuppressWarnings("deprecation")
 public class XElement extends com.google.gwt.user.client.Element {
 
   /**
-   * VisMode enumeration. Specifies the the element should hidden using the CSS
-   * display or visibility style.
+   * VisMode enumeration. Specifies the the element should hidden using the CSS display or visibility style.
    * 
    * @see #setVisible(boolean)
    */
@@ -72,16 +70,31 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Workaround for
-   * http://code.google.com/p/google-web-toolkit/issues/detail?id=3192, breaking
-   * the XElement static fields into their own class so they can be created,
-   * accessed through a 'real' Java type, not a JSO.
-   * 
+   * Workaround for http://code.google.com/p/google-web-toolkit/issues/detail?id=3192, breaking the XElement static
+   * fields into their own class so they can be created, accessed through a 'real' Java type, not a JSO.
    */
   private static class FieldHolder {
     private static Map<String, Boolean> borderBoxMap = new FastMap<Boolean>();
 
     private static ComputedStyleImpl computedStyle = GWT.create(ComputedStyleImpl.class);
+
+    private static int adjustXYOffset;
+
+    private static RegExp leftOrRight = RegExp.compile("Left|Right");
+
+    static {
+      XElement elem = XElement.createElement("div");
+      elem.setXY(100, 100);
+
+      Document.get().getBody().appendChild(elem);
+
+      Point p = elem.getXY();
+      if (p.getX() != 100) {
+        adjustXYOffset = p.getX() - 100;
+      }
+
+      elem.removeFromParent();
+    }
   }
 
   /**
@@ -91,22 +104,21 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the value with units
    */
   public native static String addUnits(String v, String defaultUnit) /*-{
-		if (v === "" || v == "auto") {
-			return v;
-		}
-		if (v === undefined) {
-			return '';
-		}
-		if (typeof v == "number"
-				|| !/\d+(px|em|%|en|ex|pt|in|cm|mm|pc)$/i.test(v)) {
-			return v + (defaultUnit || 'px');
-		}
-		return v;
+    if (v === "" || v == "auto") {
+        return v;
+    }
+    if (v === undefined) {
+        return '';
+    }
+    if (typeof v == "number"
+            || !/\d+(px|em|%|en|ex|pt|in|cm|mm|pc)$/i.test(v)) {
+        return v + (defaultUnit || 'px');
+    }
+    return v;
   }-*/;
 
   /**
-   * Assert that the given {@link Node} is an {@link Element} and automatically
-   * typecast it.
+   * Assert that the given {@link Node} is an {@link Element} and automatically typecast it.
    */
   public static XElement as(Node node) {
     assert Element.is(node);
@@ -147,60 +159,55 @@ public class XElement extends com.google.gwt.user.client.Element {
     return r;
   }
 
-  static final native void setHandler(XElement elem, JavaScriptObject obj) /*-{
-		elem.handler = obj;
-  }-*/;
-
   private native static void disableTextSelectInternal(Element e, boolean disable) /*-{
-		if (disable) {
-			e.ondrag = function(evt) {
-				var targ;
-				if (!evt)
-					evt = $wnd.event;
-				if (evt.target)
-					targ = evt.target;
-				else if (evt.srcElement)
-					targ = evt.srcElement;
-				if (targ.nodeType == 3) // defeat Safari bug
-					targ = targ.parentNode;
-				if (targ.tagName == 'INPUT' || targ.tagName == 'TEXTAREA') {
-					return true;
-				}
-				return false;
-			}
-			e.onselectstart = function(evt) {
-				var targ;
-				if (!evt)
-					evt = $wnd.event;
-				if (evt.target)
-					targ = evt.target;
-				else if (evt.srcElement)
-					targ = evt.srcElement;
-				if (targ.nodeType == 3) // defeat Safari bug
-					targ = targ.parentNode;
-				if (targ.tagName == 'INPUT' || targ.tagName == 'TEXTAREA') {
-					return true;
-				}
-				return false;
-			};
-		} else {
-			e.ondrag = null;
-			e.onselectstart = null;
-		}
+    if (disable) {
+        e.ondrag = function(evt) {
+            var targ;
+            if (!evt)
+                evt = $wnd.event;
+            if (evt.target)
+                targ = evt.target;
+            else if (evt.srcElement)
+                targ = evt.srcElement;
+            if (targ.nodeType == 3) // defeat Safari bug
+                targ = targ.parentNode;
+            if (targ.tagName == 'INPUT' || targ.tagName == 'TEXTAREA') {
+                return true;
+            }
+            return false;
+        }
+        e.onselectstart = function(evt) {
+            var targ;
+            if (!evt)
+                evt = $wnd.event;
+            if (evt.target)
+                targ = evt.target;
+            else if (evt.srcElement)
+                targ = evt.srcElement;
+            if (targ.nodeType == 3) // defeat Safari bug
+                targ = targ.parentNode;
+            if (targ.tagName == 'INPUT' || targ.tagName == 'TEXTAREA') {
+                return true;
+            }
+            return false;
+        };
+    } else {
+        e.ondrag = null;
+        e.onselectstart = null;
+    }
   }-*/;
 
   /**
-   * Not directly instantiable. Subclasses should also define a protected no-arg
-   * constructor to prevent client code from directly instantiating the class.
+   * Not directly instantiable. Subclasses should also define a protected no-arg constructor to prevent client code from
+   * directly instantiating the class.
    */
   protected XElement() {
   }
 
   /**
-   * Adds the style name to the element. Duplicate styles are automatically
-   * filtered out.
+   * Adds the style names to the element. Duplicate styles are automatically filtered out.
    * 
-   * @param classNames the new class names
+   * @param classNames the new class names to add
    */
   public final void addClassName(String... classNames) {
     if (classNames != null) {
@@ -214,13 +221,24 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
+   * Adds the style names to the element. Duplicate styles are automatically filtered out.
+   * 
+   * @param className1 the first new class name to add
+   * @param className2 the second new class name to add
+   */
+  public final void addClassName(String className1, String className2) {
+    addClassName(className1);
+    addClassName(className2);
+  }
+
+  /**
    * Adds the event type to the element's sunk events.
    * 
    * @param event the events to add
    */
   public final void addEventsSunk(int event) {
-    int bits = DOM.getEventsSunk((com.google.gwt.user.client.Element) this.cast());
-    DOM.sinkEvents((com.google.gwt.user.client.Element) this.cast(), bits | event);
+    int bits = DOM.getEventsSunk((Element) this.cast());
+    DOM.sinkEvents((Element) this.cast(), bits | event);
   }
 
   /**
@@ -234,33 +252,30 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Aligns the element with another element relative to the specified anchor
-   * points.
+   * Aligns the element with another element relative to the specified anchor points.
    * 
    * @param elem the element to align to
    * @param alignment the position to align to
-   * @param offsets the offsets or <code>null</code>
+   * @param offsetX X offset
+   * @param offsetY Y offset
    */
-  public final void alignTo(Element elem, AnchorAlignment alignment, int[] offsets) {
-    if (offsets == null) {
-      offsets = new int[] {0, 0};
-    }
-    Point p = getAlignToXY(elem, alignment, offsets);
+  public final void alignTo(Element elem, AnchorAlignment alignment, int offsetX, int offsetY) {
+    Point p = getAlignToXY(elem, alignment, offsetX, offsetY);
     setXY(p);
   }
 
   /**
-   * Sets multiple style properties. Style attribute names must be in lower
-   * camel case, e.g. "backgroundColor:white; color:red;"
+   * Sets multiple style properties. Style attribute names must be in lower camel case, e.g.
+   * "backgroundColor:white; color:red;"
    * 
    * @param styles a style specification string
    */
   public final native void applyStyles(String styles) /*-{
-		var re = /\s?([a-z\-]*)\:\s?([^;]*);?/gi;
-		var matches;
-		while ((matches = re.exec(styles)) != null) {
-			this.style[matches[1]] = matches[2];
-		}
+    var re = /\s?([a-z\-]*)\:\s?([^;]*);?/gi;
+    var matches;
+    while ((matches = re.exec(styles)) != null) {
+        this.style[matches[1]] = matches[2];
+    }
   }-*/;
 
   /**
@@ -273,11 +288,10 @@ public class XElement extends com.google.gwt.user.client.Element {
   /**
    * Centers the element.
    * 
-   * @param constrainViewport true to constrain the element position to the
-   *          viewport.
+   * @param constrainViewport true to constrain the element position to the viewport.
    */
   public final void center(boolean constrainViewport) {
-    alignTo(Document.get().getBody(), new AnchorAlignment(Anchor.CENTER, Anchor.CENTER, constrainViewport), null);
+    alignTo(Document.get().getBody(), new AnchorAlignment(Anchor.CENTER, Anchor.CENTER, constrainViewport), 0, 0);
   }
 
   /**
@@ -289,12 +303,11 @@ public class XElement extends com.google.gwt.user.client.Element {
     if (container == null) {
       container = Document.get().getBody();
     }
-    alignTo(container, new AnchorAlignment(Anchor.CENTER, Anchor.CENTER, false), null);
+    alignTo(container, new AnchorAlignment(Anchor.CENTER, Anchor.CENTER, false), 0, 0);
   }
 
   /**
-   * Selects a single child at any depth below this element based on the passed
-   * CSS selector.
+   * Selects a single child at any depth below this element based on the passed CSS selector.
    * 
    * @param selector the css selector
    * @return the child element
@@ -305,8 +318,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Selects a single child at any depth below this element based on the passed
-   * CSS selector.
+   * Selects a single child at any depth below this element based on the passed CSS selector.
    * 
    * @param selector the css selector
    * @return the child element
@@ -319,15 +331,15 @@ public class XElement extends com.google.gwt.user.client.Element {
    * Generators a native dom click on the element.
    */
   public final native void click() /*-{
-		var dom = this;
-		if (dom.click) {
-			dom.click();
-		} else {
-			var event = $doc.createEvent("MouseEvents");
-			event.initEvent('click', true, true, $wnd, 0, 0, 0, 0, 0, false,
-					false, false, false, 1, dom);
-			dom.dispatchEvent(event);
-		}
+    var dom = this;
+    if (dom.click) {
+        dom.click();
+    } else {
+        var event = $doc.createEvent("MouseEvents");
+        event.initEvent('click', true, true, $wnd, 0, 0, 0, 0, 0, false,
+                false, false, false, 1, dom);
+        dom.dispatchEvent(event);
+    }
   }-*/;
 
   /**
@@ -348,9 +360,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Enables or disables text selection for the element. A circular reference
-   * will be created when disabling text selection. Disabling should be cleared
-   * when the element is detached. See the <code>Component</code> source for an
+   * Enables or disables text selection for the element. A circular reference will be created when disabling text
+   * selection. Disabling should be cleared when the element is detached. See the <code>Component</code> source for an
    * example.
    * 
    * @param disable true to disable, false to enable
@@ -362,8 +373,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Selects a single *direct* child based on the passed CSS selector (the
-   * selector should not contain an id).
+   * Selects a single *direct* child based on the passed CSS selector (the selector should not contain an id).
    * 
    * @param selector the CSS selector
    * @return the child element
@@ -384,8 +394,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Walks up the DOM and ensures all elements are visible. Useful when trying
-   * to calculate offsets or page coordinates.
+   * Walks up the DOM and ensures all elements are visible. Useful when trying to calculate offsets or page coordinates.
    * 
    * @return list of meta data, see {@link #restoreVisible(List)}
    */
@@ -420,8 +429,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Looks at this node and then at parent nodes for a match of the passed
-   * simple selector (e.g. div.some-class or span:first-child).
+   * Looks at this node and then at parent nodes for a match of the passed simple selector (e.g. div.some-class or
+   * span:first-child).
    * 
    * @param selector the simple selector to test
    * @return the matching element
@@ -435,8 +444,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Looks at this node and then at parent nodes for a match of the passed
-   * simple selector (e.g. div.some-class or span:first-child).
+   * Looks at this node and then at parent nodes for a match of the passed simple selector (e.g. div.some-class or
+   * span:first-child).
    * 
    * @param selector the simple selector to test
    * @param maxDepth the max depth
@@ -469,12 +478,12 @@ public class XElement extends com.google.gwt.user.client.Element {
     XElement el = XElement.as(elem);
 
     boolean constrainViewport = alignment.isConstrainViewport();
-    String p1 = alignment.getAlign() == null ? "tl" : alignment.getAlign().value();
-    String p2 = alignment.getTargetAlign() == null ? "bl" : alignment.getTargetAlign().value();
+    Anchor anch1 = alignment.getAlign();
+    Anchor anch2 = alignment.getTargetAlign();
     // Subtract the aligned el's internal xy from the target's offset xy
     // plus custom offset to get the aligned el's new offset xy
-    Point a1 = getAnchorXY(alignment.getAlign(), true);
-    Point a2 = el.getAnchorXY(alignment.getTargetAlign(), false);
+    Point a1 = getAnchorXY(anch1, true);
+    Point a2 = el.getAnchorXY(anch2, false);
 
     int x = a2.getX() - a1.getX() + ox;
     int y = a2.getY() - a1.getY() + oy;
@@ -493,11 +502,8 @@ public class XElement extends com.google.gwt.user.client.Element {
       // perpendicular to the vp border, allow the aligned el to slide on that
       // border,
       // otherwise swap the aligned el to the opposite border of the target.
-      char p1y = p1.charAt(0), p1x = p1.charAt(p1.length() - 1);
-      char p2y = p2.charAt(0), p2x = p2.charAt(p2.length() - 1);
-
-      boolean swapY = ((p1y == 't' && p2y == 'b') || (p1y == 'b' && p2y == 't'));
-      boolean swapX = ((p1x == 'r' && p2x == 'l') || (p1x == 'l' && p2x == 'r'));
+      boolean swapY = (anch1.isTop() && anch2.isBottom()) || (anch1.isBottom() && anch2.isTop());
+      boolean swapX = (anch1.isRight() && anch2.isLeft()) || (anch1.isLeft() && anch2.isRight());
 
       // EXTGWT-1730 only applying 5 when there is scrolling. 5 may be able to
       // be removed
@@ -531,28 +537,11 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Gets the x,y coordinates to align this element with another element.
+   * Returns the x,y coordinates specified by the anchor position on the element.
    * 
-   * @param elem the element to align to
-   * @param alignment the alignment
-   * @param offsets an array of x and y offsets (may be be null for 0, 0)
-   * @return the point
-   */
-  public final Point getAlignToXY(Element elem, AnchorAlignment alignment, int[] offsets) {
-    if (offsets == null) {
-      offsets = new int[] {0, 0};
-    }
-    return getAlignToXY(elem, alignment, offsets[0], offsets[1]);
-  }
-
-  /**
-   * Returns the x,y coordinates specified by the anchor position on the
-   * element.
-   * 
-   * @param anchor the specified anchor position (defaults to "c"). See
-   *          {@link #alignTo} for details on supported anchor positions.
-   * @param local <code>true</code> to get the local (element top/left-relative)
-   *          anchor position instead of page coordinates
+   * @param anchor the specified anchor position (defaults to {@code CENTER}). See {@link #alignTo} for details on
+   *          supported anchor positions.
+   * @param local {@code true} to get the local (element top/left-relative) anchor position instead of page coordinates
    * @return the position
    */
   public final Point getAnchorXY(Anchor anchor, boolean local) {
@@ -560,8 +549,8 @@ public class XElement extends com.google.gwt.user.client.Element {
       return null;
     }
     boolean vp = false;
-    int w;
-    int h;
+    final int w;
+    final int h;
     if (this.cast() == Document.get().getBody() || this == Document.get().getDocumentElement()) {
       vp = true;
       w = XDOM.getViewWidth(false);
@@ -625,6 +614,66 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
+   * Returns the total border size of the specified sides.
+   * <p/>
+   * Passing more than one side will yield the sum of the sides of those sides of the element.
+   * 
+   * @param side the side
+   * @return the sum of the widths of the borders
+   */
+  public final int getBorders(Side side) {
+    switch (side) {
+      case LEFT:
+        return Util.parseInt(getComputedStyle("borderLeft"), 0);
+      case RIGHT:
+        return Util.parseInt(getComputedStyle("borderRight"), 0);
+      case TOP:
+        return Util.parseInt(getComputedStyle("borderTop"), 0);
+      case BOTTOM:
+        return Util.parseInt(getComputedStyle("borderBottom"), 0);
+    }
+    assert false : "Unparsable Side " + side;
+    return 0;
+  }
+
+  /**
+   * Returns the total border size of the specified sides.
+   * <p/>
+   * Passing more than one side will yield the sum of the sides of those sides of the element.
+   * 
+   * @param sides the sides
+   * @return the sum of the widths of the borders
+   */
+  public final int getBorders(Side... sides) {
+    List<String> list = new ArrayList<String>();
+
+    for (int i = 0; i < sides.length; i++) {
+      Side side = sides[i];
+      appendSideToList(list, side, "border");
+    }
+
+    return getStylePropertyTotal(list);
+  }
+
+  /**
+   * Returns the total border size of the specified sides.
+   * <p/>
+   * Passing more than one side will yield the sum of the sides of those sides of the element.
+   * 
+   * @param side1 the first side
+   * @param side2 the second side
+   * @return the sum of the widths of the borders
+   */
+  public final int getBorders(Side side1, Side side2) {
+    List<String> list = new ArrayList<String>();
+
+    appendSideToList(list, side1, "border");
+    appendSideToList(list, side2, "border");
+
+    return getStylePropertyTotal(list);
+  }
+
+  /**
    * Returns the elements bounds in page coordinates.
    * 
    * @return the bounds
@@ -636,8 +685,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   /**
    * Returns the elements bounds in page coordinates.
    * 
-   * @param local if true the element's left and top are returned instead of
-   *          page coordinates
+   * @param local if true the element's left and top are returned instead of page coordinates
    * 
    * @return the bounds
    */
@@ -648,8 +696,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   /**
    * Returns the element's bounds in page coordinates.
    * 
-   * @param local if true the element's left and top are returned instead of
-   *          page coordinates
+   * @param local if true the element's left and top are returned instead of page coordinates
    * @param adjust if true sizes get adjusted
    * 
    * @return the element's bounds
@@ -676,13 +723,11 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the index
    */
   public final int getChildIndex(Element child) {
-    return DOM.getChildIndex((com.google.gwt.user.client.Element) this.cast(),
-        (com.google.gwt.user.client.Element) child.cast());
+    return DOM.getChildIndex((Element) this.cast(), (Element) child.cast());
   }
 
   /**
-   * Returns either the offsetHeight or the height of this element based on it's
-   * CSS height.
+   * Returns either the offsetHeight or the height of this element based on it's CSS height.
    * 
    * @return the height
    */
@@ -711,12 +756,11 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the current value of the style attribute for this element.
    */
   public final String getComputedStyle(String prop) {
-    return getComputedStyle(Collections.singletonList(prop)).get(prop);
+    return FieldHolder.computedStyle.getStyleAttribute(this, prop);
   }
 
   /**
-   * Returns either the offsetWidth or the width of this element based on it's
-   * CSS width.
+   * Returns either the offsetWidth or the width of this element based on it's CSS width.
    * 
    * @return the width
    */
@@ -729,8 +773,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns the sum width of the padding and borders for all "sides". See
-   * #getBorderWidth() for more information about the sides.
+   * Returns the sum width of the padding and borders for all "sides". See #getBorderWidth() for more information about
+   * the sides.
    * 
    * @return the frame size
    */
@@ -768,38 +812,47 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the width
    */
   public final int getFrameWidth(Side... side) {
-    int frameWidth = 0;
-
     List<String> list = new ArrayList<String>();
 
-    for (Side s : side) {
-      switch (s) {
-        case LEFT:
-          list.add("paddingLeft");
-          list.add("borderLeftWidth");
-          break;
-
-        case RIGHT:
-          list.add("paddingRight");
-          list.add("borderRightWidth");
-          break;
-
-        case TOP:
-          list.add("paddingTop");
-          list.add("borderTopWidth");
-          break;
-        case BOTTOM:
-          list.add("paddingBottom");
-          list.add("borderBottomWidth");
-          break;
-      }
+    for (int i = 0; i < side.length; i++) {
+      Side s = side[i];
+      appendSideToList(list, s, "padding");
+      appendSideToList(list, s, "border");
     }
 
-    FastMap<String> map = getComputedStyle(list);
-    for (String s : map.keySet()) {
-      frameWidth += Util.parseInt(map.get(s), 0);
-    }
-    return frameWidth;
+    return getStylePropertyTotal(list);
+  }
+
+  /**
+   * Returns the sum width of the padding and borders for the given side.
+   * 
+   * @param side the side
+   * @return the total width
+   */
+  public final int getFrameWidth(Side side) {
+    List<String> list = new ArrayList<String>();
+
+    appendSideToList(list, side, "padding");
+    appendSideToList(list, side, "border");
+    return getStylePropertyTotal(list);
+  }
+
+  /**
+   * Returns the sum width of the padding and borders for the given side.
+   * 
+   * @param side1 the side
+   * @param side2 the side
+   * @return the total width
+   */
+  public final int getFrameWidth(Side side1, Side side2) {
+    List<String> list = new ArrayList<String>();
+
+    appendSideToList(list, side1, "padding");
+    appendSideToList(list, side1, "border");
+    appendSideToList(list, side2, "padding");
+    appendSideToList(list, side2, "border");
+
+    return getStylePropertyTotal(list);
   }
 
   /**
@@ -823,14 +876,13 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the id
    */
   public final String getId(boolean autoGenId) {
-    if (!autoGenId) {
-      return getId();
-    }
     String id = getId();
-    if (id == null || (id != null && id.length() == 0)) {
-      id = XDOM.getUniqueId();
-      setId(id);
+    if (!autoGenId || !(id == null || (id.length() == 0))) {
+      return id;
     }
+
+    id = DomIdProvider.generateId(this);
+    setId(id);
     return id;
   }
 
@@ -854,42 +906,63 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns the total margin size of the specified sides.
+   * Returns the total margin size of the specified side.
    * 
-   * @param sides the sides from which to calculate the margin. Passing more
-   *          than one side will yield the sum of the margins of those sides of
-   *          the element.
-   * @return the sum of the widths of the margins
+   * @param side the side from which to calculate the margin.
+   * @return the widths of the margin
    */
-  public final int getMargins(Side... sides) {
-    int margin = 0;
-    List<String> list = new ArrayList<String>();
-    for (Side side : sides) {
-      switch (side) {
-        case LEFT:
-          list.add("marginLeft");
-          break;
-        case RIGHT:
-          list.add("marginRight");
-          break;
-        case TOP:
-          list.add("marginTop");
-          break;
-        case BOTTOM:
-          list.add("marginBottom");
-          break;
-      }
+  public final int getMargins(Side side) {
+    switch (side) {
+      case LEFT:
+        return Util.parseInt(getComputedStyle("marginLeft"), 0);
+      case RIGHT:
+        return Util.parseInt(getComputedStyle("marginRight"), 0);
+      case TOP:
+        return Util.parseInt(getComputedStyle("marginTop"), 0);
+      case BOTTOM:
+        return Util.parseInt(getComputedStyle("marginBottom"), 0);
     }
-    FastMap<String> map = getComputedStyle(list);
-    for (String s : map.keySet()) {
-      margin += Util.parseInt(map.get(s), 0);
-    }
-    return margin;
+    assert false : "Unparsable Side " + side;
+    return 0;
   }
 
   /**
-   * Returns the offsets between two elements. Both element must be part of the
-   * DOM tree and not have display:none to have page coordinates.
+   * Returns the total margin size of the specified sides.
+   * 
+   * @param sides the sides from which to calculate the margin. Passing more than one side will yield the sum of the
+   *          margins of those sides of the element.
+   * @return the sum of the widths of the margins
+   */
+  public final int getMargins(Side... sides) {
+    List<String> list = new ArrayList<String>();
+    for (Side side : sides) {
+      appendSideToList(list, side, "margin");
+    }
+
+    return getStylePropertyTotal(list);
+  }
+
+  /**
+   * Returns the total margin size of the specified sides.
+   * <p/>
+   * Passing more than one side will yield the sum of the margins of those sides of the element.
+   * 
+   * @param side1 the first side from which to calculate the margin.
+   * @param side2 the second side from which to calculate the margin.
+   * @return the sum of the widths of the margins
+   */
+  public final int getMargins(Side side1, Side side2) {
+    List<String> list = new ArrayList<String>();
+
+    appendSideToList(list, side1, "margin");
+    appendSideToList(list, side2, "margin");
+
+    return getStylePropertyTotal(list);
+  }
+
+  /**
+   * Returns the offsets between two elements. Both element must be part of the DOM tree and not have display:none to
+   * have page coordinates.
    * 
    * @param to the to element
    * @return the xy page offsets
@@ -903,45 +976,46 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns the width of the padding(s) for the specified side(s).
+   * Returns the width of the padding(s) for the specified side.
    * 
-   * @param sides the sides from which to calculate the padding. Passing more
-   *          than one side will yield the sum of the padding of those sides of
-   *          the element.
+   * @param side the side from which to calculate the padding.
    * @return the sum of the widths of the padding
    */
-  public final int getPadding(Side... sides) {
-    int padding = 0;
-    List<String> list = new ArrayList<String>();
-    for (Side side : sides) {
-      switch (side) {
-        case LEFT:
-          list.add("paddingLeft");
-          break;
-        case RIGHT:
-          list.add("paddingRight");
-          break;
-        case TOP:
-          list.add("paddingTop");
-          break;
-        case BOTTOM:
-          list.add("paddingBottom");
-          break;
-      }
+  public final int getPadding(Side side) {
+    switch (side) {
+      case LEFT:
+        return Util.parseInt(getComputedStyle("paddingLeft"), 0);
+      case RIGHT:
+        return Util.parseInt(getComputedStyle("paddingRight"), 0);
+      case TOP:
+        return Util.parseInt(getComputedStyle("paddingTop"), 0);
+      case BOTTOM:
+        return Util.parseInt(getComputedStyle("paddingBottom"), 0);
     }
-    FastMap<String> map = getComputedStyle(list);
-    for (String s : map.keySet()) {
-      padding += Util.parseInt(map.get(s), 0);
-    }
-    return padding;
+    assert false : "Unparsable Side " + side;
+    return 0;
   }
 
   /**
-   * Returns the widget's current position. The widget must be attached to
-   * return page coordinates.
+   * Returns the width of the padding(s) for the specified side(s).
    * 
-   * @param local true to return the element's left and top rather than page
-   *          coordinates
+   * @param sides the sides from which to calculate the padding. Passing more than one side will yield the sum of the
+   *          padding of those sides of the element.
+   * @return the sum of the widths of the padding
+   */
+  public final int getPadding(Side... sides) {
+    List<String> list = new ArrayList<String>();
+    for (Side side : sides) {
+      appendSideToList(list, side, "padding");
+    }
+
+    return getStylePropertyTotal(list);
+  }
+
+  /**
+   * Returns the widget's current position. The widget must be attached to return page coordinates.
+   * 
+   * @param local true to return the element's left and top rather than page coordinates
    * @return the position
    */
   public final Point getPosition(boolean local) {
@@ -952,8 +1026,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns the region of the given element. The element must be part of the
-   * DOM tree to have a region.
+   * Returns the region of the given element. The element must be part of the DOM tree to have a region.
    * 
    * @return a region containing top, left, bottom, right
    */
@@ -968,11 +1041,9 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns the right X coordinate of the element (element X position + element
-   * width).
+   * Returns the right X coordinate of the element (element X position + element width).
    * 
-   * @param local <code>true</code> to get the local css position instead of
-   *          page coordinate
+   * @param local <code>true</code> to get the local css position instead of page coordinate
    * @return the right value
    */
   public final int getRight(boolean local) {
@@ -1019,8 +1090,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns the element's size (excluding padding and borders), using style
-   * attribute before offsets.
+   * Returns the element's size (excluding padding and borders), using style attribute before offsets.
    * 
    * @return the size
    */
@@ -1170,7 +1240,7 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the vis mode
    */
   public final native VisMode getVisMode() /*-{
-		return this.visMode;
+    return this.visMode;
   }-*/;
 
   /**
@@ -1188,18 +1258,19 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Gets the current X position of the element based on page coordinates.
-   * Element must be part of the DOM tree to have page coordinates.
+   * Gets the current X position of the element based on page coordinates. Element must be part of the DOM tree to have
+   * page coordinates.
    * 
    * @return the x position of the element
    */
   public final int getX() {
-    return getAbsoluteLeft();
+    int x = getAbsoluteLeft();
+    return x > 0 ? x - FieldHolder.adjustXYOffset : x;
   }
 
   /**
-   * Gets the current position of the element based on page coordinates. Element
-   * must be part of the DOM tree to have page coordinates.
+   * Gets the current position of the element based on page coordinates. Element must be part of the DOM tree to have
+   * page coordinates.
    * 
    * @return the location
    */
@@ -1213,7 +1284,8 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @return the y position of the element
    */
   public final int getY() {
-    return getAbsoluteTop();
+    int y = getAbsoluteTop();
+    return y > 0 ? y - FieldHolder.adjustXYOffset : y;
   }
 
   /**
@@ -1228,20 +1300,6 @@ public class XElement extends com.google.gwt.user.client.Element {
     } catch (Exception e) {
       return 0;
     }
-  }
-
-  /**
-   * Checks if the specified class name exists on this element.
-   * 
-   * @param test the test class name
-   * @return true if the class name is present, else false
-   */
-  public final boolean hasClassName(String test) {
-    if (test == null || test.length() == 0) {
-      return false;
-    }
-    String cls = getClassName();
-    return (" " + cls + " ").indexOf(" " + test + " ") != -1 ? true : false;
   }
 
   /**
@@ -1296,7 +1354,7 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @param index the insert location
    */
   public final void insertChild(Element child, int index) {
-    DOM.insertChild((com.google.gwt.user.client.Element) this.cast(), (com.google.gwt.user.client.Element) child, index);
+    DOM.insertChild((com.google.gwt.dom.client.Element) this.cast(), child, index);
   }
 
   /**
@@ -1312,8 +1370,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   /**
    * Inserts an html fragment into this element
    * 
-   * @param where where to insert the html in relation to el - beforeBegin,
-   *          afterBegin, beforeEnd, afterEnd.
+   * @param where where to insert the html in relation to el - beforeBegin, afterBegin, beforeEnd, afterEnd.
    * @param html the HTML fragment
    * @return the inserted node (or nearest related if more than 1 inserted)
    */
@@ -1322,8 +1379,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Returns true if this element matches the passed simple selector (e.g.
-   * div.some-class or span:first-child).
+   * Returns true if this element matches the passed simple selector (e.g. div.some-class or span:first-child).
    * 
    * @param selector selector
    * @return true if the element matches the selector, else false
@@ -1350,6 +1406,33 @@ public class XElement extends com.google.gwt.user.client.Element {
    */
   public final boolean isConnected() {
     return Document.get().getBody().isOrHasChild(this);
+  }
+
+  /**
+   * Returns whether the element is scrollable (x or y).
+   * 
+   * @return true if scrollable
+   */
+  public final boolean isScrollable() {
+    return isScrollableX() || isScrollableY();
+  }
+
+  /**
+   * Returns whether the element is scrollable on the x-axis.
+   * 
+   * @return true if scrollable on the x-axis
+   */
+  public final boolean isScrollableX() {
+    return getScrollWidth() > getClientWidth();
+  }
+
+  /**
+   * Returns whether the element is scrollable on the y-axis.
+   * 
+   * @return true if scrollable on the y-axis
+   */
+  public final boolean isScrollableY() {
+    return getScrollHeight() > getClientHeight();
   }
 
   /**
@@ -1428,8 +1511,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Retrieves the data using the request builder and updates the element's
-   * contents.
+   * Retrieves the data using the request builder and updates the element's contents.
    * <p>
    * This method is subject to change.
    * 
@@ -1507,9 +1589,20 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @param classNames the style names
    */
   public final void removeClassName(String... classNames) {
-    for (String s : classNames) {
-      removeClassName(s);
+    for (int i = 0; i < classNames.length; i++) {
+      removeClassName(classNames[i]);
     }
+  }
+
+  /**
+   * Removes the style names(s) from the element.
+   * 
+   * @param className1 the first class name to remove
+   * @param className2 the second class name to remove
+   */
+  public final void removeClassName(String className1, String className2) {
+    removeClassName(className1);
+    removeClassName(className2);
   }
 
   /**
@@ -1551,7 +1644,6 @@ public class XElement extends com.google.gwt.user.client.Element {
     if (list != null) {
       for (FastMap<Object> m : list) {
         Element e = (Element) m.get("element");
-      
 
         Boolean offset = (Boolean) m.get("hasxhideoffset");
         if (offset != null) {
@@ -1566,7 +1658,7 @@ public class XElement extends com.google.gwt.user.client.Element {
             e.addClassName(CommonStyles.get().hideDisplay());
           }
         }
-        
+
         e.getStyle().setProperty("display", (String) m.get("origd"));
       }
     }
@@ -1579,7 +1671,7 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @param hscroll <code>false</code> to disable horizontal scrolling.
    */
   public final void scrollIntoView(Element container, boolean hscroll) {
-    scrollIntoView(container, hscroll, null);
+    scrollIntoView(container, hscroll, 0, 0);
   }
 
   /**
@@ -1587,12 +1679,10 @@ public class XElement extends com.google.gwt.user.client.Element {
    * 
    * @param container the container element
    * @param hscroll <code>false</code> to disable horizontal scrolling.
-   * @param offsets the offsets
+   * @param offsetX X offset
+   * @param offsetY Y offset
    */
-  public final void scrollIntoView(Element container, boolean hscroll, int[] offsets) {
-    if (offsets == null) {
-      offsets = new int[] {0, 0};
-    }
+  public final void scrollIntoView(Element container, boolean hscroll, int offsetX, int offsetY) {
     Element c = container != null ? container : Document.get().getBody();
 
     Point o = getOffsetsTo(c);
@@ -1600,8 +1690,8 @@ public class XElement extends com.google.gwt.user.client.Element {
     int t = o.getY();
     l = l + c.getScrollLeft();
     t = t + c.getScrollTop();
-    int b = t + getOffsetHeight() + offsets[0];
-    int r = l + getOffsetWidth() + offsets[1];
+    int b = t + getOffsetHeight() + offsetY;
+    int r = l + getOffsetWidth() + offsetX;
 
     int ch = c.getClientHeight();
     int ct = c.getScrollTop();
@@ -1641,8 +1731,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Selects child nodes based on the passed CSS selector (the selector should
-   * not contain an id).
+   * Selects child nodes based on the passed CSS selector (the selector should not contain an id).
    * 
    * @param selector the selector/xpath query
    * @return the matching elements
@@ -1666,15 +1755,14 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Sets the attribute, determined by it names, using the given name space and
-   * value.
+   * Sets the attribute, determined by it names, using the given name space and value.
    * 
    * @param nameSpace the name space of the attribute
    * @param name the attribute name
    * @param value the value of the attribute
    */
   public final native void setAttributeNS(String nameSpace, String name, String value)/*-{
-		this.setAttributeNS(nameSpace, name, value);
+    this.setAttributeNS(nameSpace, name, value);
   }-*/;
 
   /**
@@ -1684,10 +1772,10 @@ public class XElement extends com.google.gwt.user.client.Element {
    */
   public final void setBorders(boolean show) {
     if (show) {
-      addClassName(ThemeStyles.getStyle().border());
+      addClassName(ThemeStyles.get().style().border());
       getStyle().setBorderWidth(1, Unit.PX);
     } else {
-      removeClassName(ThemeStyles.getStyle().border());
+      removeClassName(ThemeStyles.get().style().border());
       getStyle().setBorderWidth(0, Unit.PX);
     }
   }
@@ -1801,8 +1889,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Sets the element's left position directly using CSS style (instead of
-   * {@link #setX}).
+   * Sets the element's left position directly using CSS style (instead of {@link #setX}).
    * 
    * @param left the left value in pixels
    */
@@ -1914,8 +2001,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Sets the element's top position directly using CSS style (instead of
-   * {@link #setY}).
+   * Sets the element's top position directly using CSS style (instead of {@link #setY}).
    * 
    * @param top the top value in pixels
    */
@@ -1954,7 +2040,7 @@ public class XElement extends com.google.gwt.user.client.Element {
    * @param visMode the vis mode
    */
   public final native void setVisMode(VisMode visMode) /*-{
-		this.visMode = visModel;
+    this.visMode = visMode;
   }-*/;
 
   /**
@@ -1991,8 +2077,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Sets the X position of the element based on page coordinates. Element must
-   * be part of the DOM tree to have page coordinates.
+   * Sets the X position of the element based on page coordinates. Element must be part of the DOM tree to have page
+   * coordinates.
    * 
    * @param x the x coordinate
    */
@@ -2027,8 +2113,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Sets the Y position of the element based on page coordinates. Element must
-   * be part of the DOM tree to have page coordinates.
+   * Sets the Y position of the element based on page coordinates. Element must be part of the DOM tree to have page
+   * coordinates.
    * 
    * @param y the y coordinate
    */
@@ -2068,22 +2154,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Toggles the given class name, adding if not already present, removing if
-   * present.
-   * 
-   * @param className the class name to toggle
-   */
-  public final void toggleClassName(String className) {
-    if (hasClassName(className)) {
-      removeClassName(className);
-    } else {
-      addClassName(className);
-    }
-  }
-
-  /**
-   * Translates the passed page coordinates into left/top css values for this
-   * element.
+   * Translates the passed page coordinates into left/top css values for this element.
    * 
    * @param p the coordinates
    * @return the translated coordinates
@@ -2127,8 +2198,7 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Sets the element's z-index using {@link XDOM#getTopZIndex()} to ensure it
-   * has the highest values.
+   * Sets the element's z-index using {@link XDOM#getTopZIndex()} to ensure it has the highest values.
    * 
    * @param adj the adjustment to be applied to the z-index value
    */
@@ -2137,9 +2207,8 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   /**
-   * Wraps the element with the specified wrapper. The wrapper will have the
-   * same size and position of the element. The original bounds can be used to
-   * 'unwrap' the element.
+   * Wraps the element with the specified wrapper. The wrapper will have the same size and position of the element. The
+   * original bounds can be used to 'unwrap' the element.
    * 
    * @param wrapper the wrapper element
    * @return the original bounds
@@ -2218,18 +2287,35 @@ public class XElement extends com.google.gwt.user.client.Element {
   }
 
   final native Layer getLayer() /*-{
-                                return this.layer;
-                                }-*/;
+    return this.layer;
+  }-*/;
 
   final native void setLayer(Layer layer) /*-{
-                                          this.layer = layer;
-                                          }-*/;
+    this.layer = layer;
+  }-*/;
 
-  private final native boolean isLeftOrRight(String s) /*-{
-                                                       if (this.leftRightTest == null) {
-                                                       this.leftRightTest = new RegExp("Left|Right");
-                                                       }
-                                                       return this.leftRightTest.test(s);
-                                                       }-*/;
+  private void appendSideToList(List<String> list, Side side, String prop) {
+    String s = side.toString();
+    if (prop != null) {
+      String temp = prop + s.substring(0, 1).toUpperCase() + s.substring(1).toLowerCase();
+      if (prop.equals("border")) {
+        temp += "Width";
+      }
+      list.add(temp);
+    }
+  }
+
+  private int getStylePropertyTotal(List<String> props) {
+    int total = 0;
+    FastMap<String> map = getComputedStyle(props);
+    for (String s : map.keySet()) {
+      total += Util.parseInt(map.get(s), 0);
+    }
+    return total;
+  }
+
+  private final boolean isLeftOrRight(String s) {
+    return FieldHolder.leftOrRight.test(s);
+  }
 
 }

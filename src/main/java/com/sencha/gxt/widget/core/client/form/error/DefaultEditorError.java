@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,6 +9,7 @@ package com.sencha.gxt.widget.core.client.form.error;
 
 import com.google.gwt.editor.client.Editor;
 import com.google.gwt.editor.client.EditorError;
+import com.sencha.gxt.core.client.util.Format;
 
 public class DefaultEditorError implements EditorError {
 
@@ -40,7 +41,7 @@ public class DefaultEditorError implements EditorError {
 
   @Override
   public String getMessage() {
-    return message;
+    return Format.substitute(message, value);
   }
 
   @Override

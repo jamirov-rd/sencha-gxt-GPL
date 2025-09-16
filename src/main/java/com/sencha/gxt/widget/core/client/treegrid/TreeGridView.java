@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,12 +10,12 @@ package com.sencha.gxt.widget.core.client.treegrid;
 import java.util.List;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.DOM;
-import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.IconHelper;
 import com.sencha.gxt.data.shared.ListStore;
@@ -32,28 +32,58 @@ import com.sencha.gxt.widget.core.client.tree.Tree.Joint;
 import com.sencha.gxt.widget.core.client.tree.Tree.TreeNode;
 import com.sencha.gxt.widget.core.client.tree.TreeView.TreeViewRenderMode;
 
+/**
+ * A {@code GridView} subclass that adds tree related view features.
+ */
 public class TreeGridView<M> extends GridView<M> {
 
   protected TreeGrid<M> tree;
   protected TreeStore<M> treeStore;
 
+  /**
+   * Creates a new view instance.
+   */
   public TreeGridView() {
-    scrollOffset -= 2;
+    this(GWT.<GridAppearance> create(GridAppearance.class));
   }
 
+  /**
+   * Creates a new view instance with the given grid appearance.
+   * 
+   * @param appearance the grid appearance
+   */
+  public TreeGridView(GridAppearance appearance) {
+    super(appearance);
+  }
+
+  /**
+   * Collapses the given node.
+   * 
+   * @param node the node to be collapsed
+   */
   public void collapse(TreeNode<M> node) {
     M p = node.getModel();
     M lc = treeStore.getLastChild(p);
-
-    int start = ds.indexOf(p);
-    int end = tree.findLastOpenChildIndex(lc);
-
-    for (int i = end; i > start; i--) {
-      ds.remove(i);
+    // make sure there is a last child (i.e. at least one child) before trying to thin the liststore
+    if (lc != null) {
+      int start = ds.indexOf(p);
+      if (start != -1) {
+        // ensure the node is visible
+        int end = tree.findLastOpenChildIndex(lc);
+        for (int i = end; i > start; i--) {
+          ds.remove(i);
+        }
+      }
     }
+    // regardless, refresh the parent icon
     tree.refresh(p);
   }
 
+  /**
+   * Expands the given node.
+   * 
+   * @param node the node to be expanded
+   */
   public void expand(TreeNode<M> node) {
     M p = node.getModel();
     List<M> children = treeStore.getChildren(p);
@@ -72,14 +102,48 @@ public class TreeGridView<M> extends GridView<M> {
     tree.refresh(p);
   }
 
+  /**
+   * Gets the rendered element, if any, for the given tree node object. This method will look up the dom element if it
+   * has not yet been seen. The getElement() method for the node will return the same value as this method does after it
+   * has been cached.
+   * 
+   * @param node the tree node to find an element for
+   * @return the element that the node represents, or null if not yet rendered
+   */
+  public XElement getElement(TreeNode<M> node) {
+    XElement elt = node.getElement().cast();
+    if (elt == null) {
+      if (tree.isAttached() && tree.getElement().getOffsetParent() != null) {
+        elt = Document.get().getElementById(node.getDomId()).cast();
+      } else {
+        elt = tree.getElement().child("*#" + node.getDomId());
+      }
+      node.setElement(elt);
+    }
+    return elt;
+  }
+
+  /**
+   * Returns the element which wraps the children of the given node. This is the element that is displayed / hidden when
+   * a node is expanded / collapsed.
+   * 
+   * @param node the target node
+   * @return the element
+   */
   public XElement getElementContainer(TreeNode<M> node) {
     if (node.getElementContainer() == null) {
-      node.setElContainer(node.getElement() != null ? tree.getTreeAppearance().getContainerElement(
-          node.getElement().<XElement> cast()) : null);
+      node.setElContainer(getElement(node) != null ? tree.getTreeAppearance().getContainerElement(getElement(node))
+          : null);
     }
     return node.getElementContainer().cast();
   }
 
+  /**
+   * Returns the element in which the nodes icon is rendered.
+   * 
+   * @param node the target node
+   * @return the icon elmeent
+   */
   public Element getIconElement(TreeNode<M> node) {
     if (node.getIconElement() == null) {
       Element row = getRowElement(node);
@@ -92,6 +156,12 @@ public class TreeGridView<M> extends GridView<M> {
     return node.getIconElement();
   }
 
+  /**
+   * Returns the element in which the nodes joint (expand / collapse) icon is rendered.
+   * 
+   * @param node the target node
+   * @return the joint element
+   */
   public Element getJointElement(TreeNode<M> node) {
     if (node.getJointElement() == null) {
       Element row = getRowElement(node);
@@ -104,6 +174,18 @@ public class TreeGridView<M> extends GridView<M> {
     return node.getJointElement();
   }
 
+  /**
+   * Returns the markup that is used to render a node.
+   * 
+   * @param m the model
+   * @param id the id of the node (store model key provider)
+   * @param text the node text
+   * @param icon the node icon or null
+   * @param checkable true if the node is checked
+   * @param joint the joint state
+   * @param level the tree depth
+   * @return the markup as safe html
+   */
   public SafeHtml getTemplate(M m, String id, SafeHtml text, ImageResource icon, boolean checkable, Joint joint,
       int level) {
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
@@ -112,6 +194,12 @@ public class TreeGridView<M> extends GridView<M> {
     return sb.toSafeHtml();
   }
 
+  /**
+   * Returns the element in which the node's text is rendered.
+   * 
+   * @param node the target node
+   * @return the text element
+   */
   public Element getTextElement(TreeNode<M> node) {
     if (node == null) {
       return null;
@@ -136,8 +224,7 @@ public class TreeGridView<M> extends GridView<M> {
     TreeNode<M> node = tree.findNode(target);
     if (node != null) {
       Element j = getJointElement(node);
-      if (j != null
-          && DOM.isOrHasChild((com.google.gwt.user.client.Element) j, (com.google.gwt.user.client.Element) target)) {
+      if (j != null && j.isOrHasChild(target)) {
         return false;
       }
     }
@@ -157,6 +244,7 @@ public class TreeGridView<M> extends GridView<M> {
       } else {
         e = DOM.createSpan();
       }
+      e.setClassName(iconEl.getClassName());
       node.setIconElement((Element) iconEl.getParentElement().insertBefore(e, iconEl));
       iconEl.removeFromParent();
     }
@@ -165,14 +253,14 @@ public class TreeGridView<M> extends GridView<M> {
   public void onJointChange(TreeNode<M> node, Joint joint) {
     Element jointEl = getJointElement(node);
     if (jointEl != null) {
-      XElement elem = node.getElement().cast();
+      XElement elem = getElement(node);
       node.setJointElement(tree.getTreeAppearance().onJointChange(elem, jointEl.<XElement> cast(), joint,
           tree.getStyle()));
     }
   }
 
   public void onLoading(TreeNode<M> node) {
-    onIconStyleChange(node, null);
+    onIconStyleChange(node, tree.getTreeAppearance().loadingIcon());
   }
 
   @Override
@@ -192,15 +280,10 @@ public class TreeGridView<M> extends GridView<M> {
     if (!isRemoteSort()) {
       treeStore.clearSortInfo();
 
-      // These casts can fail, but in dev mode the exception will be caught by
-      // the
-      // try/catch, unless there are no items in the Store
-      @SuppressWarnings({"unchecked", "rawtypes"})
-      ValueProvider<? super M, Comparable> vp = (ValueProvider) column.getValueProvider();
-      @SuppressWarnings("unchecked")
-      StoreSortInfo<M> s = new StoreSortInfo<M>(vp, sortDir);
+      StoreSortInfo<M> s = createStoreSortInfo(column, sortDir);
 
-      if (sortDir == null && storeSortInfo != null && storeSortInfo.getValueProvider() == vp) {
+      if (sortDir == null && storeSortInfo != null
+              && storeSortInfo.getValueProvider().getPath().equals(column.getValueProvider().getPath())) {
         s.setDirection(storeSortInfo.getDirection() == SortDir.ASC ? SortDir.DESC : SortDir.ASC);
       } else if (sortDir == null) {
         s.setDirection(SortDir.ASC);
@@ -253,7 +336,7 @@ public class TreeGridView<M> extends GridView<M> {
     SafeHtml s = super.getRenderedValue(rowIndex, colIndex, m, record);
     TreeNode<M> node = findNode(m);
     if (node != null && cc == tree.getTreeColumn()) {
-      return getTemplate(m, node.getId(), s, tree.calculateIconStyle(m), false, tree.calculateJoint(m),
+      return getTemplate(m, node.getDomId(), s, tree.calculateIconStyle(m), false, tree.calculateJoint(m),
           treeStore.getDepth(m));
     }
     return s;
@@ -264,7 +347,7 @@ public class TreeGridView<M> extends GridView<M> {
   }
 
   @Override
-  protected StoreSortInfo<M> getSortState() {
+  public StoreSortInfo<M> getSortState() {
     if (treeStore.getSortInfo().size() > 0) {
       return treeStore.getSortInfo().get(0);
     }

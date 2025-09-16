@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Style.Display;
 import com.google.gwt.dom.client.Style.Visibility;
 import com.google.gwt.event.shared.HandlerRegistration;
@@ -20,6 +21,7 @@ import com.sencha.gxt.core.client.Style.Anchor;
 import com.sencha.gxt.core.client.Style.AnchorAlignment;
 import com.sencha.gxt.core.client.Style.Direction;
 import com.sencha.gxt.core.client.Style.LayoutRegion;
+import com.sencha.gxt.core.client.dom.CompositeElement;
 import com.sencha.gxt.core.client.dom.XDOM;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
@@ -83,15 +85,28 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
    * @param region the region this panel occupies in the border panel
    */
   public CollapsePanel(ContentPanel panel, BorderLayoutData data, LayoutRegion region) {
+    this(GWT.<CollapsePanelAppearance> create(CollapsePanelAppearance.class), panel, data, region);
+  }
+
+  /**
+   * Creates a {@link CollapsePanel} that acts as a stand-in for the given panel
+   * when it is collapsed.
+   * 
+   * @param appearance the appearance instance to use when rendering and updating the dom
+   * @param panel the content panel
+   * @param data layout data describing a region in a border panel
+   * @param region the region this panel occupies in the border panel
+   */
+  public CollapsePanel(CollapsePanelAppearance appearance, ContentPanel panel, BorderLayoutData data, LayoutRegion region) {
     this.panel = panel;
     this.panelData = data;
     this.region = region;
-    this.appearance = GWT.<CollapsePanelAppearance> create(CollapsePanelAppearance.class);
+    this.appearance = appearance;
 
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder, region);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element) XDOM.create(builder.toSafeHtml()));
     sinkEvents(Event.ONCLICK);
 
     IconConfig config = ToolButton.DOUBLERIGHT;
@@ -105,7 +120,8 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
       case SOUTH:
         config = ToolButton.DOUBLEUP;
         break;
-
+      default:
+        // do nothing
     }
 
     expandBtn = new ToolButton(config);
@@ -156,6 +172,8 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
           case NORTH:
             d = Direction.UP;
             break;
+          default:
+            // do nothing
         }
 
         panel.getElement().<FxElement> cast().slideOut(d, fx);
@@ -177,6 +195,8 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
         return new SplitBar(LayoutRegion.SOUTH, this);
       case SOUTH:
         return new SplitBar(LayoutRegion.NORTH, this);
+      case CENTER:
+        // do nothing
     }
 
     return null;
@@ -208,6 +228,8 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
           case SOUTH:
             splitBar.updateMini(Direction.UP);
             break;
+          case CENTER:
+            // do nothing
         }
       }
     }
@@ -230,17 +252,19 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
     if (bar != null) {
       switch (region) {
         case EAST:
-          bar.setXOffset(5);
+          bar.setXOffset(bar.getHandleWidth());
           break;
         case WEST:
-          bar.setXOffset(-5);
+          bar.setXOffset(-bar.getHandleWidth());
           break;
         case NORTH:
-          bar.setYOffset(-5);
+          bar.setYOffset(-bar.getHandleWidth());
           break;
         case SOUTH:
-          bar.setYOffset(5);
+          bar.setYOffset(bar.getHandleWidth());
           break;
+        case CENTER:
+          // do nothing
       }
 
       bar.disableDragging();
@@ -253,7 +277,7 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
    * effect if the panel is not collapsed.
    */
   public void expand() {
-    if (!expanded) {
+    if (panelData.isFloatable() && !expanded) {
       SplitBar bar = panel.getData("splitBar");
       if (bar != null) {
         bar.getElement().getStyle().setDisplay(Display.NONE);
@@ -287,8 +311,11 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
           d = Direction.DOWN;
           align = new AnchorAlignment(Anchor.TOP_LEFT, Anchor.BOTTOM_LEFT);
           break;
+        case WEST:
+        case CENTER:
+          // do nothing
       }
-      panel.getElement().alignTo(getElement(), align, null);
+      panel.getElement().alignTo(getElement(), align, 0, 0);
 
       if (animate && !disableAnimations) {
         Fx fx = new Fx();
@@ -320,8 +347,15 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
           return false;
         }
       };
+      CompositeElement comp = new CompositeElement();
+      comp.add(panel.getElement());
+      preview.setIgnoreList(comp);
       preview.add();
     }
+  }
+
+  public CollapsePanelAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -361,6 +395,10 @@ public class CollapsePanel extends Component implements HasExpandHandlers {
       }
     }
 
+  }
+  
+  public void setIconConfig(IconConfig config) {
+    expandBtn.changeStyle(config);
   }
 
   /**

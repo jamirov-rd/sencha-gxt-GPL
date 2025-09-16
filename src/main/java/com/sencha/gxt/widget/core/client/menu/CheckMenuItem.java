@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -24,8 +24,7 @@ import com.sencha.gxt.widget.core.client.event.CheckChangeEvent.HasCheckChangeHa
 import com.sencha.gxt.widget.core.client.tree.Tree.CheckState;
 
 /**
- * Adds a menu item that contains a checkbox by default, but can also be part of
- * a radio group.
+ * Adds a menu item that contains a checkbox by default, but can also be part of a radio group.
  */
 public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandlers<CheckMenuItem>,
     HasCheckChangeHandlers<CheckMenuItem> {
@@ -37,11 +36,11 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
      * @param state Whether to apply or remove the style
      */
     void applyChecked(XElement parent, boolean state);
-    
+
     ImageResource checked();
-    
+
     ImageResource unchecked();
-    
+
     ImageResource radio();
 
   }
@@ -55,7 +54,7 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
    * 
    */
   public CheckMenuItem() {
-    this(GWT.<CheckMenuItemAppearance> create(CheckMenuItemAppearance.class));
+    this(GWT.<CheckMenuItemAppearance>create(CheckMenuItemAppearance.class));
   }
 
   public CheckMenuItem(CheckMenuItemAppearance appearance) {
@@ -94,6 +93,10 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
     return addHandler(handler, CheckChangeEvent.getType());
   }
 
+  public CheckMenuItemAppearance getCheckMenuItemAppearance() {
+    return appearance;
+  }
+
   /**
    * Returns the ARIA group title.
    * 
@@ -122,8 +125,7 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
   }
 
   /**
-   * Sets the title attribute on the group container element. Only applies to
-   * radio check items when ARIA is enabled.
+   * Sets the title attribute on the group container element. Only applies to radio check items when ARIA is enabled.
    * 
    * @param title the title
    */
@@ -132,12 +134,15 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
   }
 
   /**
-   * Set the checked state of this item.
+   * Set the checked state of this item. If the item is in a group of CheckMenuItems, then it will toggle them as
+   * radios.
    * 
    * @param checked the new checked state
    */
   public void setChecked(boolean checked) {
     setChecked(checked, false);
+
+    toggleRadios();
   }
 
   /**
@@ -147,7 +152,9 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
    * @param suppressEvent true to prevent the CheckChange event from firing
    */
   public void setChecked(boolean state, boolean suppressEvent) {
-    if (suppressEvent || fireCancellableEvent(new BeforeCheckChangeEvent<CheckMenuItem>(this, state ? CheckState.CHECKED : CheckState.UNCHECKED))) {
+    if (suppressEvent
+        || fireCancellableEvent(new BeforeCheckChangeEvent<CheckMenuItem>(this, state ? CheckState.CHECKED
+            : CheckState.UNCHECKED))) {
       if (getGroup() == null) {
         setIcon(state ? appearance.checked() : appearance.unchecked());
         appearance.applyChecked(getElement(), state);
@@ -163,8 +170,8 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
   }
 
   /**
-   * All check items with the same group name will automatically be grouped into
-   * a single-select radio button group (defaults to null).
+   * All check items with the same group name will automatically be grouped into a single-select radio button group
+   * (defaults to null).
    * 
    * @param group the group
    */
@@ -174,23 +181,19 @@ public class CheckMenuItem extends MenuItem implements HasBeforeCheckChangeHandl
   }
 
   protected void onClick(NativeEvent ce) {
-    if (!disabled && getGroup() == null) {
+    if (!disabled) {
       setChecked(!checked);
-    }
-    if (!disabled && !checked && getGroup() != null) {
-      setChecked(!checked);
-      onRadioClick(ce);
     }
     super.onClick(ce);
   }
 
-  protected void onRadioClick(NativeEvent ce) {
-    if (getParent() instanceof HasWidgets) {
+  protected void toggleRadios() {
+    if (getGroup() != null && getParent() instanceof HasWidgets) {
       for (Widget w : ((HasWidgets) getParent())) {
         if (w instanceof CheckMenuItem) {
           CheckMenuItem check = (CheckMenuItem) w;
-          if (check != this && check.isChecked() && Util.equalWithNull(group, check.getGroup())) {
-            check.setChecked(false);
+          if (check != this && Util.equalWithNull(group, check.getGroup()) && check.isChecked()) {
+            check.setChecked(false, false);
           }
         }
       }

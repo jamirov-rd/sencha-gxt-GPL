@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -156,14 +156,7 @@ public abstract class ResizeContainer extends Container implements RequiresResiz
       if (margins == null) {
         return 0;
       }
-      int tot = 0;
-      if (margins.getLeft() != -1) {
-        tot += margins.getLeft();
-      }
-      if (margins.getRight() != -1) {
-        tot += margins.getRight();
-      }
-      return tot;
+      return margins.getLeft() + margins.getRight();
     }
     return 0;
   }
@@ -206,14 +199,7 @@ public abstract class ResizeContainer extends Container implements RequiresResiz
       if (margins == null) {
         return 0;
       }
-      int tot = 0;
-      if (margins.getLeft() != -1) {
-        tot += margins.getTop();
-      }
-      if (margins.getRight() != -1) {
-        tot += margins.getBottom();
-      }
-      return tot;
+      return margins.getTop() + margins.getBottom();
     }
 
     return 0;

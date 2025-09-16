@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client.form;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.text.ParseException;
 
 import com.google.gwt.i18n.client.LocaleInfo;
@@ -31,7 +32,7 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
      * Creates a number property editor for use with {@link BigDecimal}.
      */
     public BigDecimalPropertyEditor() {
-      super(new BigDecimal(1));
+      super(BigDecimal.ONE);
     }
 
     /**
@@ -41,7 +42,7 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
      * @param format the format to use when converting to (or from) a string
      */
     public BigDecimalPropertyEditor(NumberFormat format) {
-      super(format, new BigDecimal(1));
+      super(format, BigDecimal.ONE);
     }
 
     @Override
@@ -56,8 +57,8 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
 
     @Override
     protected BigDecimal parseString(String string) {
-      // may throw exception
-      return new BigDecimal(string);
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return new BigDecimal(format.parse(string));
     }
 
     @Override
@@ -65,7 +66,56 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
       if (number instanceof BigDecimal) {
         return (BigDecimal) number;
       } else {
-        return new BigDecimal(number.doubleValue());
+        return BigDecimal.valueOf(number.doubleValue());
+      }
+    }
+
+  }
+
+  /**
+   * A number property editor for use with {@link BigInteger}.
+   */
+  public static class BigIntegerPropertyEditor extends NumberPropertyEditor<BigInteger> {
+
+    /**
+     * Creates a number property editor for use with {@link BigInteger}.
+     */
+    public BigIntegerPropertyEditor() {
+      super(BigInteger.ONE);
+    }
+
+    /**
+     * Creates a number property editor for use with {@link BigInteger} that
+     * uses the specified format when converting to (or from) a string.
+     * 
+     * @param format the format to use when converting to (or from) a string
+     */
+    public BigIntegerPropertyEditor(NumberFormat format) {
+      super(format, BigInteger.ONE);
+    }
+
+    @Override
+    protected BigInteger doDecr(BigInteger value) {
+      return value.subtract(getIncrement());
+    }
+
+    @Override
+    protected BigInteger doIncr(BigInteger value) {
+      return value.add(getIncrement());
+    }
+
+    @Override
+    protected BigInteger parseString(String string) {
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return new BigDecimal(format.parse(string)).toBigInteger();
+    }
+
+    @Override
+    protected BigInteger returnTypedValue(Number number) {
+      if (number instanceof BigInteger) {
+        return (BigInteger) number;
+      } else {
+        return BigInteger.valueOf(number.longValue());
       }
     }
 
@@ -94,17 +144,22 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
 
     @Override
     public Double doDecr(Double value) {
-      return value - getIncrement();
+      double newValue = value - getIncrement();
+      newValue = newValue > value ? value : newValue;
+      return newValue;
     }
 
     @Override
     public Double doIncr(Double value) {
-      return value + getIncrement();
+      double newValue = value + getIncrement();
+      newValue = newValue < value ? value : newValue;
+      return newValue;
     }
 
     @Override
     protected Double parseString(String string) {
-      return Double.parseDouble(string);
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return format.parse(string);
     }
 
     @Override
@@ -136,17 +191,22 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
 
     @Override
     public Float doDecr(Float value) {
-      return value - getIncrement();
+      float newValue = value - getIncrement();
+      newValue = newValue > value ? value : newValue;
+      return newValue;
     }
 
     @Override
     public Float doIncr(Float value) {
-      return value + getIncrement();
+      float newValue = value + getIncrement();
+      newValue = newValue < value ? value : newValue;
+      return newValue;
     }
 
     @Override
     protected Float parseString(String string) {
-      return Float.parseFloat(string);
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return (float) format.parse(string);
     }
 
     @Override
@@ -178,17 +238,22 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
 
     @Override
     public Integer doDecr(Integer value) {
-      return value - getIncrement();
+      int newValue = value - getIncrement();
+      newValue = newValue > value ? value : newValue;
+      return newValue;
     }
 
     @Override
     public Integer doIncr(Integer value) {
-      return value + getIncrement();
+      int newValue = value + getIncrement();
+      newValue = newValue < value ? value : newValue;
+      return newValue;
     }
 
     @Override
     protected Integer parseString(String string) {
-      return Integer.parseInt(string);
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return (int) format.parse(string);
     }
 
     @Override
@@ -219,17 +284,22 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
 
     @Override
     public Long doDecr(Long value) {
-      return value - getIncrement();
+      long newValue = value - getIncrement();
+      newValue = newValue > value ? value : newValue;
+      return newValue;
     }
 
     @Override
     public Long doIncr(Long value) {
-      return value + getIncrement();
+      long newValue = value + getIncrement();
+      newValue = newValue < value ? value : newValue;
+      return newValue;
     }
 
     @Override
     protected Long parseString(String string) {
-      return Long.parseLong(string);
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return (long) format.parse(string);
     }
 
     @Override
@@ -261,17 +331,22 @@ public abstract class NumberPropertyEditor<N extends Number> extends PropertyEdi
 
     @Override
     public Short doDecr(Short value) {
-      return (short) (value - getIncrement());
+      short newValue = (short)(value - getIncrement());
+      newValue = newValue > value ? value : newValue;
+      return newValue;
     }
 
     @Override
     public Short doIncr(Short value) {
-      return (short) (value + getIncrement());
+      short newValue = (short) (value + getIncrement());
+      newValue = newValue < value ? value : newValue;
+      return newValue;
     }
 
     @Override
     protected Short parseString(String string) {
-      return Short.parseShort(string);
+      // Handle non-U.S. locales (e.g. 1.234 instead of 1,234)
+      return (short) format.parse(string);
     }
 
     @Override

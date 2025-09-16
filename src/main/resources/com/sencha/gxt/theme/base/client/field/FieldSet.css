@@ -1,37 +1,49 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 .legend {
-  
+  overflow: hidden;
 }
 
 .toolWrap {}
+
 .header {}
 
 .fieldSet {
   border: 1px solid;
-  padding: 10px;
-  margin-bottom: 10px;
+  overflow: hidden;
   display: block;
+  padding: 5px 9px 10px 9px;
+}
+
+@if user.agent safari chrome {
+  .fieldSet {
+    -webkit-padding-before: 5px;
+    -webkit-padding-after: 10px;
+  }
 }
 
 @if user.agent ie6 ie8 ie9 {
   .body {
     zoom: 1;
   }
- 
   .fieldSet legend {
-    margin-bottom: 10px;
+    margin-bottom: 5px;
   }
+}
 
-  .fieldSet {
-    padding-top: 0;
-    padding-bottom: 10px;
+@if user.agent ie9 {
+  .fieldSet legend {
+     margin-bottom: 2px;
   }
+}
+
+.body {
+  overflow: hidden;
 }
 
 .fieldSet legend .toolWrap {
@@ -83,23 +95,13 @@ fieldset.collapsed .body {
     position: relative;
     margin-bottom: 23px;
   }
-  
   .noborder legend span {
     position: absolute;
     left: 16px;
   }
 }
 
-.fieldSet {
-  overflow: hidden;
-}
-
 /* make top of checkbox/tools visible in webkit */
 .header, .fieldSet legend > div {
   padding-top: 1px;
-}
-
-.body {
-  overflow: hidden;
-  height: 100%;
 }

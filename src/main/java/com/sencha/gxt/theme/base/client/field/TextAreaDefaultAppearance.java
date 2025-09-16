@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -21,13 +21,14 @@ import com.sencha.gxt.cell.core.client.form.TextAreaInputCell.TextAreaAppearance
 import com.sencha.gxt.cell.core.client.form.TextAreaInputCell.TextAreaCellOptions;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.dom.XElement;
+import com.sencha.gxt.core.client.util.Size;
 import com.sencha.gxt.theme.base.client.field.TextFieldDefaultAppearance.TextFieldStyle;
 
 public class TextAreaDefaultAppearance extends ValueBaseFieldDefaultAppearance implements TextAreaAppearance {
 
   public interface TextAreaResources extends ValueBaseFieldResources, ClientBundle {
 
-    @Source({"ValueBaseField.css", "TextField.css"})
+    @Source({"ValueBaseField.css", "TextField.css", "TextArea.css"})
     TextAreaStyle css();
 
     @ImageOptions(repeatStyle = RepeatStyle.Horizontal)
@@ -53,6 +54,29 @@ public class TextAreaDefaultAppearance extends ValueBaseFieldDefaultAppearance i
   }
 
   @Override
+  public XElement getInputElement(Element parent) {
+    return parent.getFirstChildElement().getFirstChildElement().cast();// textarea
+  }
+
+  @Override
+  public void onResize(XElement parent, int width, int height) {
+    Element div = parent.getFirstChildElement();
+
+    Size adj = adjustTextAreaSize(width, height);
+
+    if (width != -1) {
+      div.getStyle().setWidth(width, Unit.PX);
+      width = adj.getWidth();
+      div.getFirstChildElement().getStyle().setWidth(width, Unit.PX);
+    }
+
+    if (height != -1) {
+      height = adj.getHeight();
+      div.getFirstChildElement().getStyle().setHeight(height, Unit.PX);
+    }
+  }
+
+  @Override
   public void render(SafeHtmlBuilder sb, String value, FieldAppearanceOptions options) {
     int width = options.getWidth();
     int height = options.getHeight();
@@ -62,9 +86,12 @@ public class TextAreaDefaultAppearance extends ValueBaseFieldDefaultAppearance i
     String name = options.getName() != null ? " name='" + options.getName() + "' " : "";
     String disabled = options.isDisabled() ? " disabled=true" : "";
     String ro = options.isReadonly() ? " readonly" : "";
+    String placeholder = options.getEmptyText() != null ? " placeholder='" + SafeHtmlUtils.htmlEscape(options.getEmptyText()) + "' " : "";
 
     if ((value == null || value.equals("")) && options.getEmptyText() != null) {
-      value = options.getEmptyText();
+      if (GXT.isIE8() || GXT.isIE9()) {
+        value = options.getEmptyText();
+      }
       empty = true;
     }
 
@@ -75,22 +102,16 @@ public class TextAreaDefaultAppearance extends ValueBaseFieldDefaultAppearance i
     String inputStyles = "";
     String wrapStyles = "";
 
+    Size adjusted = adjustTextAreaSize(width, height);
+
     if (width != -1) {
       wrapStyles += "width:" + width + "px;";
-      // 6px margin, 2px border
-      width -= 8;
-      if (GXT.isGecko()) {
-        width += 6;
-      }
+      width = adjusted.getWidth();
       inputStyles += "width:" + width + "px;";
     }
 
     if (height != -1) {
-      // 2px border, 2px padding
-      height -= 2;
-      if (GXT.isGecko()) {
-        height -= 2;
-      }
+      height = adjusted.getHeight();
       inputStyles += "height: " + height + "px;";
     }
 
@@ -106,38 +127,33 @@ public class TextAreaDefaultAppearance extends ValueBaseFieldDefaultAppearance i
 
     sb.appendHtmlConstant("<div style='" + wrapStyles + "' class='" + style.wrap() + "'>");
     sb.appendHtmlConstant("<textarea " + name + disabled + " style='" + inputStyles + "' type='text' class='" + cls
-        + "'" + ro + ">");
+        + "'" + ro + placeholder + ">");
     sb.append(SafeHtmlUtils.fromString(value));
     sb.appendHtmlConstant("</textarea></div>");
   }
 
-  @Override
-  public XElement getInputElement(Element parent) {
-    return parent.getFirstChildElement().getFirstChildElement().cast();// textarea
-  }
-
-  @Override
-  public void onResize(XElement parent, int width, int height) {
-    Element div = parent.getFirstChildElement();
-
+  protected Size adjustTextAreaSize(int width, int height) {
     if (width != -1) {
-      div.getStyle().setWidth(width, Unit.PX);
-      // 6px margin, 2px border
-      width -= 8;
-      if (GXT.isGecko()) {
-        width += 6;
+      // 2px border
+      width -= 2;
+      
+      // 6px margin except for gecko which has 0px margin
+      if (!GXT.isGecko()) {
+        width -= 6;
       }
-      div.getFirstChildElement().getStyle().setWidth(width, Unit.PX);
     }
 
     if (height != -1) {
       // 2px border
       height -= 2;
-      if (GXT.isIE() || GXT.isGecko() || GXT.isChrome()) {
-        height -= 4;
+
+      // 2px margin except gecko which has 0px margin
+      if (!GXT.isGecko()) {
+        height -= 2;
       }
-      div.getFirstChildElement().getStyle().setHeight(height, Unit.PX);
     }
+
+    return new Size(width, height);
   }
 
 }

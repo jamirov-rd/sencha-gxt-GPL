@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -224,19 +224,14 @@
   width:25%;
 }
 
-.ok {
-  margin-right:3px;
+.cancel {
+  display: inline;
+  margin: 0 3px 0 2px;
 }
 
-.cancel {}
-
-.monthButtons button {
-  text-decoration:none;
-  text-align:center;
-  text-decoration:none !important;
-  border:1px solid;
-  padding:1px 3px 1px;
-  cursor:pointer;
+.ok {
+  display: inline;
+  margin: 0 3px 0 2px;
 }
 
 .monthButtons {
@@ -244,8 +239,14 @@
 }
 
 .monthButtons td {
+  /* reset styles for nested buttons */
+  padding: 0px;
+}
+
+.monthButtons > td {
   border-top: 1px solid;
   text-align:center;
+  vertical-align: bottom;
 }
 
 .month a, .year a {

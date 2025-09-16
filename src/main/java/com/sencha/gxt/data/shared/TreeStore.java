@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -10,12 +10,10 @@ package com.sencha.gxt.data.shared;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gwt.core.client.GWT;
 import com.sencha.gxt.core.shared.FastMap;
 import com.sencha.gxt.data.shared.event.StoreAddEvent;
 import com.sencha.gxt.data.shared.event.StoreClearEvent;
@@ -149,7 +147,8 @@ public class TreeStore<M> extends Store<M> {
         int actualIndex = index == 0 ? 0 : (this.children.indexOf(getChildren().get(index - 1)) + 1);
         this.children.addAll(actualIndex, children);
       }
-      for (TreeModel child : children) {
+      for (int i = 0; i < children.size(); i++) {
+        TreeModel child = children.get(i);
         child.parent = this;
       }
 
@@ -174,7 +173,9 @@ public class TreeStore<M> extends Store<M> {
         }
 
         // check up the parent chain, see if changes need to happen
-        applyFiltersToParents();
+        if (!isRoot()) {
+          applyFiltersToParents();
+        }
       }
     }
 
@@ -194,7 +195,8 @@ public class TreeStore<M> extends Store<M> {
 
       // look at children first, if anything is visible, this is visible.
       // don't break early, because otherwise we won't run the filter on all children
-      for (TreeModel child : children) {
+      for (int i = 0; i < children.size(); i++) {
+        TreeModel child = children.get(i);
         if (child.applyFiltersToChildren()) {
           visibleChildren.add(child);
           isVisible = true;
@@ -218,6 +220,7 @@ public class TreeStore<M> extends Store<M> {
      */
     public void applyFiltersToParents() {
       assert visibleChildren != null;
+      assert isRoot() == false;
       boolean visible = visibleChildren.size() != 0 || !isFilteredOut();
       if (visible != isVisible) {
         isVisible = visible;
@@ -243,15 +246,15 @@ public class TreeStore<M> extends Store<M> {
 
     @Override
     public List<TreeModel> getChildren() {
-      List<TreeModel> children;
+      final List<TreeModel> children;
       if (isFiltered()) {
         assert visibleChildren != null;
         children = this.visibleChildren;
       } else {
         children = this.children;
       }
-      // if running in a jvm (test, or dev mode), make sure no changes are made
-      if (GWT.isProdMode() == false) {
+      // if assertions are enabled, make sure no calling code ever tries to modify this list
+      if (TreeModel.class.desiredAssertionStatus()) {
         return Collections.unmodifiableList(children);
       }
       return children;
@@ -281,7 +284,7 @@ public class TreeStore<M> extends Store<M> {
       // if filtering is enabled and the child was visible, re-filter this
       // element, as well as parents
       // TODO refiltering probably isnt necessary unless visible count is now 0
-      if (isFiltered() && visibleChildren.remove(wrapper)) {
+      if (isFiltered() && visibleChildren.remove(wrapper) && !isRoot()) {
         applyFiltersToParents();
       }
     }
@@ -324,8 +327,8 @@ public class TreeStore<M> extends Store<M> {
    * 
    * @param rootNodes the items to add
    */
-  public void add(List<M> rootNodes) {
-    insert(roots, roots.getChildren().size(), rootNodes, false);
+  public void add(List<? extends M> rootNodes) {
+    insert(roots, roots.getChildren().size(), rootNodes);
   }
 
   /**
@@ -344,9 +347,9 @@ public class TreeStore<M> extends Store<M> {
    * @param parent the parent item
    * @param children the items to insert
    */
-  public void add(M parent, List<M> children) {
+  public void add(M parent, List<? extends M> children) {
     TreeModel parentModel = getWrapper(parent);
-    insert(parentModel, parentModel.getChildren().size(), children, false);
+    insert(parentModel, parentModel.getChildren().size(), children);
   }
 
   /**
@@ -366,16 +369,20 @@ public class TreeStore<M> extends Store<M> {
    * @param index the insert location of the new subtree
    * @param children the list of subtrees
    */
-  public void addSubTree(int index, List<? extends TreeNode<M>> children) {
-    List<M> addedElements = new ArrayList<M>();
-    List<TreeModel> wrapped = convertTreeNodes(children, addedElements);
+  public void addSubTree(int index, List<? extends TreeNode<? extends M>> children) {
+    List<TreeModel> wrapped = convertTreeNodes(children);
     roots.addChildren(index, wrapped);
 
     List<M> elts = new ArrayList<M>();
-    for (TreeNode<M> child : children) {
-      elts.add(child.getData());
+    for (int i = 0; i < wrapped.size(); i++) {
+      TreeModel child = wrapped.get(i);
+      if (child.isVisible) {
+        elts.add(child.getData());
+      }
     }
-    fireEvent(new StoreAddEvent<M>(index, elts));
+    if (!elts.isEmpty()) {
+      fireEvent(new StoreAddEvent<M>(index, elts));
+    }
   }
 
   /**
@@ -386,25 +393,30 @@ public class TreeStore<M> extends Store<M> {
    * @param index the child index
    * @param children the list of subtrees
    */
-  public void addSubTree(M parent, int index, List<? extends TreeNode<M>> children) {
-    List<M> addedElements = new ArrayList<M>();
-    List<TreeModel> wrapped = convertTreeNodes(children, addedElements);
+  public void addSubTree(M parent, int index, List<? extends TreeNode<? extends M>> children) {
+    List<TreeModel> wrapped = convertTreeNodes(children);
     getWrapper(parent).addChildren(index, wrapped);
     // fireEvent(new StoreAddEvent<M>(index, addedElements));
 
     List<M> elts = new ArrayList<M>();
-    for (TreeNode<M> child : children) {
-      elts.add(child.getData());
+    for (int i = 0; i < wrapped.size(); i++) {
+      TreeModel child = wrapped.get(i);
+      if (child.isVisible) {
+        elts.add(child.getData());
+      }
     }
-    fireEvent(new StoreAddEvent<M>(index, elts));
+    if (!elts.isEmpty()) {
+      fireEvent(new StoreAddEvent<M>(index, elts));
+    }
   }
 
   @Override
   public void applySort(boolean suppressEvent) {
-    Collections.sort(roots.children, buildWrappedFullComparator());
+    Comparator<TreeModel> comparator = buildWrappedFullComparator();
+    Collections.sort(roots.children, comparator);
 
     for (TreeModel model : modelMap.values()) {
-      Collections.sort(model.children, buildWrappedFullComparator());
+      Collections.sort(model.children, comparator);
     }
     if (!suppressEvent) {
       fireEvent(new StoreSortEvent<M>());
@@ -653,8 +665,8 @@ public class TreeStore<M> extends Store<M> {
    * @param index the insert index
    * @param rootNodes the items to insert
    */
-  public void insert(int index, List<M> rootNodes) {
-    insert(roots, index, rootNodes, false);
+  public void insert(int index, List<? extends M> rootNodes) {
+    insert(roots, index, rootNodes);
   }
 
   /**
@@ -675,8 +687,8 @@ public class TreeStore<M> extends Store<M> {
    * @param index the insert index
    * @param children the items to insert
    */
-  public void insert(M parent, int index, List<M> children) {
-    insert(getWrapper(parent), index, children, false);
+  public void insert(M parent, int index, List<? extends M> children) {
+    insert(getWrapper(parent), index, children);
   }
 
   /**
@@ -739,13 +751,15 @@ public class TreeStore<M> extends Store<M> {
    * @param parent the parent data model
    * @param children the list of child models
    */
-  public void replaceChildren(M parent, List<M> children) {
+  public void replaceChildren(M parent, List<? extends M> children) {
+    final boolean fireEvent;
     if (parent == null) {
       super.clear();
       roots.clear();
       modelMap.clear();
 
       roots.addChildren(0, wrap(children));
+      fireEvent = roots.isVisible;
     } else {
       TreeModel parentNode = getWrapper(parent);
       List<TreeModel> models = new LinkedList<TreeModel>();
@@ -759,8 +773,11 @@ public class TreeStore<M> extends Store<M> {
       parentNode.clear();
 
       parentNode.addChildren(0, wrap(children));
+      fireEvent = parentNode.isVisible;
     }
-    fireEvent(new StoreDataChangeEvent<M>(parent));
+    if (fireEvent) {
+      fireEvent(new StoreDataChangeEvent<M>(parent));
+    }
   }
 
   /**
@@ -769,17 +786,19 @@ public class TreeStore<M> extends Store<M> {
    * @param parent the parent data model
    * @param children the list of subtrees
    */
-  public void replaceSubTree(M parent, List<? extends TreeNode<M>> children) {
-    List<TreeModel> wrapped = convertTreeNodes(children, new ArrayList<M>());
+  public void replaceSubTree(M parent, List<? extends TreeNode<? extends M>> children) {
+    List<TreeModel> wrapped = convertTreeNodes(children);
+
+    final boolean fireEvent;
     if (parent == null) {
       super.clear();
       roots.clear();
       modelMap.clear();
 
       roots.addChildren(0, wrapped);
+      fireEvent = roots.isVisible;
     } else {
       TreeModel parentNode = getWrapper(parent);
-      parentNode.clear();
       List<TreeModel> models = new LinkedList<TreeModel>();
       models.addAll(parentNode.children);
       for (int i = 0; i < models.size(); i++) {
@@ -788,21 +807,27 @@ public class TreeStore<M> extends Store<M> {
         modelMap.remove(getKeyProvider().getKey(wrapper.getData()));
         super.remove(wrapper.getData());
       }
+      parentNode.clear();
 
       parentNode.addChildren(0, wrapped);
+      fireEvent = parentNode.isVisible;
     }
-    fireEvent(new StoreDataChangeEvent<M>(parent));
+    if (fireEvent) {
+      fireEvent(new StoreDataChangeEvent<M>(parent));
+    }
   }
 
   public void update(M item) {
-    TreeModel wrapper = modelMap.get(getKeyProvider().getKey(item));
+    TreeModel wrapper = getWrapper(item);
 
     // remove references to the old model
     super.remove(wrapper.data);
     // replace the existing model with the incoming one
     wrapper.data = item;
 
-    fireEvent(new StoreUpdateEvent<M>(Collections.singletonList(item)));
+    if (wrapper.isVisible) {
+      fireEvent(new StoreUpdateEvent<M>(Collections.singletonList(item)));
+    }
   }
 
   /*
@@ -840,19 +865,42 @@ public class TreeStore<M> extends Store<M> {
    * TreeStore instance.
    * 
    * @param children the foreign nodes to prepare
-   * @param added an existing list to which the node data will be added
-   * @return the new list of prepared nodes, empty if children is null (or
-   *         empty)
+   * @return the new list of prepared nodes, empty if children is null (or empty)
    */
-  protected List<TreeModel> convertTreeNodes(List<? extends TreeNode<M>> children, List<M> added) {
+  protected List<TreeModel> convertTreeNodes(List<? extends TreeNode<? extends M>> children) {
+    List<StoreFilter<M>> filterCopy = null;
+    if (isFiltered()) {
+      filterCopy = new ArrayList<StoreFilter<M>>(getFilters());
+      getFilters().clear();
+    }
+    List<TreeModel> converted = convertTreeNodesHelper(children);
+    if (filterCopy != null) {
+      getFilters().addAll(filterCopy);
+      assert isFiltered() == true;
+    }
+    return converted;
+  }
+
+  /**
+   * Helper method that actually recurses over the children and appends them now that 
+   * convertTreeNodes has effectively disabled the filters.
+   * 
+   * As the items haven't actually been added yet to their parent yet, filtering must not be active
+   * when this is called, as parent items cannot be made visible.
+   * 
+   * @param children the new nodes to prepare
+   * @return the new list of prepared nodes, empty if children is null (or empty)
+   */
+  private List<TreeModel> convertTreeNodesHelper(List<? extends TreeNode<? extends M>> children) {
+    assert !isFiltered();
     List<TreeModel> wrapped = new ArrayList<TreeModel>();
     if (children != null) {
 
-      for (TreeNode<M> child : children) {
+      for (int i = 0; i < children.size(); i++) {
+        TreeNode<? extends M> child = children.get(i);
         TreeModel tree = new TreeModel(child.getData());
-        added.add(child.getData());
         modelMap.put(getKeyProvider().getKey(child.getData()), tree);
-        tree.addChildren(0, convertTreeNodes(child.getChildren(), added));
+        tree.addChildren(0, convertTreeNodesHelper(child.getChildren()));
         wrapped.add(tree);
       }
     }
@@ -886,7 +934,8 @@ public class TreeStore<M> extends Store<M> {
    */
   protected List<M> unwrap(List<TreeModel> models) {
     List<M> list = new ArrayList<M>();
-    for (TreeModel model : models) {
+    for (int i = 0; i < models.size(); i++) {
+      TreeModel model = models.get(i);
       assert model != roots : "The TreeStore's root is not a valid model to be returned";
       list.add(model.getData());
     }
@@ -900,9 +949,10 @@ public class TreeStore<M> extends Store<M> {
    * @param data the data
    * @return the list of wrapped models
    */
-  protected List<TreeModel> wrap(List<M> data) {
+  protected List<TreeModel> wrap(List<? extends M> data) {
     List<TreeModel> wrappers = new ArrayList<TreeModel>();
-    for (M elt : data) {
+    for (int i = 0; i < data.size(); i++) {
+      M elt = data.get(i);
       wrappers.add(wrap(elt));
     }
     return wrappers;
@@ -916,7 +966,9 @@ public class TreeStore<M> extends Store<M> {
    * @return the new wrapped tree model for the given data model
    */
   protected TreeModel wrap(M data) {
-    assert !modelMap.containsKey(getKeyProvider().getKey(data)) : "The given model is already in the TreeStore, and should not be assigned a new node";
+    assert !modelMap.containsKey(getKeyProvider().getKey(data)) : 
+      "The given model is already in the TreeStore, and should not be assigned a new node. Key=" + 
+        getKeyProvider().getKey(data);
     TreeModel wrapper = new TreeModel(data);
     modelMap.put(getKeyProvider().getKey(data), wrapper);
     return wrapper;
@@ -927,7 +979,7 @@ public class TreeStore<M> extends Store<M> {
    * Written so that no map lookups are done more than necessary, and so that
    * the event can track which changes will actually be visible.
    */
-  private void insert(TreeModel parent, int index, List<M> children, boolean suppressEvent) {
+  private void insert(TreeModel parent, int index, List<? extends M> children) {
     int initialCount = parent.getChildren().size();
     parent.addChildren(index, wrap(children));
 
@@ -958,7 +1010,7 @@ public class TreeStore<M> extends Store<M> {
           }
         }
       }
-      if (!suppressEvent && addedChildren.size() != 0) {
+      if (addedChildren.size() != 0) {
         fireEvent(new StoreAddEvent<M>(index, addedChildren));
       }
     }
@@ -998,13 +1050,18 @@ public class TreeStore<M> extends Store<M> {
   }
 
   private void removeChildren(TreeModel parentWrapper) {
-    if (parentWrapper.getChildren().size() != 0) {
+    //check all children size, not just visible
+    if (parentWrapper.children.size() != 0) {
       List<TreeModel> models = new LinkedList<TreeModel>();
       models.addAll(parentWrapper.children);
+      parentWrapper.clear();
+      if (isFiltered()) {
+        parentWrapper.applyFiltersToParents();
+      }
       for (int i = 0; i < models.size(); i++) {
         TreeModel wrapper = models.get(i);
         models.addAll(wrapper.children);
-        
+
         List<M> children = getAllChildren(wrapper.data);
 
         modelMap.remove(getKeyProvider().getKey(wrapper.getData()));

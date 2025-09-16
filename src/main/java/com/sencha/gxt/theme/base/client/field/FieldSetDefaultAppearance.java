@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -12,6 +12,7 @@ import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.XTemplates;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
@@ -21,7 +22,7 @@ public class FieldSetDefaultAppearance implements FieldSetAppearance {
 
   public interface Template extends XTemplates {
     @XTemplate(source = "FieldSet.html")
-    SafeHtml render(FieldSetStyle style);
+    SafeHtml render(FieldSetStyle style, boolean isGecko);
   }
   
   public interface FieldSetResources extends ClientBundle {
@@ -66,7 +67,7 @@ public class FieldSetDefaultAppearance implements FieldSetAppearance {
 
   @Override
   public void render(SafeHtmlBuilder sb) {
-    sb.append(template.render(style));
+    sb.append(template.render(style, GXT.isGecko()));
   }
 
   @Override

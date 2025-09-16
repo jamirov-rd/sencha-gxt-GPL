@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -28,6 +28,7 @@ import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.text.shared.SafeHtmlRenderer;
 import com.google.gwt.user.client.Event;
@@ -41,6 +42,7 @@ import com.sencha.gxt.core.client.GXTLogConfiguration;
 import com.sencha.gxt.core.client.IdentityValueProvider;
 import com.sencha.gxt.core.client.Style.Anchor;
 import com.sencha.gxt.core.client.Style.AnchorAlignment;
+import com.sencha.gxt.core.client.Style.Side;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.ThemeStyles;
 import com.sencha.gxt.core.client.util.BaseEventPreview;
@@ -55,10 +57,15 @@ import com.sencha.gxt.data.shared.event.StoreDataChangeEvent;
 import com.sencha.gxt.data.shared.event.StoreDataChangeEvent.StoreDataChangeHandler;
 import com.sencha.gxt.data.shared.event.StoreUpdateEvent;
 import com.sencha.gxt.data.shared.event.StoreUpdateEvent.StoreUpdateHandler;
+import com.sencha.gxt.data.shared.loader.ListLoadConfig;
+import com.sencha.gxt.data.shared.loader.ListLoadConfigBean;
+import com.sencha.gxt.data.shared.loader.ListLoadResult;
+import com.sencha.gxt.data.shared.loader.ListLoader;
+import com.sencha.gxt.data.shared.loader.LoadEvent;
+import com.sencha.gxt.data.shared.loader.LoadHandler;
 import com.sencha.gxt.data.shared.loader.Loader;
 import com.sencha.gxt.data.shared.loader.PagingLoadConfig;
 import com.sencha.gxt.data.shared.loader.PagingLoadConfigBean;
-import com.sencha.gxt.data.shared.loader.PagingLoadResult;
 import com.sencha.gxt.data.shared.loader.PagingLoader;
 import com.sencha.gxt.widget.core.client.ListView;
 import com.sencha.gxt.widget.core.client.cell.HandlerManagerContext;
@@ -86,14 +93,14 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
    * TriggerAction enum.
    */
   public enum TriggerAction {
-    ALL, QUERY;
+    ALL, QUERY
   }
 
   private class ComboPropertyEditor extends PropertyEditor<T> {
 
     @Override
     public T parse(CharSequence text) throws ParseException {
-      return selectByValue(text == null ? "" : text.toString());
+      return getByValue(text == null ? "" : text.toString());
     }
 
     @Override
@@ -126,6 +133,13 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   protected Loader<?, ?> loader;
   protected int pageSize;
   protected PagingToolBar pagingToolBar;
+  protected DelayedTask navKeyTask;
+
+  /**
+   * The delay is milliseconds the select on over is disabled on up / down arrow keys (defaults to 200).
+   */
+  protected int navKeyDelay = 200;
+
   private final LabelProvider<? super T> labelProvider;
   private TriggerAction triggerAction = TriggerAction.QUERY;
   private boolean expanded;
@@ -153,24 +167,20 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   private static Logger logger = Logger.getLogger(ComboBoxCell.class.getName());
 
   /**
-   * Creates a combo box cell that renders all items with the given label
-   * provider.
+   * Creates a combo box cell that renders all items with the given label provider.
    * 
    * @param store the store containing the data that can be selected
-   * @param labelProvider converts the current model type into a string value to
-   *          display in the text box
+   * @param labelProvider converts the current model type into a string value to display in the text box
    */
   public ComboBoxCell(ListStore<T> store, LabelProvider<? super T> labelProvider) {
     this(store, labelProvider, GWT.<TriggerFieldAppearance> create(TriggerFieldAppearance.class));
   }
 
   /**
-   * Creates a combo box cell that renders the input value with the label
-   * provider.
+   * Creates a combo box cell that renders the input value with the label provider.
    * 
    * @param store the store containing the data that can be selected
-   * @param labelProvider converts the current model type into a string value to
-   *          display in the text box
+   * @param labelProvider converts the current model type into a string value to display in the text box
    * @param view the list view
    */
   public ComboBoxCell(ListStore<T> store, LabelProvider<? super T> labelProvider, ListView<T, ?> view) {
@@ -178,12 +188,10 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Creates a combo box cell that renders the input value with the label
-   * provider.
+   * Creates a combo box cell that renders the input value with the label provider.
    * 
    * @param store the store containing the data that can be selected
-   * @param labelProvider converts the current model type into a string value to
-   *          display in the text box
+   * @param labelProvider converts the current model type into a string value to display in the text box
    * @param view the list view
    * @param appearance the appearance
    */
@@ -199,12 +207,11 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Creates a combo box cell that renders the input value with the label
-   * provider and the drop down values with the renderer.
+   * Creates a combo box cell that renders the input value with the label provider and the drop down values with the
+   * renderer.
    * 
    * @param store the store containing the data that can be selected
-   * @param labelProvider converts the current model type into a string value to
-   *          display in the text box
+   * @param labelProvider converts the current model type into a string value to display in the text box
    * @param renderer draws the current model as html in the drop down
    */
   public ComboBoxCell(ListStore<T> store, LabelProvider<? super T> labelProvider, final SafeHtmlRenderer<T> renderer) {
@@ -212,12 +219,11 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Creates a combo box cell that renders the input value with the label
-   * provider and the drop down values with the renderer.
+   * Creates a combo box cell that renders the input value with the label provider and the drop down values with the
+   * renderer.
    * 
    * @param store the store containing the data that can be selected
-   * @param labelProvider converts the current model type into a string value to
-   *          display in the text box
+   * @param labelProvider converts the current model type into a string value to display in the text box
    * @param renderer draws the current model as html in the drop down
    * @param appearance the appearance
    */
@@ -236,12 +242,11 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Creates a combo box cell that renders both the input value and drop down
-   * values with the given label provider.
+   * Creates a combo box cell that renders both the input value and drop down values with the given label provider.
    * 
    * @param store the store containing the data that can be selected
-   * @param labelProvider converts the current model type into a string value to
-   *          display in the text box and the drop down values
+   * @param labelProvider converts the current model type into a string value to display in the text box and the drop
+   *          down values
    * @param appearance the appearance
    */
   public ComboBoxCell(ListStore<T> store, LabelProvider<? super T> labelProvider, TriggerFieldAppearance appearance) {
@@ -258,8 +263,8 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Adds a {@link BeforeSelectionEvent} handler. The handler will be passed an
-   * instance of {@link CellBeforeSelectionEvent} which can be cast to.
+   * Adds a {@link BeforeSelectionEvent} handler. The handler will be passed an instance of
+   * {@link CellBeforeSelectionEvent} which can be cast to.
    * 
    * @param handler the handler
    * @return the registration for the event
@@ -270,8 +275,8 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Adds a {@link SelectionEvent} handler. The handler will be passed an
-   * instance of {@link CellSelectionEvent} which can be cast to.
+   * Adds a {@link SelectionEvent} handler. The handler will be passed an instance of {@link CellSelectionEvent} which
+   * can be cast to.
    * 
    * @param handler the handler
    * @return the registration for the event
@@ -292,10 +297,11 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     listView.getSelectionModel().deselectAll();
 
     RootPanel.get().remove(listContainer);
-    fireEvent(context, new CollapseEvent());
+    fireEvent(context, new CollapseEvent(context));
   }
 
-  public void doQuery(Context context, XElement parent, ValueUpdater<T> updater, T value, String query, boolean force) {
+  public void doQuery(final Context context, final XElement parent, final ValueUpdater<T> updater, final T value,
+      String query, boolean force) {
     if (query == null) {
       query = "";
     }
@@ -336,9 +342,27 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
 
           onResultsLoad(context, parent, updater, value);
         } else {
-          expand(context, parent, updater, value);
+          // expand right away with loading text, otherwise wait until the loader has loaded before expanding.
+          if (listView.getLoadingHtml() != null) {
+            expand(context, parent, updater, value);
+          }
+
           @SuppressWarnings("unchecked")
-          PagingLoader<PagingLoadConfig, PagingLoadResult<?>> l = (PagingLoader<PagingLoadConfig, PagingLoadResult<?>>) loader;
+          ListLoader<ListLoadConfig, ListLoadResult<?>> l = (ListLoader<ListLoadConfig, ListLoadResult<?>>) loader;
+
+          // delay expanding - hide the empty list with shadow until something is loaded.
+          if (listView.getLoadingHtml() == null) {
+            final GroupingHandlerRegistration tmpHandler = new GroupingHandlerRegistration();
+            LoadHandler<ListLoadConfig, ListLoadResult<?>> loadHandler = new LoadHandler<ListLoadConfig, ListLoadResult<?>>() {
+              @Override
+              public void onLoad(LoadEvent<ListLoadConfig, ListLoadResult<?>> event) {
+                tmpHandler.removeHandler();
+                onResultsLoad(context, parent, updater, value);
+              }
+            };
+            tmpHandler.add(l.addLoadHandler(loadHandler));
+          }
+
           l.load(getParams(query));
         }
       } else {
@@ -348,7 +372,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     }
   }
 
-  public void expand(Context context, final XElement parent, ValueUpdater<T> updater, T value) {
+  public void expand(final Context context, final XElement parent, final ValueUpdater<T> updater, final T value) {
     if (expanded) {
       return;
     }
@@ -362,8 +386,9 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
       focusedCell = null;
     }
 
-    RootPanel.get().add(listContainer);
+    listContainer.getElement().makePositionable(true);
     listContainer.getElement().updateZIndex(0);
+    RootPanel.get().add(listContainer);
 
     eventPreview.add();
     expanded = true;
@@ -377,7 +402,25 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
       }
     });
 
-    fireEvent(context, new ExpandEvent());
+    if (navKeyTask == null) {
+      navKeyTask = new DelayedTask() {
+
+        @Override
+        public void onExecute() {
+          listView.setSelectOnOver(true);
+        }
+      };
+    }
+
+    navKeyTask.delay(navKeyDelay);
+
+    fireEvent(context, new ExpandEvent(context));
+  }
+
+  @Override
+  public void finishEditing(Element parent, T value, Object key, ValueUpdater<T> valueUpdater) {
+    super.finishEditing(parent, value, key, valueUpdater);
+    dqTask.cancel();
   }
 
   /**
@@ -409,6 +452,15 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
 
   public Loader<?, ?> getLoader() {
     return loader;
+  }
+  
+  /**
+   * Returns the dropdown list's max height.
+   * 
+   * @return the max height
+   */
+  public int getMaxHeight() {
+    return maxHeight;
   }
 
   /**
@@ -452,6 +504,16 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
+   * Returns the length of time in milliseconds to delay between the start of typing and sending the query to filter the
+   * dropdown list.
+   * 
+   * @return the query delay
+   */
+  public int getQueryDelay() {
+    return queryDelay;
+  }
+
+  /**
    * Returns the combo's list store.
    * 
    * @return the store
@@ -477,15 +539,14 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   public int getTypeAheadDelay() {
     return typeAheadDelay;
   }
-
+  
   /**
-   * Returns the length of time in milliseconds to delay between the start of
-   * typing and sending the query to filter the dropdown list.
+   * Returns the state if the query cache is used or not.
    * 
-   * @return the query delay
+   * @return the useQueryCache state
    */
-  public int getQueryDelay() {
-    return queryDelay;
+  public boolean isUseQueryCache() {
+    return useQueryCache;
   }
 
   /**
@@ -498,8 +559,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Returns true if the field's value is forced to one of the value in the
-   * list.
+   * Returns true if the field's value is forced to one of the value in the list.
    * 
    * @return the force selection state
    */
@@ -518,7 +578,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
 
   public void onBrowserEvent(Cell.Context context, Element parent, T value, NativeEvent event,
       ValueUpdater<T> valueUpdater) {
-    
+
     Element target = event.getEventTarget().cast();
     if (!parent.isOrHasChild(target)) {
       return;
@@ -544,13 +604,12 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     options.setEditable(isEditable());
     options.setDisabled(isDisabled());
 
-    appearance.render(sb, s == null ? "" : s, options);
+    getAppearance().render(sb, s == null ? "" : s, options);
   }
 
   /**
-   * Select an item in the dropdown list by its numeric index in the list. This
-   * function does NOT cause the select event to fire. The list must expanded
-   * for this function to work, otherwise use #setValue.
+   * Select an item in the dropdown list by its numeric index in the list. This function does NOT cause the select event
+   * to fire. The list must expanded for this function to work, otherwise use #setValue.
    * 
    * @param index the index of the item to select
    */
@@ -558,15 +617,15 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     if (index != -1 && index < getListView().getElements().size()) {
       T item = getStore().get(index);
       selectedItem = item;
+
       getListView().getSelectionModel().select(item, false);
       getListView().getElement(index).scrollIntoView();
     }
   }
 
   /**
-   * Select an item in the dropdown list. This function does NOT cause the
-   * select event to fire. The list must expanded for this function to work,
-   * otherwise use #setValue.
+   * Select an item in the dropdown list. This function does NOT cause the select event to fire. The list must expanded
+   * for this function to work, otherwise use #setValue.
    * 
    * @param item the item to select
    */
@@ -581,8 +640,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * The text query to send to the server to return all records for the list
-   * with no filtering (defaults to '').
+   * The text query to send to the server to return all records for the list with no filtering (defaults to '').
    * 
    * @param allQuery the all query
    */
@@ -591,9 +649,8 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   /**
-   * Sets whether the combo's value is restricted to one of the values in the
-   * list, false to allow the user to set arbitrary text into the field
-   * (defaults to false).
+   * Sets whether the combo's value is restricted to one of the values in the list, false to allow the user to set
+   * arbitrary text into the field (defaults to false).
    * 
    * @param forceSelection true to force selection
    */
@@ -603,28 +660,72 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
 
   /**
    * Sets the loader for use with remote queries.
+   * <p/>
+   * <ul>
+   * <li>This adds a handle for {@link ListView#onBeforeLoad()}.
+   * <li>If {@link #setLoadingHtml(SafeHtml)} or {@link #setLoadingText(String)} are used the list will display the
+   * loading HTML or text while loading in the list.
+   * </ul>
    * 
    * @param loader the loader
    */
   public void setLoader(Loader<?, ?> loader) {
     setMode(loader == null ? QueryMode.LOCAL : QueryMode.REMOTE);
     this.loader = loader;
+    listView.setLoader(loader);
   }
 
   /**
-   * Sets the minimum number of characters the user must type before
-   * autocomplete and typeahead active (defaults to 4 if remote, or 0 if local).
+   * Sets the html loading text to be displayed during a load request.
+   * <p/>
+   * <ul>
+   * <li>The {@link #setLoader(Loader)} has to be set for this use.
+   * <li>The css class name 'loading-indicator' can style the loading HTML.
+   * </ul>
    * 
-   * @param minChars minimum number of characters before activating autocomplete
-   *          and typeahead
+   * @param loadingHtml the loading html
+   */
+  public void setLoadingHtml(SafeHtml loadingHtml) {
+    getListView().setLoadingHtml(loadingHtml);
+  }
+
+  /**
+   * Sets the text loading text to be displayed during a load request.
+   * <p/>
+   * <ul>
+   * <li>The {@link #setLoader(Loader)} has to be set for this use.
+   * <li>The css class name 'loading-indicator' can style the loading text.
+   * </ul>
+   * 
+   * @param loadingText the loading text
+   */
+  public void setLoadingText(String loadingText) {
+    getListView().setLoadingText(loadingText);
+  }
+  
+  /**
+   * Sets the maximum height in pixels of the dropdown list before scrollbars
+   * are shown (defaults to 300).
+   * 
+   * @param maxHeight the max hieght
+   */
+  public void setMaxHeight(int maxHeight) {
+    this.maxHeight = maxHeight;
+  }
+
+  /**
+   * Sets the minimum number of characters the user must type before autocomplete and typeahead active (defaults to 4 if
+   * remote, or 0 if local).
+   * 
+   * @param minChars minimum number of characters before activating autocomplete and typeahead
    */
   public void setMinChars(int minChars) {
     this.minChars = minChars;
   }
 
   /**
-   * Sets the minimum width of the dropdown list in pixels (defaults to 70, will
-   * be ignored if listWidth has a higher value).
+   * Sets the minimum width of the dropdown list in pixels (defaults to 70, will be ignored if listWidth has a higher
+   * value).
    * 
    * @param minListWidth the min width
    */
@@ -645,7 +746,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
         pagingToolBar.setPageSize(pageSize);
       } else {
         pagingToolBar = createPagingToolBar(pageSize);
-        pagingToolBar.addStyleName(ThemeStyles.getStyle().borderTop());
+        pagingToolBar.addStyleName(ThemeStyles.get().style().borderTop());
         pagingToolBar.bind((PagingLoader<PagingLoadConfig, ?>) loader);
         listContainer.add(pagingToolBar, new VerticalLayoutData(1, -1));
         listContainer.setShadow(false);
@@ -653,6 +754,16 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     } else {
       pagingToolBar = null;
     }
+  }
+
+  /**
+   * The length of time in milliseconds to delay between the start of typing and sending the query to filter the
+   * dropdown list.
+   * 
+   * @param queryDelay the query delay
+   */
+  public void setQueryDelay(int queryDelay) {
+    this.queryDelay = queryDelay;
   }
 
   /**
@@ -686,15 +797,21 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   public void setTypeAheadDelay(int typeAheadDelay) {
     this.typeAheadDelay = typeAheadDelay;
   }
-
+  
   /**
-   * The length of time in milliseconds to delay between the start of typing and
-   * sending the query to filter the dropdown list.
+   * Set this to false to disable the last query cache (defaults to true).
    * 
-   * @param queryDelay the query delay
+   * When set to false the store gets queried on each expand for the data that
+   * should get displayed in the list. If you use a loader, than each time the
+   * ComboBox gets expanded, the server gets asked for the data.
+   * 
+   * You want to do this for example, if you filter the content of this ComboBox
+   * against some selection in another field.
+   * 
+   * @param useQueryCache the useQueryCache to set
    */
-  public void setQueryDelay(int queryDelay) {
-    this.queryDelay = queryDelay;
+  public void setUseQueryCache(boolean useQueryCache) {
+    this.useQueryCache = useQueryCache;
   }
 
   protected void bindStore(ListStore<T> store) {
@@ -768,17 +885,38 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     }
   }
 
-  protected PagingLoadConfig getParams(String query) {
-    PagingLoadConfig config = null;
-    if (loader.isReuseLoadConfig()) {
-      config = (PagingLoadConfig) loader.getLastLoadConfig();
-    } else {
-      config = new PagingLoadConfigBean();
+  protected T getByValue(String value) {
+    int count = store.size();
+    for (int i = 0; i < count; i++) {
+      T item = store.get(i);
+      String v = getRenderedValue(item);
+      if (v != null && v.equals(value)) {
+        return item;
+      }
     }
-    config.setLimit(pageSize);
-    config.setOffset(0);
-    // config.set("query", query);
-    return config;
+    return null;
+  }
+
+  protected ListLoadConfig getParams(String query) {
+    if (pageSize > 0) {
+      PagingLoadConfig config = null;
+      if (loader.isReuseLoadConfig()) {
+        config = (PagingLoadConfig) loader.getLastLoadConfig();
+      } else {
+        config = new PagingLoadConfigBean();
+      }
+      config.setLimit(pageSize);
+      config.setOffset(0);
+      return config;
+    } else {
+      ListLoadConfig config = null;
+      if (loader.isReuseLoadConfig()) {
+        config = (ListLoadConfig) loader.getLastLoadConfig();
+      } else {
+        config = new ListLoadConfigBean();
+      }
+      return config;
+    }
   }
 
   protected void init(ListStore<T> store) {
@@ -803,6 +941,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
             if (listView.getElement().isOrHasChild(target)) {
               if (pagingToolBar == null || (!pagingToolBar.getElement().isOrHasChild(target))) {
                 onViewClick(lastParent, pe.getNativeEvent(), true, false);
+                pe.getNativeEvent().preventDefault();
               }
             } else {
               collapseIf(pe);
@@ -852,6 +991,7 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
 
     listView.setBorders(false);
     listView.setSelectOnOver(true);
+    listView.setTrackMouseOver(false);
     listView.getSelectionModel().addSelectionChangedHandler(new SelectionChangedHandler<T>() {
       @Override
       public void onSelectionChanged(SelectionChangedEvent<T> event) {
@@ -861,7 +1001,6 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
         } else {
           selectedItem = null;
         }
-
       }
     });
 
@@ -869,8 +1008,8 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
   }
 
   @Override
-  protected boolean isFocusClick(XElement parent, XElement target) {
-    boolean result = parent.isOrHasChild(target) || listView.getElement().isOrHasChild(target);
+  protected boolean isFocusedWithTarget(Element parent, Element target) {
+    boolean result = parent.isOrHasChild(target) || listContainer.getElement().isOrHasChild(target);
     if (!result && pagingToolBar != null) {
       if (pagingToolBar.getElement().isOrHasChild(target)) {
         return true;
@@ -927,23 +1066,27 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
 
     switch (event.getKeyCode()) {
       case KeyCodes.KEY_DOWN:
-
         event.stopPropagation();
         event.preventDefault();
         if (!isExpanded()) {
           onTriggerClick(context, parent.<XElement> cast(), event, value, valueUpdater);
         } else {
           selectNext();
+          listView.setSelectOnOver(false);
+          navKeyTask.delay(navKeyDelay);
         }
         break;
       case KeyCodes.KEY_UP:
         if (isExpanded()) {
           event.stopPropagation();
           selectPrev();
+          listView.setSelectOnOver(false);
+          navKeyTask.delay(navKeyDelay);
         }
         break;
       case KeyCodes.KEY_ESCAPE:
         if (isExpanded()) {
+          event.preventDefault();
           event.stopPropagation();
           collapse(lastContext, lastParent);
         }
@@ -1090,28 +1233,37 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
       return;
 
     } else {
-      T sel = listView.getSelectionModel().getSelectedItem();
-      if (sel != null) {
-        idx = store.indexOf(sel);
+      List<T> items = listView.getSelectionModel().getSelectedItems();
+      if (!items.isEmpty()) {
+        idx = store.indexOf(items.get(0));
       }
     }
-    if (idx != -1) {
+    if (idx == -1) {
+      collapse(lastContext, lastParent);
+    } else {
       T sel = store.get(idx);
       onSelect(sel);
     }
 
     if (focus) {
-      Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-
-        @Override
-        public void execute() {
-          if (GXTLogConfiguration.loggingIsEnabled()) {
-            logger.finest("onViewClick parent.focus()");
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("onViewClick parent.focus()");
+      }
+      if (GXT.isIE8()) {
+        Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+          @Override
+          public void execute() {
+            if (lastParent == parent) {
+              if (GXTLogConfiguration.loggingIsEnabled()) {
+                logger.finest("onViewClick parent.focus() actually ran");
+              }
+              getInputElement(parent).focus();
+            }
           }
-
-          getInputElement(parent).focus();
-        }
-      });
+        });
+      } else {
+        getInputElement(parent).focus();
+      }
     }
 
   }
@@ -1128,13 +1280,30 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
     int h = fh + listContainer.getOffsetHeight();
     int mH = Math.min(maxHeight, Window.getClientHeight() - 10);
     h = Math.min(h, mH);
+    
+    int aw = width - listContainer.getElement().getFrameWidth(Side.LEFT, Side.RIGHT);
 
     listContainer.getElement().makePositionable(true);
-    listContainer.setPixelSize(width, h);
-    listContainer.getElement().alignTo(wrapper, new AnchorAlignment(Anchor.TOP_LEFT, Anchor.BOTTOM_LEFT, true), null);
+    listContainer.setPixelSize(aw, h);
     listContainer.getElement().setVisibility(true);
 
+    listView.setWidth(aw);
     listView.setHeight(h - 2 - (pagingToolBar != null ? pagingToolBar.getOffsetHeight() : 0));
+
+    if (selectedItem != null) {
+      int index = getStore().indexOf(selectedItem);
+      if (index == -1) {
+        // item not found in store using .equals method. try using Key
+        selectedItem = getStore().findModel(selectedItem);
+        index = getStore().indexOf(selectedItem);
+      }
+
+      if (selectedItem != null) {
+        listView.getElement(index).scrollIntoView();
+      }
+    }
+
+    listContainer.getElement().alignTo(wrapper, new AnchorAlignment(Anchor.TOP_LEFT, Anchor.BOTTOM_LEFT, true), 0, 0);
 
     Scheduler.get().scheduleDeferred(new ScheduledCommand() {
       @Override
@@ -1142,18 +1311,14 @@ public class ComboBoxCell<T> extends TriggerFieldCell<T> implements HasBeforeSel
         listContainer.sync(true);
       }
     });
-
   }
 
   protected T selectByValue(String value) {
-    int count = store.size();
-    for (int i = 0; i < count; i++) {
-      T item = store.get(i);
-      String v = getRenderedValue(item);
-      if (v != null && v.equals(value)) {
-        select(item);
-        return item;
-      }
+    T item = getByValue(value);
+    if (item != null) {
+      select(item);
+      return item;
+
     }
     return null;
   }

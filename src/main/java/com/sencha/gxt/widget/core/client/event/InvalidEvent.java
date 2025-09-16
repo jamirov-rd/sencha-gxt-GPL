@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.event;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.editor.client.EditorError;
@@ -38,7 +39,7 @@ public class InvalidEvent extends GwtEvent<InvalidHandler> {
   private List<EditorError> errors;
 
   public InvalidEvent(List<EditorError> errors) {
-    this.errors = errors;
+    this.errors = Collections.unmodifiableList(errors);
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})

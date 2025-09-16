@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -59,8 +59,8 @@ public class StringFilter<M> extends Filter<M, String> {
   };
 
   /**
-   * Creates a string filter for the specified value provider. See
-   * {@link Filter#Filter(ValueProvider)} for more information.
+   * Creates a string filter for the specified value provider. See {@link Filter#Filter(ValueProvider)} for more
+   * information.
    * 
    * @param valueProvider the value provider
    */
@@ -72,7 +72,7 @@ public class StringFilter<M> extends Filter<M, String> {
       protected void onKeyUp(Event event) {
         super.onKeyUp(event);
         onFieldKeyUp(event);
-      };
+      }
     };
 
     menu.add(field);
@@ -133,6 +133,16 @@ public class StringFilter<M> extends Filter<M, String> {
     field.setEmptyText(messages.emptyText());
   }
 
+  /**
+   * Sets the value of this filter. In order for the filter to be applied, {@link #setActive(boolean, boolean)} must be
+   * called when setting filter value programmatically.
+   * 
+   * @param value the value
+   */
+  public void setValue(String value) {
+    field.setValue(value);
+  }
+
   protected Class<String> getType() {
     return String.class;
   }
@@ -158,6 +168,18 @@ public class StringFilter<M> extends Filter<M, String> {
       return false;
     } else {
       return val.toLowerCase().indexOf(v.toLowerCase()) > -1;
+    }
+  }
+
+  @Override
+  public void setFilterConfig(List<FilterConfig> configs) {
+    if (configs.size() > 0) {
+      String val = configs.get(0).getValue();
+      setValue(val);
+      setActive(val != null, false);
+    } else {
+      setValue(null);
+      setActive(false, false);
     }
   }
 }

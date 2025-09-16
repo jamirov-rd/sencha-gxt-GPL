@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -13,6 +13,7 @@ import java.util.List;
 
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.dom.client.EventTarget;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.dom.client.Style.Display;
@@ -22,10 +23,12 @@ import com.google.gwt.event.logical.shared.ValueChangeHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.i18n.client.DateTimeFormat;
 import com.google.gwt.i18n.client.DateTimeFormat.PredefinedFormat;
-import com.google.gwt.i18n.shared.DefaultDateTimeFormatInfo;
+import com.google.gwt.i18n.client.LocaleInfo;
+import com.google.gwt.i18n.shared.DateTimeFormatInfo;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.HasValue;
+import com.google.gwt.user.datepicker.client.CalendarUtil;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.Style.Direction;
 import com.sencha.gxt.core.client.dom.CompositeElement;
@@ -52,32 +55,12 @@ import com.sencha.gxt.widget.core.client.event.XEvent;
  */
 public class DatePicker extends Component implements HasValue<Date> {
 
-  public enum DateState {
-    ACTIVE, TODAY, SELECTED, DISABLED, OVER, PREVIOUS, NEXT;
-  }
-
   /**
    * The appearance of the date picker.
    */
   public interface DatePickerAppearance {
 
-    void onUpdateDateStyle(Element cell, DateState state, boolean add);
-
-    void onTextChange(Element cell, String text);
-
-    void onMonthSelected(Element cell, boolean select);
-
-    void onMonthButtonTextChange(XElement parent, String text);
-
-    void onMonthPickerSize(XElement monthPicker, int width, int height);
-
-    boolean isDisabled(Element cell);
-
     String dateSelector();
-
-    NodeList<Element> getDateCells(XElement parent);
-
-    void onUpdateDayOfWeeks(XElement parent, List<String> values);
 
     /**
      * Returns the selector that identifies the element representing a day.
@@ -85,6 +68,10 @@ public class DatePicker extends Component implements HasValue<Date> {
      * @return the day selector
      */
     String daySelector();
+
+    NodeList<Element> getDateCells(XElement parent);
+
+    boolean isDisabled(Element cell);
 
     /**
      * Returns the selector that identifies the element representing the left
@@ -141,6 +128,18 @@ public class DatePicker extends Component implements HasValue<Date> {
      * @return the month picker year year selector
      */
     String monthPickerYearSelector();
+
+    void onMonthButtonTextChange(XElement parent, String text);
+
+    void onMonthPickerSize(XElement monthPicker, int width, int height);
+
+    void onMonthSelected(Element cell, boolean select);
+
+    void onTextChange(Element cell, String text);
+
+    void onUpdateDateStyle(Element cell, DateState state, boolean add);
+
+    void onUpdateDayOfWeeks(XElement parent, List<String> values);
 
     /**
      * Renders the appearance of a date picker as HTML into a
@@ -276,7 +275,7 @@ public class DatePicker extends Component implements HasValue<Date> {
     /**
      * Returns the advisory title of the next month element.
      * 
-     * @return the adivisory title of the next month element.
+     * @return the advisory title of the next month element.
      */
     String nextText();
 
@@ -290,7 +289,7 @@ public class DatePicker extends Component implements HasValue<Date> {
     /**
      * Returns the advisory title of the previous month element.
      * 
-     * @return the adivisory title of the previous month element.
+     * @return the advisory title of the previous month element.
      */
     String prevText();
 
@@ -310,21 +309,26 @@ public class DatePicker extends Component implements HasValue<Date> {
     String todayTip(String date);
   }
 
+  public enum DateState {
+    ACTIVE, TODAY, SELECTED, DISABLED, OVER, PREVIOUS, NEXT
+  }
+
   protected TextButton todayBtn;
+  protected TextButton monthPickerOkButton;
+  protected TextButton monthPickerCancelButton;
   
   private DateWrapper activeDate, value;
-  private int firstDOW;
   private long today;
   private Date maxDate, minDate;
   private Element[] cells;
   private int startDay = Integer.MIN_VALUE;
-  private DefaultDateTimeFormatInfo constants = new DefaultDateTimeFormatInfo();
+  private DateTimeFormatInfo constants = LocaleInfo.getCurrentLocale().getDateTimeFormatInfo();
   private XElement monthPicker;
   private CompositeElement mpMonths, mpYears;
   private int mpSelMonth, mpSelYear;
   private int mpyear;
   private DatePickerMessages messages;
-  private DatePickerAppearance appearance;
+  private final DatePickerAppearance appearance;
   private XElement overElement;
 
   /**
@@ -345,22 +349,11 @@ public class DatePicker extends Component implements HasValue<Date> {
     SafeHtmlBuilder builder = new SafeHtmlBuilder();
     this.appearance.render(builder);
 
-    setElement(XDOM.create(builder.toSafeHtml()));
+    setElement((Element)XDOM.create(builder.toSafeHtml()));
 
     setAllowTextSelection(false);
 
-    String[] dn = constants.weekdaysNarrow();
-    @SuppressWarnings("unused")
-    String[] longdn = constants.weekdaysShort();
-
-    firstDOW = getCalculatedStartDay();
-
-    List<String> temp = new ArrayList<String>();
-    for (int i = 0; i < 7; i++) {
-      temp.add(dn[(i + firstDOW) % 7]);
-    }
-
-    appearance.onUpdateDayOfWeeks(getElement(), temp);
+    setStartDay(constants.firstDayOfTheWeek());
 
     todayBtn = new TextButton(getMessages().todayText());
     todayBtn.addSelectHandler(new SelectHandler() {
@@ -374,6 +367,26 @@ public class DatePicker extends Component implements HasValue<Date> {
     todayBtn.setToolTip(getMessages().todayTip(DateTimeFormat.getFormat(PredefinedFormat.DATE_SHORT).format(new Date())));
 
     getElement().selectNode(appearance.todayButtonSelector()).appendChild(todayBtn.getElement());
+
+    monthPickerOkButton = new TextButton(getMessages().okText());
+    monthPickerOkButton.addSelectHandler(new SelectHandler() {
+      @Override
+      public void onSelect(SelectEvent event) {
+        DateWrapper d = new DateWrapper(mpSelYear, mpSelMonth, 1);
+        update(d);
+        focus();
+        hideMonthPicker();
+      }
+    });
+
+    monthPickerCancelButton = new TextButton(getMessages().cancelText());
+    monthPickerCancelButton.addSelectHandler(new SelectHandler() {
+      @Override
+      public void onSelect(SelectEvent event) {
+        focus();
+        hideMonthPicker();
+      }
+    });
 
     monthPicker = XElement.createElement("div");
     monthPicker.getStyle().setDisplay(Display.NONE);
@@ -396,11 +409,22 @@ public class DatePicker extends Component implements HasValue<Date> {
     getElement().setTabIndex(0);
     getElement().setAttribute("hideFocus", "true");
     sinkEvents(Event.ONCLICK | Event.MOUSEEVENTS | Event.ONFOCUS);
+
+    XElement target = getElement().selectNode(appearance.leftMonthSelector());
+    target.setTitle(messages.prevText());
+    target =  getElement().selectNode(appearance.rightMonthSelector());
+    target.setTitle(messages.nextText());
+    target =  getElement().selectNode(appearance.monthButtonSelector());
+    target.setTitle(messages.monthYearText());
   }
 
   @Override
   public HandlerRegistration addValueChangeHandler(ValueChangeHandler<Date> handler) {
     return addHandler(handler, ValueChangeEvent.getType());
+  }
+
+  public DatePickerAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -450,6 +474,9 @@ public class DatePicker extends Component implements HasValue<Date> {
   @Override
   public void onBrowserEvent(Event event) {
     super.onBrowserEvent(event);
+    if (!isEnabled()) {
+      return;
+    }
     switch (event.getTypeInt()) {
       case Event.ONCLICK:
         onClick(event);
@@ -466,6 +493,18 @@ public class DatePicker extends Component implements HasValue<Date> {
     }
   }
 
+  @Override
+  protected void onEnable() {
+    super.onEnable();
+    todayBtn.enable();
+  }
+
+  @Override
+  protected void onDisable() {
+    super.onDisable();
+    todayBtn.disable();
+  }
+
   /**
    * Sets the picker's maximum allowed date.
    * 
@@ -477,6 +516,7 @@ public class DatePicker extends Component implements HasValue<Date> {
     }
     this.maxDate = maxDate;
     update(activeDate);
+    enableTodayButton();
   }
 
   /**
@@ -499,15 +539,27 @@ public class DatePicker extends Component implements HasValue<Date> {
     }
     this.minDate = minDate;
     update(activeDate);
+    enableTodayButton();
   }
 
   /**
-   * Sets the picker's start day
+   * Sets the picker's start day index as returned by {@link DateTimeFormatInfo#weekdaysNarrow()}.
    * 
-   * @param startDay the start day
+   * @param startDay the start day index
    */
   public void setStartDay(int startDay) {
     this.startDay = startDay;
+
+    String[] dn = constants.weekdaysNarrow();
+    
+    List<String> temp = new ArrayList<String>();
+    for (int i = 0; i < 7; i++) {
+      temp.add(dn[(i + startDay) % 7]);
+    }
+
+    appearance.onUpdateDayOfWeeks(getElement(), temp);
+    
+    update(activeDate);
   }
 
   @Override
@@ -538,15 +590,26 @@ public class DatePicker extends Component implements HasValue<Date> {
   protected void doAttachChildren() {
     super.doAttachChildren();
     ComponentHelper.doAttach(todayBtn);
+    ComponentHelper.doAttach(monthPickerOkButton);
+    ComponentHelper.doAttach(monthPickerCancelButton);
   }
 
   @Override
   protected void doDetachChildren() {
     super.doDetachChildren();
     ComponentHelper.doDetach(todayBtn);
+    ComponentHelper.doDetach(monthPickerOkButton);
+    ComponentHelper.doDetach(monthPickerCancelButton);
+  }
+
+  protected int getCalculatedStartDay() {
+    return startDay != Integer.MIN_VALUE ? startDay : constants.firstDayOfTheWeek();
   }
 
   protected void handlerKeyPress(NativeEvent evt) {
+    if (!isEnabled()) {
+      return;
+    }
     switch (evt.getKeyCode()) {
       case KeyCodes.KEY_DOWN:
         onKeyDown(evt);
@@ -581,8 +644,22 @@ public class DatePicker extends Component implements HasValue<Date> {
     }
 
     if (evt.getKeyCode() == 32) {
-      selectToday();
+      EventTarget eventTarget = evt.getEventTarget();
+      if ( ! (Element.is(eventTarget) && todayBtn.getElement().isOrHasChild(Element.as(eventTarget)))) {
+        selectToday();
+      }
     }
+  }
+
+  protected void hideMonthPicker() {
+    Fx fx = new Fx();
+    fx.addAfterAnimateHandler(new AfterAnimateHandler() {
+      @Override
+      public void onAfterAnimate(AfterAnimateEvent event) {
+        monthPicker.setVisible(false);
+      }
+    });
+    monthPicker.<FxElement> cast().slideOut(Direction.UP, fx);
   }
 
   protected void onClick(Event event) {
@@ -613,12 +690,6 @@ public class DatePicker extends Component implements HasValue<Date> {
       }
       appearance.onMonthSelected(pn, true);
       mpSelYear = pn.getPropertyInt("xyear");
-    } else if (target.is(appearance.monthPickerOkSelector())) {
-      DateWrapper d = new DateWrapper(mpSelYear, mpSelMonth, 1);
-      update(d);
-      hideMonthPicker();
-    } else if (target.is(appearance.monthPickerCancelSelector())) {
-      hideMonthPicker();
     } else if (target.is(appearance.leftYearSelector())) {
       updateMPYear(mpyear - 10);
     } else if (target.is(appearance.rightYearSelector())) {
@@ -737,85 +808,7 @@ public class DatePicker extends Component implements HasValue<Date> {
     }
   }
 
-  private void createMonthPicker() {
-    SafeHtmlBuilder builder = new SafeHtmlBuilder();
-    appearance.renderMonthPicker(builder, messages, constants.monthsShort());
-
-    monthPicker.setInnerHTML(builder.toSafeHtml().asString());
-
-    mpMonths = new CompositeElement(Util.toElementArray(monthPicker.select(appearance.monthPickerMonthSelector())));
-    mpYears = new CompositeElement(Util.toElementArray(monthPicker.select(appearance.monthPickerYearSelector())));
-
-    mpMonths.each(new CompositeFunction() {
-
-      public void doFunction(Element elem, CompositeElement ce, int index) {
-        index += 1;
-        if (index % 2 == 0) {
-          elem.setPropertyInt("xmonth", (int) (5 + (Math.round(index * .5))));
-        } else {
-          elem.setPropertyInt("xmonth", (int) (Math.round((index - 1) * .5)));
-        }
-      }
-
-    });
-  }
-
-  private int getCalculatedStartDay() {
-    return startDay != Integer.MIN_VALUE ? startDay : constants.firstDayOfTheWeek() - 1;
-  }
-
-  private void handleDateClick(XElement target, String dt) {
-    String[] tokens = dt.split(",");
-    int year = Integer.parseInt(tokens[0]);
-    int month = Integer.parseInt(tokens[1]);
-    int day = Integer.parseInt(tokens[2]);
-    Date d = new DateWrapper(year, month, day).asDate();
-    if (d != null && !appearance.isDisabled(target.getParentElement())) {
-      setValue(d);
-    }
-  }
-
-  private void hideMonthPicker() {
-    Fx fx = new Fx();
-    fx.addAfterAnimateHandler(new AfterAnimateHandler() {
-      @Override
-      public void onAfterAnimate(AfterAnimateEvent event) {
-        monthPicker.setVisible(false);
-      }
-    });
-    monthPicker.<FxElement> cast().slideOut(Direction.UP, fx);
-  }
-
-  private void selectToday() {
-    setValue(new DateWrapper().asDate());
-  }
-
-  private void setCellStyle(Element cell, Date d, long sel, long min, long max) {
-    long t = d.getTime();
-
-    DateWrapper w = new DateWrapper(d);
-    int year = w.getFullYear();
-    int month = w.getMonth();
-    int day = w.getDate();
-
-    String dd = year + "," + month + "," + day;
-
-    cell.getFirstChildElement().setPropertyString("dateValue", dd);
-
-    appearance.onUpdateDateStyle(cell, DateState.TODAY, t == today);
-    appearance.onUpdateDateStyle(cell, DateState.SELECTED, t == sel);
-
-    if (t > max || t < min) {
-      appearance.onUpdateDateStyle(cell, DateState.DISABLED, true);
-      if (t > max) {
-        cell.setTitle(messages.maxText());
-      } else {
-        cell.setTitle(messages.minText());
-      }
-    }
-  }
-
-  private void showMonthPicker() {
+  protected void showMonthPicker() {
     createMonthPicker();
 
     Size s = getElement().getSize(true);
@@ -836,20 +829,141 @@ public class DatePicker extends Component implements HasValue<Date> {
     monthPicker.<FxElement> cast().slideIn(Direction.DOWN);
   }
 
-  private void showNextMonth() {
+  protected void showNextMonth() {
     setValue(activeDate.addMonths(+1).asDate(), false);
   }
 
-  private void showNextYear() {
+  protected void showNextYear() {
     setValue(activeDate.addYears(1).asDate(), false);
   }
 
-  private void showPreviousYear() {
+  protected void showPreviousYear() {
     setValue(activeDate.addYears(-1).asDate(), false);
   }
 
-  private void showPrevMonth() {
+  protected void showPrevMonth() {
     setValue(activeDate.addMonths(-1).asDate(), false);
+  }
+
+  protected void updateMPMonth(int month) {
+    for (int i = 0; i < mpMonths.getCount(); i++) {
+      Element elem = mpMonths.item(i);
+      int xmonth = elem.getPropertyInt("xmonth");
+      appearance.onMonthSelected(elem, xmonth == month);
+    }
+  }
+
+  protected void updateMPYear(int year) {
+    mpyear = year;
+    for (int i = 1; i <= 10; i++) {
+      XElement td = XElement.as(mpYears.item(i - 1));
+      int y2;
+      if (i % 2 == 0) {
+        y2 = (int) (year + (Math.round(i * .5)));
+      } else {
+        y2 = (int) (year - (5 - Math.round(i * .5)));
+      }
+      td.getFirstChildElement().setInnerHTML("" + y2);
+      td.setPropertyInt("xyear", y2);
+      appearance.onMonthSelected(td, y2 == mpSelYear);
+    }
+  }
+
+  private void createMonthPicker() {
+    SafeHtmlBuilder builder = new SafeHtmlBuilder();
+    appearance.renderMonthPicker(builder, messages, constants.monthsShort());
+
+    monthPicker.removeChildren();
+    monthPicker.setInnerHTML(builder.toSafeHtml().asString());
+
+    monthPicker.selectNode(appearance.monthPickerOkSelector()).appendChild(monthPickerOkButton.getElement());
+    monthPicker.selectNode(appearance.monthPickerCancelSelector()).appendChild(monthPickerCancelButton.getElement());
+
+    mpMonths = new CompositeElement(Util.toElementArray(monthPicker.select(appearance.monthPickerMonthSelector())));
+    mpYears = new CompositeElement(Util.toElementArray(monthPicker.select(appearance.monthPickerYearSelector())));
+
+    mpMonths.each(new CompositeFunction() {
+
+      public void doFunction(Element elem, CompositeElement ce, int index) {
+        index += 1;
+        if (index % 2 == 0) {
+          elem.setPropertyInt("xmonth", (int) (5 + (Math.round(index * .5))));
+        } else {
+          elem.setPropertyInt("xmonth", (int) (Math.round((index - 1) * .5)));
+        }
+      }
+
+    });
+  }
+
+  @SuppressWarnings("deprecation")
+  private void enableTodayButton() {
+    boolean minDateDisable = false;
+    boolean maxDateDisable = false;
+
+    if (minDate != null) {
+      Date endOfToday = new Date();
+      CalendarUtil.addDaysToDate(endOfToday, 1);
+      endOfToday.setHours(0);
+      endOfToday.setMinutes(0);
+      endOfToday.setSeconds(0);
+      minDateDisable = minDate.after(endOfToday);
+    }
+
+    if (maxDate != null) {
+      Date endOfYesterday = new Date();
+      CalendarUtil.addDaysToDate(endOfYesterday, -1);
+      endOfYesterday.setHours(23);
+      endOfYesterday.setMinutes(59);
+      endOfYesterday.setSeconds(59);
+      maxDateDisable = maxDate.before(endOfYesterday);
+    }
+
+    if (minDateDisable || maxDateDisable) {
+      todayBtn.setEnabled(false);
+    } else {
+      todayBtn.setEnabled(true);
+    }
+  }
+
+  private void handleDateClick(XElement target, String dt) {
+    String[] tokens = dt.split(",");
+    int year = Integer.parseInt(tokens[0]);
+    int month = Integer.parseInt(tokens[1]);
+    int day = Integer.parseInt(tokens[2]);
+    Date d = new DateWrapper(year, month, day).asDate();
+    if (d != null && !appearance.isDisabled(target.getParentElement())) {
+      setValue(d);
+    }
+  }
+
+  private void selectToday() {
+    setValue(new DateWrapper().asDate());
+  }
+
+  private void setCellStyle(Element cell, Date d, long sel, long min, long max) {
+    long t = d.getTime();
+
+    DateWrapper w = new DateWrapper(d);
+    int year = w.getFullYear();
+    int month = w.getMonth();
+    int day = w.getDate();
+
+    String dd = year + "," + month + "," + day;
+
+    cell.getFirstChildElement().setPropertyString("dateValue", dd);
+
+    appearance.onUpdateDateStyle(cell, DateState.TODAY, t == today);
+    appearance.onUpdateDateStyle(cell, DateState.SELECTED, t == sel);
+    appearance.onUpdateDateStyle(cell, DateState.DISABLED, t > max || t < min);
+
+    if (t > max || t < min) {
+      if (t > max) {
+        cell.setTitle(messages.maxText());
+      } else {
+        cell.setTitle(messages.minText());
+      }
+    }
   }
 
   private void update(DateWrapper date) {
@@ -858,9 +972,9 @@ public class DatePicker extends Component implements HasValue<Date> {
     if (vd != null) {
       int days = date.getDaysInMonth();
       DateWrapper firstOfMonth = date.getFirstDayOfMonth();
-      int startingPos = firstOfMonth.getDayInWeek() - firstDOW;
+      int startingPos = firstOfMonth.getDayInWeek() - startDay;
 
-      if (startingPos <= firstDOW) {
+      if (startingPos <= startDay) {
         startingPos += 7;
       }
 
@@ -882,13 +996,18 @@ public class DatePicker extends Component implements HasValue<Date> {
         d = d.addDays(1);
         appearance.onUpdateDateStyle(cells[i], DateState.PREVIOUS, true);
         setCellStyle(cells[i], d.asDate(), sel, min, max);
+
+        cells[i].setTitle(DateTimeFormat.getFormat(PredefinedFormat.DATE_MEDIUM).format(d.asDate()));
       }
       for (; i < days; i++) {
         int intDay = i - startingPos + 1;
         appearance.onTextChange(cells[i], "" + intDay);
         d = d.addDays(1);
+        appearance.onUpdateDateStyle(cells[i], DateState.PREVIOUS, false);
+        appearance.onUpdateDateStyle(cells[i], DateState.NEXT, false);
         appearance.onUpdateDateStyle(cells[i], DateState.ACTIVE, true);
         setCellStyle(cells[i], d.asDate(), sel, min, max);
+        cells[i].setTitle(DateTimeFormat.getFormat(PredefinedFormat.DATE_MEDIUM).format(d.asDate()));
       }
       int extraDays = 0;
       for (; i < 42; i++) {
@@ -896,6 +1015,7 @@ public class DatePicker extends Component implements HasValue<Date> {
         d = d.addDays(1);
         appearance.onUpdateDateStyle(cells[i], DateState.NEXT, true);
         setCellStyle(cells[i], d.asDate(), sel, min, max);
+        cells[i].setTitle(DateTimeFormat.getFormat(PredefinedFormat.DATE_MEDIUM).format(d.asDate()));
       }
       int month = activeDate.getMonth();
 
@@ -904,29 +1024,5 @@ public class DatePicker extends Component implements HasValue<Date> {
       appearance.onMonthButtonTextChange(getElement(), t);
     }
 
-  }
-
-  private void updateMPMonth(int month) {
-    for (int i = 0; i < mpMonths.getCount(); i++) {
-      Element elem = mpMonths.item(i);
-      int xmonth = elem.getPropertyInt("xmonth");
-      appearance.onMonthSelected(elem, xmonth == month);
-    }
-  }
-
-  private void updateMPYear(int year) {
-    mpyear = year;
-    for (int i = 1; i <= 10; i++) {
-      XElement td = XElement.as(mpYears.item(i - 1));
-      int y2;
-      if (i % 2 == 0) {
-        y2 = (int) (year + (Math.round(i * .5)));
-      } else {
-        y2 = (int) (year - (5 - Math.round(i * .5)));
-      }
-      td.getFirstChildElement().setInnerHTML("" + y2);
-      td.setPropertyInt("xyear", y2);
-      appearance.onMonthSelected(td, y2 == mpSelYear);
-    }
   }
 }

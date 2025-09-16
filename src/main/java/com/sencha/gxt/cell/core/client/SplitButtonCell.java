@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -28,8 +28,6 @@ public class SplitButtonCell extends TextButtonCell {
   @Override
   protected void onClick(Context context, XElement p, String value, NativeEvent event, ValueUpdater<String> valueUpdater) {
     event.preventDefault();
-    // focus();
-    // hideToolTip();
 
     if (!isDisableEvents() && fireCancellableEvent(context, new BeforeSelectEvent(context))) {
 
@@ -45,7 +43,7 @@ public class SplitButtonCell extends TextButtonCell {
   }
 
   public boolean isClickOnArrow(XElement p, NativeEvent e) {
-    XElement buttonEl = appearance.getButtonElement(p);
+    XElement buttonEl = getAppearance().getButtonElement(p);
     return (getArrowAlign() == ButtonArrowAlign.BOTTOM) ? e.getClientY() > buttonEl.getRegion().getBottom() - 14
         : e.getClientX() > buttonEl.getRegion().getRight() - 14;
   }

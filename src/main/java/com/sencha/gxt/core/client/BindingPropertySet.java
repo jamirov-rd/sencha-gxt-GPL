@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,5 +22,7 @@ public interface BindingPropertySet {
   @Target(ElementType.METHOD)
   public @interface PropertyValue {
     String value();
+    /** If false, suppresses a warning from a missing value, defaults to true */
+    boolean warn() default true;
   }
 }

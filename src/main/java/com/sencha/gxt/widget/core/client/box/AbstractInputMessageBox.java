@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -24,6 +24,7 @@ public abstract class AbstractInputMessageBox extends MessageBox {
 
     this.field = field;
     setFocusWidget(field);
+    field.setWidth(300 - getFrameSize().getWidth());
 
     contentAppearance.getContentElement(getElement()).appendChild(field.getElement());
     setPredefinedButtons(PredefinedButton.OK, PredefinedButton.CANCEL);
@@ -62,7 +63,7 @@ public abstract class AbstractInputMessageBox extends MessageBox {
   @Override
   protected void onResize(int width, int height) {
     super.onResize(width, height);
-    field.setWidth(getContainerTarget().getWidth(true));
+    field.setWidth(width - getFrameSize().getWidth());
   }
 
 }

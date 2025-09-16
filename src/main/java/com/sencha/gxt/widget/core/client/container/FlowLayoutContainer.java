@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.widget.core.client.container;
 
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.event.dom.client.HasScrollHandlers;
 import com.google.gwt.event.dom.client.ScrollEvent;
 import com.google.gwt.event.dom.client.ScrollHandler;
@@ -47,7 +48,7 @@ public class FlowLayoutContainer extends InsertContainer implements HasScrollHan
    * Creates a flow layout container.
    */
   public FlowLayoutContainer() {
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
   }
 
   /**

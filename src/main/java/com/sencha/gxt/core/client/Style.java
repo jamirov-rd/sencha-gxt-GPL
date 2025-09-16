@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,25 +18,48 @@ public class Style {
    * Direction enumeration.
    */
   public enum Direction {
-    UP, DOWN, LEFT, RIGHT;
+    UP, DOWN, LEFT, RIGHT
   }
   
   public enum Side {
-    LEFT, RIGHT, TOP, BOTTOM;
+    LEFT, RIGHT, TOP, BOTTOM
   }
 
   public enum Anchor {
-    TOP("t"), TOP_RIGHT("tr"), RIGHT("r"), BOTTOM_RIGHT("br"), BOTTOM("b"), BOTTOM_LEFT("bl"), LEFT("l"), TOP_LEFT("tl"), CENTER(
-        "c");
+    TOP(false, false, true, false), 
+    TOP_RIGHT(false, true, true, false),
+    RIGHT(false, true, false, false),
+    BOTTOM_RIGHT(false, true, false, true),
+    BOTTOM(false, false, false, true),
+    BOTTOM_LEFT(true, false, false, true),
+    LEFT(true, false, false, false),
+    TOP_LEFT(true, false, true, false),
+    CENTER(false, false, false, false);
 
-    private final String value;
-
-    private Anchor(String value) {
-      this.value = value;
+    private final boolean isLeft;
+    private final boolean isRight;
+    private final boolean isTop;
+    private final boolean isBottom;
+    private Anchor(boolean l, boolean r, boolean t, boolean b) {
+      assert l == false || r == false;
+      assert t == false || b == false;
+      isLeft = l;
+      isRight = r;
+      isTop = t;
+      isBottom = b;
     }
 
-    public String value() {
-      return value;
+    public boolean isBottom() {
+      return isBottom;
+    }
+    public boolean isLeft() {
+      return isLeft;
+    }
+    public boolean isRight() {
+      return isRight;
+    }
+    public boolean isTop() {
+      return isTop;
     }
   }
 
@@ -103,42 +126,42 @@ public class Style {
    * Vertical alignment enumerations.
    */
   public enum VerticalAlignment {
-    TOP, MIDDLE, BOTTOM;
+    TOP, MIDDLE, BOTTOM
   }
 
   /**
    * Layout out regions.
    */
   public enum LayoutRegion {
-    NORTH, EAST, SOUTH, WEST, CENTER;
+    NORTH, EAST, SOUTH, WEST, CENTER
   }
 
   /**
    * Orientation enumeration.
    */
   public enum Orientation {
-    VERTICAL, HORIZONTAL;
+    VERTICAL, HORIZONTAL
   }
 
   /**
    * Scroll direction enumeration.
    */
   public enum ScrollDir {
-    VERTICAL, HORIZONTAL;
+    VERTICAL, HORIZONTAL
   }
 
   /**
    * Scroll direction enumeration.
    */
   public enum ScrollDirection {
-    LEFT, TOP;
+    LEFT, TOP
   }
 
   /**
    * Selection mode enumeration.
    */
   public enum SelectionMode {
-    SINGLE, SIMPLE, MULTI;
+    SINGLE, SIMPLE, MULTI
   }
 
   /**

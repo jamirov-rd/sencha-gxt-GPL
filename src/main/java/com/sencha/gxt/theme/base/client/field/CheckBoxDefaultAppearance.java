@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -89,7 +89,7 @@ public class CheckBoxDefaultAppearance extends ValueBaseFieldDefaultAppearance i
     if (options.getBoxLabel() != null) {
       sb.appendHtmlConstant(options.getBoxLabel());
     }
-    sb.appendHtmlConstant("</label>");
+    sb.appendHtmlConstant("</label></div>");
 
   }
 

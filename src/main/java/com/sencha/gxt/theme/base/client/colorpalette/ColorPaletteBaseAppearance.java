@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,7 +9,6 @@ package com.sencha.gxt.theme.base.client.colorpalette;
 
 import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.safecss.shared.SafeStyles;
@@ -92,6 +91,7 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     StyleInjectorHelper.ensureInjected(this.style, true);
   }
 
+  @Override
   public String getAboveColor(XElement parent, String value) {
     if (value == null) {
       return null;
@@ -111,6 +111,7 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     return null;
   }
 
+  @Override
   public String getBelowColor(XElement parent, String value) {
     NodeList<Element> colorElements = getColorElements(parent);
 
@@ -132,15 +133,18 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     return null;
   }
 
+  @Override
   public XElement getChildElement(XElement parent, String color) {
     return parent.child("a.color-" + color);
   }
 
+  @Override
   public String getClickedColor(XElement parent, Element target) {
     Element colorElement = getColorElement(parent, target);
     return stripColorName(colorElement.getClassName());
   }
 
+  @Override
   public Element getColorElement(XElement parent, Element target) {
     if (parent.isOrHasChild(target)) {
       return target.getParentElement().getParentElement();
@@ -149,6 +153,7 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     }
   }
 
+  @Override
   public NodeList<Element> getColorElements(XElement parent) {
     return parent.select("a." + style.anchor());
   }
@@ -157,6 +162,7 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     return columnCount;
   }
 
+  @Override
   public String getLeftColor(XElement parent, String value) {
     if (value == null) {
       return null;
@@ -176,6 +182,7 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     return null;
   }
 
+  @Override
   public String getRightColor(XElement parent, String value) {
     NodeList<Element> colorElements = getColorElements(parent);
     if (value == null) {
@@ -199,6 +206,7 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     return parent.select("tr").getLength();
   }
 
+  @Override
   public void hover(XElement parent, Element target, boolean entering) {
     if (parent.isOrHasChild(target)) {
       if (entering) {
@@ -209,20 +217,23 @@ public abstract class ColorPaletteBaseAppearance implements ColorPaletteCell.Col
     }
   }
 
-  public void onMouseOut(XElement parent, Element target, NativeEvent event) {
+  @Override
+  public void onMouseOut(XElement parent, Element target) {
     if (target.<XElement> cast().hasClassName(style.inner()) && parent.isOrHasChild(target)) {
       hover(parent, target.getParentElement().getParentElement(), false);
     }
   }
 
-  public void onMouseOver(XElement parent, Element target, NativeEvent event) {
+  @Override
+  public void onMouseOver(XElement parent, Element target) {
     if (target.<XElement> cast().hasClassName(style.inner()) && parent.isOrHasChild(target)) {
       hover(parent, target.getParentElement().getParentElement(), true);
     }
   }
 
+  @Override
   public void render(Context context, String value, String[] colors, String[] labels, SafeHtmlBuilder result) {
-    result.appendHtmlConstant("<table style=\"" + style.colorPalette() + "\">");
+    result.appendHtmlConstant("<table class=\"" + style.colorPalette() + "\">");
     int mark = 0;
 
     int rows = (colors.length + (columnCount - 1)) / columnCount;

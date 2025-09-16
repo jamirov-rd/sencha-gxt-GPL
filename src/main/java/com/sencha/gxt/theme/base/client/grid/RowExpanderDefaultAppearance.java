@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -11,19 +11,20 @@ import com.google.gwt.cell.client.Cell.Context;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.resources.client.CssResource.Import;
 import com.google.gwt.resources.client.ImageResource;
-import com.google.gwt.resources.client.CssResource.Shared;
 import com.google.gwt.resources.client.ImageResource.ImageOptions;
 import com.google.gwt.resources.client.ImageResource.RepeatStyle;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.core.client.resources.StyleInjectorHelper;
-import com.sencha.gxt.widget.core.client.grid.GridView.GridDataTableStyles;
+import com.sencha.gxt.widget.core.client.grid.GridView.GridStateStyles;
 import com.sencha.gxt.widget.core.client.grid.RowExpander.RowExpanderAppearance;
 
 public class RowExpanderDefaultAppearance<M> implements RowExpanderAppearance<M> {
 
   public interface RowExpanderResources extends ClientBundle {
+    @Import(GridStateStyles.class)
     @Source("RowExpander.css")
     RowExpanderStyle style();
 
@@ -34,13 +35,16 @@ public class RowExpanderDefaultAppearance<M> implements RowExpanderAppearance<M>
     ImageResource specialColumnSelected();
   }
 
-  @Shared
-  public interface RowExpanderStyle extends CssResource, GridDataTableStyles {
+  public interface RowExpanderStyle extends CssResource {
     String rowCollapsed();
 
     String rowExpanded();
 
     String rowExpander();
+
+    String hasExpander();
+
+    String cell();
   }
 
   private final RowExpanderResources resources;
@@ -55,6 +59,16 @@ public class RowExpanderDefaultAppearance<M> implements RowExpanderAppearance<M>
     this.style = this.resources.style();
 
     StyleInjectorHelper.ensureInjected(style, false);
+  }
+
+  @Override
+  public void finishInit(XElement gridParent) {
+    gridParent.addClassName(style.hasExpander());
+  }
+
+  @Override
+  public String getCellClassName() {
+    return style.cell();
   }
 
   @Override

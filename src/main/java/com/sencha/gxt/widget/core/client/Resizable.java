@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -11,13 +11,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Document;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.logical.shared.AttachEvent;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.event.shared.SimpleEventBus;
 import com.google.gwt.user.client.DOM;
-import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.ui.RootPanel;
@@ -29,20 +30,19 @@ import com.sencha.gxt.core.client.util.Rectangle;
 import com.sencha.gxt.core.shared.event.GroupingHandlerRegistration;
 import com.sencha.gxt.fx.client.Shim;
 import com.sencha.gxt.widget.core.client.event.ResizeEndEvent;
-import com.sencha.gxt.widget.core.client.event.ResizeStartEvent;
 import com.sencha.gxt.widget.core.client.event.ResizeEndEvent.HasResizeEndHandlers;
 import com.sencha.gxt.widget.core.client.event.ResizeEndEvent.ResizeEndHandler;
+import com.sencha.gxt.widget.core.client.event.ResizeStartEvent;
 import com.sencha.gxt.widget.core.client.event.ResizeStartEvent.HasResizeStartHandlers;
 import com.sencha.gxt.widget.core.client.event.ResizeStartEvent.ResizeStartHandler;
 
 /**
- * Applies drag handles to a widget to make it resizable. The drag handles are
- * inserted into the widget and positioned absolute.
+ * Applies drag handles to a widget to make it resizable. The drag handles are inserted into the widget and positioned
+ * absolute.
  * 
  * <p />
- * Only <code>Component</code> instances can be used with <code>Resizable</code>
- * as <code>Widget</code>'s do not fire resize events. Widgets can be wrapped in
- * a {@link WidgetComponent} instance to use with <code>Resizable</code>.
+ * Only <code>Component</code> instances can be used with <code>Resizable</code> as <code>Widget</code>'s do not fire
+ * resize events. Widgets can be wrapped in a {@link WidgetComponent} instance to use with <code>Resizable</code>.
  * 
  * <p>
  * Here is the list of valid resize handles:
@@ -103,7 +103,7 @@ public class Resizable implements HasResizeStartHandlers, HasResizeEndHandlers {
     public Dir dir;
 
     private ResizeHandle() {
-      setElement(DOM.createDiv());
+      setElement(Document.get().createDivElement());
       sinkEvents(Event.MOUSEEVENTS);
     }
 
@@ -112,7 +112,7 @@ public class Resizable implements HasResizeStartHandlers, HasResizeEndHandlers {
       switch (DOM.eventGetType(event)) {
         case Event.ONMOUSEDOWN:
           DOM.eventCancelBubble(event, true);
-          DOM.eventPreventDefault(event);
+          event.preventDefault();
           handleMouseDown(event, this);
           break;
       }
@@ -195,6 +195,10 @@ public class Resizable implements HasResizeStartHandlers, HasResizeEndHandlers {
     return ensureHandlers().addHandler(ResizeStartEvent.getType(), handler);
   }
 
+  public ResizableAppearance getAppearance() {
+    return appearance;
+  }
+
   /**
    * Returns the max height
    * 
@@ -262,19 +266,19 @@ public class Resizable implements HasResizeStartHandlers, HasResizeEndHandlers {
    * Removes the drag handles.
    */
   public void release() {
-    onDetach();
     registration.removeHandler();
 
     if (handleList != null) {
       for (ResizeHandle handle : handleList) {
-        handle.removeFromParent();
+        handle.getElement().removeFromParent();
       }
     }
+    
+    onDetach();
   }
 
   /**
-   * True to resize the widget directly instead of using a proxy (defaults to
-   * false).
+   * True to resize the widget directly instead of using a proxy (defaults to false).
    * 
    * @param dynamic true to resize directly
    */
@@ -336,8 +340,7 @@ public class Resizable implements HasResizeStartHandlers, HasResizeEndHandlers {
   }
 
   /**
-   * True to preserve the original ratio between height and width during resize
-   * (defaults to false).
+   * True to preserve the original ratio between height and width during resize (defaults to false).
    * 
    * @param preserveRatio true to preserve the original aspect ratio
    */
@@ -450,8 +453,9 @@ public class Resizable implements HasResizeStartHandlers, HasResizeEndHandlers {
     dir = handle.dir;
 
     startBox = resize.getElement().getBounds(false);
-    int x = DOM.eventGetClientX(event);
-    int y = DOM.eventGetClientY(event);
+
+    int x = event.getClientX();
+    int y = event.getClientY();
     startPoint = new Point(x, y);
 
     resizing = true;

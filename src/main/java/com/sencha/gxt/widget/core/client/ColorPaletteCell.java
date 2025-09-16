@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -21,6 +21,7 @@ import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.event.shared.HandlerManager;
 import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
+import com.sencha.gxt.cell.core.client.DisableCell;
 import com.sencha.gxt.core.client.dom.XElement;
 import com.sencha.gxt.widget.core.client.cell.HandlerManagerContext;
 import com.sencha.gxt.widget.core.client.event.CellSelectionEvent;
@@ -32,7 +33,7 @@ import com.sencha.gxt.widget.core.client.event.CellSelectionEvent;
  * an individual cell in a color palette.
  * </p>
  */
-public class ColorPaletteCell extends AbstractEditableCell<String, String> implements HasSelectionHandlers<String> {
+public class ColorPaletteCell extends AbstractEditableCell<String, String> implements HasSelectionHandlers<String>, DisableCell {
 
   /**
    * The appearance of a color palette. The color palette consists of elements
@@ -132,9 +133,8 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
      * 
      * @param parent the parent
      * @param target the child
-     * @param event the browser event associated with mousing out
      */
-    public void onMouseOut(XElement parent, Element target, NativeEvent event);
+    public void onMouseOut(XElement parent, Element target);
 
     /**
      * Modifies the appearance to indicate that the mouse has moved over the
@@ -142,9 +142,8 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
      * 
      * @param parent the parent
      * @param target the child
-     * @param event the browser event associated with mousing over
      */
-    public void onMouseOver(XElement parent, Element target, NativeEvent event);
+    public void onMouseOver(XElement parent, Element target);
 
     /**
      * Renders the appearance of a color palette cell as HTML into a
@@ -162,7 +161,7 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
 
   }
 
-  protected ColorPaletteAppearance appearance;
+  private final ColorPaletteAppearance appearance;
 
   private String[] colors = new String[] {
       "E9967A", "B22222", "FFB6C1", "DB7093", "FF6347", "FFD700", "FFFACD", "FFDAB9", "BDB76B", "EE82EE", "FF00FF",
@@ -180,6 +179,8 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
       "Honeydew", "Alice Blue", "Beige", "Ivory", "Misty Rose", "Silver", "Light Slate Gray", "Black"};
 
   private HandlerManager handlerManager;
+
+  private boolean disabled;
 
   /**
    * Creates a color palette cell with a default set of colors.
@@ -234,8 +235,22 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
   }
 
   @Override
+  public void disable(Context context, Element parent) {
+    disabled = true;
+  }
+
+  @Override
+  public void enable(Context context, Element parent) {
+    disabled = false;
+  }
+
+  @Override
   public void fireEvent(GwtEvent<?> event) {
     ensureHandlers().fireEvent(event);
+  }
+
+  public ColorPaletteAppearance getAppearance() {
+    return appearance;
   }
 
   /**
@@ -264,6 +279,9 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
   @Override
   public void onBrowserEvent(Context context, Element parent, String value, NativeEvent event,
       ValueUpdater<String> valueUpdater) {
+    if (disabled){
+      return;
+    }
     Element target = event.getEventTarget().cast();
     if (!parent.isOrHasChild(target)) {
       return;
@@ -404,7 +422,7 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
       ValueUpdater<String> valueUpdater) {
     EventTarget from = event.getEventTarget();
     if (from != null && Element.is(from)) {
-      appearance.onMouseOut(parent, Element.as(from), event);
+      appearance.onMouseOut(parent, Element.as(from));
     }
   }
 
@@ -412,7 +430,7 @@ public class ColorPaletteCell extends AbstractEditableCell<String, String> imple
       ValueUpdater<String> valueUpdater) {
     EventTarget from = event.getEventTarget();
     if (from != null && Element.is(from)) {
-      appearance.onMouseOver(parent, Element.as(from), event);
+      appearance.onMouseOver(parent, Element.as(from));
     }
   }
 

@@ -1,12 +1,13 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
  */
 package com.sencha.gxt.data.shared.event;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gwt.event.shared.EventHandler;
@@ -78,7 +79,7 @@ public final class StoreUpdateEvent<M> extends StoreEvent<M, StoreUpdateHandler<
    * @param items the items that have been updated
    */
   public StoreUpdateEvent(List<M> items) {
-    this.items = items;
+    this.items = Collections.unmodifiableList(items);
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -9,15 +9,17 @@ package com.sencha.gxt.widget.core.client.grid;
 
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
+import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NodeList;
 import com.google.gwt.dom.client.Style.Overflow;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.safecss.shared.SafeStyles;
+import com.google.gwt.safecss.shared.SafeStylesUtils;
 import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
-import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.client.ui.HasHorizontalAlignment.HorizontalAlignmentConstant;
 import com.sencha.gxt.core.client.GXT;
 import com.sencha.gxt.core.client.dom.DomHelper;
 import com.sencha.gxt.core.client.dom.XDOM;
@@ -27,8 +29,7 @@ import com.sencha.gxt.widget.core.client.grid.GridView.GridStyles;
 import com.sencha.gxt.widget.core.client.grid.GridView.GridTemplates;
 
 /**
- * Column footer widget for <code>Grid</code>, which renders one to many
- * aggregation rows.
+ * Column footer widget for <code>Grid</code>, which renders one to many aggregation rows.
  */
 public class ColumnFooter<M> extends Component {
 
@@ -55,7 +56,7 @@ public class ColumnFooter<M> extends Component {
 
     this.styles = grid.getView().getAppearance().styles();
 
-    setElement(DOM.createDiv());
+    setElement(Document.get().createDivElement());
     setStyleName(styles.footer());
     getElement().getStyle().setOverflow(Overflow.HIDDEN);
 
@@ -108,8 +109,7 @@ public class ColumnFooter<M> extends Component {
 
     int rows = cm.getAggregationRows().size();
 
-    String cellClass = styles.cell();
-    String cellInner = styles.cellInner();
+    String cellInner = styles.cellInner() + " " + gridView.getStateStyles().cellInner();
 
     SafeStyles empty = XDOM.EMPTY_SAFE_STYLE;
 
@@ -120,14 +120,18 @@ public class ColumnFooter<M> extends Component {
 
       // loop each cell per row
       for (int i = 0; i < colCount; i++) {
+        String cellClass = styles.cell() + " " + gridView.getStateStyles().cell();
         String cs = config.getCellStyle(cm.getColumn(i));
         if (cs != null) {
           cellClass += " " + cs;
         }
-
-        trBuilder.append(tpls.td(i, cellClass, empty, cellInner, empty, getRenderedValue(j, i)));
+        HorizontalAlignmentConstant align = cm.getColumnHorizontalAlignment(i);
+        SafeStyles s = empty;
+        if (align != null) {
+          s = SafeStylesUtils.fromTrustedString("text-align:" + align.getTextAlignString() + ";");
+        }
+        trBuilder.append(tpls.td(i, cellClass, empty, cellInner, s, getRenderedValue(j, i)));
       }
-
       buf.append(tpls.tr("", trBuilder.toSafeHtml()));
     }
 

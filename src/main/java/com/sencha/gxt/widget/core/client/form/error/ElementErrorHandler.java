@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -66,6 +66,10 @@ public class ElementErrorHandler implements ErrorHandler {
     if (elem != null) {
       elem.setInnerHTML(errors.get(0).getMessage());
     }
+  }
+  @Override
+  public void release() {
+    //no handlers to remove
   }
 
 }

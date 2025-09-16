@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -22,7 +22,7 @@ import com.sencha.gxt.core.client.dom.XElement;
 public class TextAreaInputCell extends ValueBaseInputCell<String> {
 
   public enum Resizable {
-    NONE, VERTICAL, HORIZONTAL, BOTH;
+    NONE, VERTICAL, HORIZONTAL, BOTH
   }
 
   public static interface TextAreaAppearance extends ValueBaseFieldAppearance {
@@ -56,10 +56,9 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
 
   }
 
-  private final TextAreaAppearance appearance;
   private boolean preventScrollbars;
   private Resizable resizable = Resizable.NONE;
-  
+
   private static Logger logger = Logger.getLogger(TextAreaInputCell.class.getName());
 
   public TextAreaInputCell() {
@@ -68,11 +67,10 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
 
   public TextAreaInputCell(TextAreaAppearance appearance) {
     super(appearance);
-    this.appearance = appearance;
 
     setWidth(150);
   }
-  
+
   @Override
   public void finishEditing(Element parent, String value, Object key, ValueUpdater<String> valueUpdater) {
     if (GXTLogConfiguration.loggingIsEnabled()) {
@@ -95,13 +93,15 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
       valueUpdater.update(newValue);
     }
 
-    // Blur the element.
-    super.finishEditing(parent, newValue, key, valueUpdater);
+    clearViewData(key);
+    clearFocusKey();
+
+    // calling super.finishEditing not needed as programmatic blurs causes issues
   }
 
   @Override
   public TextAreaAppearance getAppearance() {
-    return appearance;
+    return (TextAreaAppearance) super.getAppearance();
   }
 
   /**
@@ -137,6 +137,9 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
     String eventType = event.getType();
     Object key = context.getKey();
     if ("change".equals(eventType)) {
+      if (GXTLogConfiguration.loggingIsEnabled()) {
+        logger.finest("onBrowserEvent change event fired");
+      }
       finishEditing(parent, value, key, valueUpdater);
     } else if ("keyup".equals(eventType)) {
       // Record keys as they are typed.
@@ -145,7 +148,7 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
         vd = new FieldViewData(value);
         setViewData(key, vd);
       }
-      vd.setCurrentValue(value);
+      vd.setCurrentValue(getText(XElement.as(parent)));
     }
   }
 
@@ -160,31 +163,30 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
     options.setResizable(resizable);
     options.setDisabled(isDisabled());
 
-    appearance.render(sb, s == null ? "" : s, options);
+    getAppearance().render(sb, s == null ? "" : s, options);
   }
 
   /**
-   * True to prevent scrollbars from appearing regardless of how much text is in
-   * the field (equivalent to setting overflow: hidden, defaults to false.
+   * True to prevent scrollbars from appearing regardless of how much text is in the field (equivalent to setting
+   * overflow: hidden, defaults to false.
    * 
    * @param preventScrollbars true to disable scroll bars
    */
   public void setPreventScrollbars(XElement parent, boolean preventScrollbars) {
     this.preventScrollbars = preventScrollbars;
-    appearance.getInputElement(parent).getStyle().setOverflow(preventScrollbars ? Overflow.HIDDEN : Overflow.VISIBLE);
+    getAppearance().getInputElement(parent).getStyle().setOverflow(preventScrollbars ? Overflow.HIDDEN : Overflow.VISIBLE);
   }
 
   /**
-   * Sets whether the field can be resized (defaults to NONE). This method uses
-   * the CSS resize property which is only supported on browsers that support
-   * CSS3.
+   * Sets whether the field can be resized (defaults to NONE). This method uses the CSS resize property which is only
+   * supported on browsers that support CSS3.
    * 
    * @param parent the parent element
    * @param resizable the resizable value
    */
   public void setResizable(XElement parent, Resizable resizable) {
     this.resizable = resizable;
-    XElement area = appearance.getInputElement(parent);
+    XElement area = getAppearance().getInputElement(parent);
     area.getStyle().setProperty("resize", resizable.name().toLowerCase());
   }
 
@@ -204,4 +206,8 @@ public class TextAreaInputCell extends ValueBaseInputCell<String> {
   public int getCursorPos(XElement parent) {
     return impl.getTextAreaCursorPos(getInputElement(parent).<XElement> cast());
   }
+
+  private native void clearFocusKey() /*-{
+        this.@com.google.gwt.cell.client.AbstractInputCell::focusedKey = null;
+  }-*/;
 }

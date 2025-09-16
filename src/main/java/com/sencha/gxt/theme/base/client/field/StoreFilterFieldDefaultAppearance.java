@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -17,7 +17,7 @@ public class StoreFilterFieldDefaultAppearance extends TriggerFieldDefaultAppear
 
   public interface StoreFilterFieldResources extends TriggerFieldResources {
 
-    @Source({"ValueBaseField.css", "TextField.css", "TriggerField.css"})
+    @Source({"ValueBaseField.css", "TextField.css", "TriggerField.css", "StoreFilterField.css"})
     StoreFilterFieldStyle css();
 
     @ImageOptions(repeatStyle = RepeatStyle.Horizontal)
@@ -34,10 +34,6 @@ public class StoreFilterFieldDefaultAppearance extends TriggerFieldDefaultAppear
 
     @Source("clearTriggerFocus.gif")
     ImageResource triggerArrowFocus();
-
-    ImageResource triggerArrowFocusOver();
-
-    ImageResource triggerArrowFocusClick();
 
   }
   

@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -23,6 +23,8 @@ public interface XMessages extends Messages {
   String tabPanelItem_closeOtherText();
 
   String field_invalidText();
+
+  String field_parseExceptionText(String value);
 
   String loadMask_msg();
 
@@ -251,5 +253,7 @@ public interface XMessages extends Messages {
   String numericFilter_emptyText();
 
   String gridFilters_filterText();
+
+  String timeField_invalidText(String date, String format);
 
 }

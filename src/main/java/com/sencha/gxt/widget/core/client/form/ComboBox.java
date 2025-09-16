@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -14,6 +14,7 @@ import com.google.gwt.event.logical.shared.HasSelectionHandlers;
 import com.google.gwt.event.logical.shared.SelectionEvent;
 import com.google.gwt.event.logical.shared.SelectionHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.safehtml.shared.SafeHtml;
 import com.google.gwt.text.shared.SafeHtmlRenderer;
 import com.google.gwt.uibinder.client.UiConstructor;
 import com.sencha.gxt.cell.core.client.LabelProviderSafeHtmlRenderer;
@@ -23,8 +24,10 @@ import com.sencha.gxt.cell.core.client.form.TriggerFieldCell.TriggerFieldAppeara
 import com.sencha.gxt.data.shared.LabelProvider;
 import com.sencha.gxt.data.shared.ListStore;
 import com.sencha.gxt.data.shared.loader.Loader;
+import com.sencha.gxt.messages.client.DefaultMessages;
 import com.sencha.gxt.widget.core.client.ListView;
 import com.sencha.gxt.widget.core.client.event.BeforeQueryEvent;
+import com.sencha.gxt.widget.core.client.event.ParseErrorEvent;
 import com.sencha.gxt.widget.core.client.event.BeforeQueryEvent.BeforeQueryHandler;
 import com.sencha.gxt.widget.core.client.event.BeforeQueryEvent.HasBeforeQueryHandlers;
 import com.sencha.gxt.widget.core.client.event.CollapseEvent;
@@ -255,6 +258,15 @@ public class ComboBox<T> extends TriggerField<T> implements HasBeforeSelectionHa
   public Loader<?, ?> getLoader() {
     return getCell().getLoader();
   }
+  
+  /**
+   * Returns the dropdown list's max height.
+   * 
+   * @return the max height
+   */
+  public int getMaxHeight() {
+    return getCell().getMaxHeight();
+  }
 
   /**
    * Returns the minimum characters used for autocomplete and typeahead.
@@ -308,6 +320,15 @@ public class ComboBox<T> extends TriggerField<T> implements HasBeforeSelectionHa
    */
   public int getTypeAheadDelay() {
     return getCell().getTypeAheadDelay();
+  }
+
+  /**
+   * Returns the state if the query cache is used or not.
+   *
+   * @return the useQueryCache state
+   */
+  public boolean isUseQueryCache() {
+    return getCell().isUseQueryCache();
   }
 
   /**
@@ -411,6 +432,44 @@ public class ComboBox<T> extends TriggerField<T> implements HasBeforeSelectionHa
   public void setLoader(Loader<?, ?> loader) {
     getCell().setLoader(loader);
   }
+  
+  /**
+   * Sets the maximum height in pixels of the dropdown list before scrollbars
+   * are shown (defaults to 300).
+   * 
+   * @param maxHeight the max hieght
+   */
+  public void setMaxHeight(int maxHeight) {
+    getCell().setMaxHeight(maxHeight);
+  }
+
+  /**
+   * Sets the html loading text to be displayed during a load request.
+   * <p>
+   * <ul>
+   * <li>The {@link #setLoader(Loader)} has to be set for this use.
+   * <li>The css class name 'loading-indicator' can style the loading HTML.
+   * </ul>
+   *
+   * @param loadingHtml the loading html
+   */
+  public void setLoadingHtml(SafeHtml loadingHtml) {
+    getCell().setLoadingHtml(loadingHtml);
+  }
+
+  /**
+   * Sets the text loading text to be displayed during a load request.
+   * <p>
+   * <ul>
+   * <li>The {@link #setLoader(Loader)} has to be set for this use.
+   * <li>The css class name 'loading-indicator' can style the loading text.
+   * </ul>
+   *
+   * @param loadingText the loading text
+   */
+  public void setLoadingText(String loadingText) {
+    getCell().setLoadingText(loadingText);
+  }
 
   /**
    * Sets the minimum number of characters the user must type before
@@ -485,6 +544,22 @@ public class ComboBox<T> extends TriggerField<T> implements HasBeforeSelectionHa
   }
 
   /**
+   * Set this to false to disable the last query cache (defaults to true).
+   * 
+   * When set to false the store gets queried on each expand for the data that
+   * should get displayed in the list. If you use a loader, than each time the
+   * ComboBox gets expanded, the server gets asked for the data.
+   * 
+   * You want to do this for example, if you filter the content of this ComboBox
+   * against some selection in another field.
+   * 
+   * @param useQueryCache the useQueryCache to set
+   */
+  public void setUseQueryCache(boolean useQueryCache) {
+    getCell().setUseQueryCache(useQueryCache);
+  }
+
+  /**
    * The length of time in milliseconds to delay between the start of typing and
    * sending the query to filter the dropdown list.
    * 
@@ -502,6 +577,14 @@ public class ComboBox<T> extends TriggerField<T> implements HasBeforeSelectionHa
       getInputEl().setAttribute("autocomplete", "off");
     }
 
+  }
+
+  @Override
+  protected void onCellParseError(ParseErrorEvent event) {
+    super.onCellParseError(event);
+    String msg = DefaultMessages.getMessages().field_parseExceptionText(getText());
+    parseError = msg;
+    forceInvalid(msg);
   }
 
   @Override

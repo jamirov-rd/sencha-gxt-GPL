@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -18,30 +18,13 @@ import com.sencha.gxt.theme.base.client.slider.SliderVerticalBaseAppearance;
 
 public class BlueSliderVerticalAppearance extends SliderVerticalBaseAppearance implements VerticalSliderAppearance {
 
-  public static class BlueSliderVerticalAppearanceHelper {
-
-    public static String getTrackVerticalBottom() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append(
-          "/blue/images/slider/trackVerticalBottom.png);").toString();
-    }
-
-    public static String getTrackVerticalMiddle() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append(
-          "/blue/images/slider/trackVerticalMiddle.png);").toString();
-    }
-
-    public static String getTrackVerticalTop() {
-      return new StringBuilder("url(").append(GWT.getModuleBaseURL()).append(
-          "/blue/images/slider/trackVerticalTop.png);").toString();
-    }
-
-  }
-
   public interface BlueSliderVerticalResources extends SliderVerticalResources, ClientBundle {
 
+    @Override
     @Source({
         "com/sencha/gxt/theme/base/client/slider/Slider.css",
-        "com/sencha/gxt/theme/base/client/slider/SliderVertical.css", "BlueSliderVertical.css"})
+        "com/sencha/gxt/theme/base/client/slider/SliderVertical.css",
+        "BlueSliderVertical.css"})
     BlueVerticalSliderStyle style();
 
     ImageResource thumbVertical();

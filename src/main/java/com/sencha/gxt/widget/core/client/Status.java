@@ -1,6 +1,6 @@
 /**
- * Sencha GXT 3.0.1 - Sencha for GWT
- * Copyright(c) 2007-2012, Sencha, Inc.
+ * Sencha GXT 3.1.1 - Sencha for GWT
+ * Copyright(c) 2007-2014, Sencha, Inc.
  * licensing@sencha.com
  *
  * http://www.sencha.com/products/gxt/license/
@@ -8,6 +8,7 @@
 package com.sencha.gxt.widget.core.client;
 
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.resources.client.ImageResource;
 import com.google.gwt.safehtml.client.HasSafeHtml;
 import com.google.gwt.safehtml.shared.SafeHtml;
@@ -40,7 +41,9 @@ public class Status extends Component implements HasText, HasHTML, HasIcon, HasS
     
   }
 
-  protected StatusAppearance appearance;
+  private final StatusAppearance appearance;
+
+  private ImageResource icon;
 
   /**
    * Creates a status component with the default appearance.
@@ -60,7 +63,7 @@ public class Status extends Component implements HasText, HasHTML, HasIcon, HasS
     SafeHtmlBuilder sb = new SafeHtmlBuilder();
     appearance.render(sb);
 
-    setElement(XDOM.create(sb.toSafeHtml()));
+    setElement((Element) XDOM.create(sb.toSafeHtml()));
   }
 
   /**
@@ -73,6 +76,10 @@ public class Status extends Component implements HasText, HasHTML, HasIcon, HasS
     setText(text);
   }
 
+  public StatusAppearance getAppearance() {
+    return appearance;
+  }
+
   @Override
   public String getHTML() {
     return appearance.getTextElem(getElement()).getInnerHTML();
@@ -80,7 +87,7 @@ public class Status extends Component implements HasText, HasHTML, HasIcon, HasS
 
   @Override
   public ImageResource getIcon() {
-    return null;
+    return icon;
   }
 
   @Override
@@ -109,6 +116,7 @@ public class Status extends Component implements HasText, HasHTML, HasIcon, HasS
 
   @Override
   public void setIcon(ImageResource icon) {
+    this.icon = icon;
     appearance.onUpdateIcon(getElement(), icon);
   }
 

@@ -4,12 +4,12 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.extjs</groupId>
-  <artifactId>gxt</artifactId>
-  <version>2.3.1-gwt22</version>
+  <artifactId>gxt-gpl</artifactId>
+  <version>2.3.1a18-gwt210</version>
   <packaging>jar</packaging>
 
   <properties>
-    <gwt.version>2.4.0</gwt.version>
+    <gwt.version>2.10.0</gwt.version>
     <maven.compiler.source>1.7</maven.compiler.source>
     <maven.compiler.target>1.7</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

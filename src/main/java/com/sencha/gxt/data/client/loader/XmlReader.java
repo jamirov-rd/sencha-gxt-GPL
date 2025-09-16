@@ -262,6 +262,11 @@ public class XmlReader<M, Base> extends AbstractAutoBeanReader<M, Base, String> 
       assert nodes != null && nodes.getLength() != 0;
       return nodes.getItem(0);
     }
+
+    @Override
+    public void removeReified(String key) {
+      reifiedData.remove(key);
+    }
   }
 
   private static native Node getNode(com.google.gwt.xml.client.Node n) /*-{

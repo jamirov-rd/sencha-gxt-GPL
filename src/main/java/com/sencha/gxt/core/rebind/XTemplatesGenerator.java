@@ -168,7 +168,13 @@ public class XTemplatesGenerator extends Generator {
     // look for a local file first
     // TODO remove this assumption
     String path = slashify(toGenerate.getPackage().getName()) + "/" + markerPath;
-    Resource res = context.getResourcesOracle().getResourceMap().get(path);
+    Resource res = null;
+    for (Resource r : context.getResourcesOracle().getResources()) {
+      if (r.getPath().equals(path)) {
+          res = r;
+          break;
+      }
+    }
     // if not a local path, try an absolute one
     if (res == null) {
       URL url = Thread.currentThread().getContextClassLoader().getResource(markerPath);

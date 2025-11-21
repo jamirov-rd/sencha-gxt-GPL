@@ -294,7 +294,7 @@ public class MenuItem extends Item implements IconSupport {
   @Override
   protected void onRender(Element target, int index) {
     super.onRender(target, index);
-    setElement(DOM.createSpan(), target, index);
+    setElement(DOM.createAnchor(), target, index);
     
     getElement().setAttribute("unselectable", "on");
 
